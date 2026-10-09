@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แผงควบคุมผู้ดูแลระบบ (Admin) - ศูนย์รวมระบบบริหารจัดการหน้างาน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    header {
+      background: linear-gradient(145deg, #0B1F4B 0%, #17326E 100%);
+      color: #fff;
+      padding: 44px 24px 84px;
+      border-bottom: 4px solid var(--amber);
+      box-shadow: 0 4px 20px rgba(11, 31, 75, 0.15);
+    }
+    .header-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    header h1 {
+      font-size: clamp(24px, 4vw, 32px);
+      font-weight: 700;
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .admin-tag {
+      background: var(--amber);
+      color: #0B1F4B;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+    }
+    header p {
+      color: #C4CCD6;
+      font-size: 14.5px;
+      margin-top: 8px;
+      font-weight: 300;
+      max-width: 60ch;
+    }
+
+    main {
+      max-width: 1040px;
+      margin: -50px auto 0;
+      padding: 0 20px 48px;
+    }
+
+    /* System Stats Quick Bar (เหมือนแบบ 100%) */
+    .quick-stats {
+      background: #FFFFFF;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-node {
+      text-align: center;
+      flex: 1;
+      min-width: 120px;
+    }
+    .stat-node .s-val {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .stat-node .s-lbl {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Cards Grid (เหมือนแบบ 100%) */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--accent);
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: var(--ink);
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      column-gap: 18px;
+      row-gap: 6px;
+      box-shadow: 0 2px 8px rgba(22, 34, 58, 0.05);
+      transition: transform .2s ease, box-shadow .2s ease;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(22, 34, 58, 0.12);
+    }
+    .card .icon {
+      grid-row: 1 / span 3;
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .card .icon svg {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .card h2 {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.35;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-badge {
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--field);
+      color: var(--muted);
+    }
+    .card p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .card .enter {
+      margin-top: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card .enter svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform .15s ease;
+    }
+    .card:hover .enter svg {
+      transform: translateX(4px);
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px 48px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; gap: 14px; }
+      .card { padding: 18px; grid-template-columns: 52px 1fr; }
+      .card .icon { width: 52px; height: 52px; }
+      header { padding: 32px 20px 72px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>
+          <span>ศูนย์รวมระบบบริหารจัดการหน้างาน</span>
+          <span class="admin-tag">👑 ADMIN CONSOLE</span>
+        </h1>
+        <p>แผงควบคุมระบบสำหรับผู้ดูแลระบบ &bull; เชื่อมต่อฐานข้อมูล PostgreSQL โดยตรง</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <button onclick="openUserModal()" class="btn" style="background:var(--amber); color:#0B1F4B; font-weight:700; padding:7px 14px; font-size:12.5px; border-radius:8px;">
+            👥 จัดการผู้ใช้งาน
+          </button>
+          <a href="/api/export/waste/excel" class="btn" style="background:#1E8A5C; color:#fff; text-decoration:none; padding:7px 12px; font-size:12px; border-radius:8px;">
+            📊 Export Excel (มีรูป)
+          </a>
+          <a href="/api/export/waste/pdf" target="_blank" class="btn" style="background:#1B3070; color:#fff; text-decoration:none; padding:7px 12px; font-size:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
+            📄 Export PDF
+          </a>
+          <a href="/api/export/waste/print" target="_blank" class="btn" style="background:#2F5D9E; color:#fff; text-decoration:none; padding:7px 12px; font-size:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
+            🖨️ พิมพ์รายงาน
+          </a>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:#fff;" id="adminAvatar">
+              A
+            </div>
+            <div style="line-height:1.2; text-align:left;">
+              <div style="font-size:13px; font-weight:600; color:#fff;" id="adminName">ผู้ดูแลระบบ</div>
+              <div style="font-size:11px; color:#A3BBEB;">ADMINISTRATOR</div>
+            </div>
+          </div>
+          <button onclick="API.logout()" class="btn" style="background:rgba(255,255,255,0.12); color:#fff; padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
+            ออกจากระบบ
+          </button>
+        </div>
+        <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(30,158,106,0.2); border:1px solid rgba(95,211,165,0.35); color:#79F0C2; padding:5px 12px; border-radius:999px; font-size:12px; font-weight:500;">
+          <span style="width:7px; height:7px; border-radius:50%; background:#5FD3A5;"></span>
+          <span>PostgreSQL: Connected</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Quick Stats Bar (ตามแบบ 100%) -->
+    <div class="quick-stats" id="quickStats">
+      <div class="stat-node">
+        <div class="s-val" id="qsTransport">-</div>
+        <div class="s-lbl">เบิก-จ่ายวัสดุ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsWaste">-</div>
+        <div class="s-lbl">เที่ยวขนย้ายขยะ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsRoute">-</div>
+        <div class="s-lbl">แผนเดินรถ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsChecklist">-</div>
+        <div class="s-lbl">เช็กลิสต์ตรวจไซต์</div>
+      </div>
+    </div>
+
+    <!-- System Cards Grid (ตามแบบ 100%) -->
+    <div class="grid">
+
+      <!-- 1. ติดตามขนส่งวัสดุภายในไซต์ -->
+      <a class="card" href="/transport" style="--accent:#B36B12;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+        </div>
+        <h2>
+          <span>ติดตามขนส่งวัสดุภายในไซต์</span>
+          <span class="card-badge" id="bTransport">...</span>
+        </h2>
+        <p>ดูสถานะการเบิก-จ่ายวัสดุแบบเรียลไทม์ ผ่านกราฟและตารางสรุปข้อมูล</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 2. ติดตามขยะภายในไซต์ -->
+      <a class="card" href="/waste" style="--accent:#2F6F62;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        </div>
+        <h2>
+          <span>ติดตามขยะภายในไซต์</span>
+          <span class="card-badge" id="bWaste">...</span>
+        </h2>
+        <p>บันทึกการขนย้ายขยะ สรุปปริมาณคิว (m³) และค่าใช้จ่ายรายโครงการ</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 3. ระบบแผนการเดินรถ -->
+      <a class="card" href="/route" style="--accent:#2F5D9E;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M1 6h13v10H1zM14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        </div>
+        <h2>
+          <span>ระบบแผนการเดินรถ</span>
+          <span class="card-badge" id="bRoute">...</span>
+        </h2>
+        <p>ขอจองรถ ขอด่วน หรือยกเลิก พร้อมติดตามตารางการจัดส่งรายวัน</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 4. เช็กลิสต์ตรวจพื้นที่ประจำวัน -->
+      <a class="card" href="/checklist" style="--accent:#A8462F;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/></svg>
+        </div>
+        <h2>
+          <span>เช็กลิสต์ตรวจพื้นที่ประจำวัน</span>
+          <span class="card-badge" id="bChecklist">...</span>
+        </h2>
+        <p>ตรวจพื้นที่ก่อสร้างรายวัน บันทึกข้อบกพร่อง และดูรายงานสรุป</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+    </div>
+  </main>
+
+  <!-- Modal: จัดการผู้ใช้งาน -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>จัดการผู้ใช้งานระบบ (User Management)</h3>
+        <button class="modal-close" onclick="closeUserModal()">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size:14px; margin-bottom:10px; color:var(--ink);">+ เพิ่มผู้ใช้งานใหม่</h4>
+        <form onsubmit="handleCreateUser(event)" style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end;">
+          <div class="form-group" style="margin:0;">
+            <label>Username</label>
+            <input type="text" id="nu_username" required placeholder="foreman1">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>ชื่อ-นามสกุล</label>
+            <input type="text" id="nu_fullname" required placeholder="สมชาย มั่นคง">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>รหัสผ่าน</label>
+            <input type="password" id="nu_password" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary" style="height:42px; background:var(--ink);">+ เพิ่ม</button>
+        </form>
+      </div>
+
+      <h4 style="font-size:14px; margin-bottom:8px; color:var(--ink);">รายชื่อผู้ใช้ปัจจุบันใน PostgreSQL</h4>
+      <div style="max-height: 240px; overflow-y: auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:8px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px;">ID</th>
+              <th style="text-align:left; padding:8px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px;">Username</th>
+              <th style="text-align:left; padding:8px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px;">ชื่อ-นามสกุล</th>
+              <th style="text-align:left; padding:8px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px;">สิทธิ์</th>
+              <th style="text-align:center; padding:8px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px;">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeUserModal()">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Site Management Hub &bull; Siphya Group &bull; Admin Console &bull; PostgreSQL Edition
+  </footer>
+
+  <div id="hubToast"></div>
+
+  <script src="/js/api-client.js"></script>
+  <script>
+    let currentUser = API.getUser();
+    if (!currentUser || currentUser.role !== 'admin') {
+      currentUser = { username: 'admin', full_name: 'ผู้ดูแลระบบสูงสุด (Admin)', role: 'admin' };
+      API.setUser(currentUser);
+    }
+    document.getElementById('adminName').textContent = currentUser.full_name;
+    document.getElementById('adminAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+
+    async function loadHubSummary() {
+      try {
+        const res = await API.get('/api/hub/summary');
+        if (res.ok && res.data) {
+          const sys = res.data.systems;
+          document.getElementById('qsTransport').textContent = sys.transport.total.toLocaleString();
+          document.getElementById('qsWaste').textContent = sys.waste.total.toLocaleString();
+          document.getElementById('qsRoute').textContent = sys.route.total.toLocaleString();
+          document.getElementById('qsChecklist').textContent = sys.checklist.total.toLocaleString();
+
+          document.getElementById('bTransport').textContent = sys.transport.badge;
+          document.getElementById('bWaste').textContent = sys.waste.badge;
+          document.getElementById('bRoute').textContent = sys.route.badge;
+          document.getElementById('bChecklist').textContent = sys.checklist.badge;
+        }
+      } catch (err) {
+        console.error('Failed to load hub summary:', err);
+      }
+    }
+
+    // Modal User Management
+    async function openUserModal() {
+      document.getElementById('userModal').classList.add('open');
+      loadUsersList();
+    }
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('open');
+    }
+
+    async function loadUsersList() {
+      try {
+        const res = await API.get('/api/auth/users');
+        if (res.ok) {
+          document.getElementById('userTableBody').innerHTML = res.users.map(u => `
+            <tr>
+              <td style="padding:10px 8px; border-bottom:1px solid var(--line-soft);">${u.id}</td>
+              <td style="padding:10px 8px; border-bottom:1px solid var(--line-soft);"><strong>${u.username}</strong></td>
+              <td style="padding:10px 8px; border-bottom:1px solid var(--line-soft);">${u.full_name}</td>
+              <td style="padding:10px 8px; border-bottom:1px solid var(--line-soft);"><span class="badge" style="background:${u.role === 'admin' ? '#FDECEC' : '#E3F5EC'}; color:${u.role === 'admin' ? '#C62828' : '#1E9E6A'};">${u.role.toUpperCase()}</span></td>
+              <td style="padding:10px 8px; border-bottom:1px solid var(--line-soft); text-align:center;">
+                ${u.id !== currentUser.id ? `<button class="btn" style="background:#FDECEC; color:#C62828; padding:3px 8px; font-size:11px; border-radius:4px;" onclick="deleteUser(${u.id}, '${u.username}')">ลบ</button>` : '<span style="color:var(--faint); font-size:11px;">บัญชีปัจจุบัน</span>'}
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        hubToast('โหลดรายชื่อผู้ใช้ไม่สำเร็จ');
+      }
+    }
+
+    async function handleCreateUser(e) {
+      e.preventDefault();
+      try {
+        const payload = {
+          username: document.getElementById('nu_username').value,
+          full_name: document.getElementById('nu_fullname').value,
+          password: document.getElementById('nu_password').value,
+          role: 'staff'
+        };
+        const res = await API.post('/api/auth/users', payload);
+        if (res.ok) {
+          hubToast('เพิ่มผู้ใช้งานสำเร็จแล้ว!');
+          document.getElementById('nu_username').value = '';
+          document.getElementById('nu_fullname').value = '';
+          document.getElementById('nu_password').value = '';
+          loadUsersList();
+        }
+      } catch (err) {
+        hubToast('เพิ่มไม่สำเร็จ: ' + err.message);
+      }
+    }
+
+    async function deleteUser(id, username) {
+      if (!confirm(`คุณต้องการลบผู้ใช้งาน "${username}" หรือไม่?`)) return;
+      try {
+        const res = await API.request(`/api/auth/users/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          hubToast('ลบผู้ใช้สำเร็จ');
+          loadUsersList();
+        }
+      } catch (err) {
+        hubToast('ลบไม่สำเร็จ: ' + err.message);
+      }
+    }
+
+    loadHubSummary();
+  </script>
+</body>
+</html>

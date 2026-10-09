@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>ระบบแผนการเดินรถ - PostgreSQL</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    body { padding: 68px 22px 60px; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .topbar .actions { display: flex; gap: 8px; }
+    .topbar button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 16px; border: none; border-radius: 10px; background: var(--field); color: var(--ink); cursor: pointer; }
+    .topbar button.primary { background: #2F5D9E; color: #fff; }
+
+    .filters { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+    .filters .field { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+    .filters label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .filters select, .filters input { font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); }
+
+    .data-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
+    .table-scroll { overflow-x: auto; border-radius: 10px; max-height: 520px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+    table.data th { position: sticky; top: 0; background: #2F5D9E; text-align: left; color: #fff; font-weight: 500; font-size: 12.5px; padding: 11px 14px; }
+    table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+    table.data tbody tr:nth-child(even) { background: var(--paper); }
+  </style>
+</head>
+<body>
+  <a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="actions">
+        <button onclick="loadRouteData()">↻ Refresh</button>
+        <button class="primary" onclick="openAddRouteModal()">+ ขอจองรถ / แผนเดินรถ</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div id="routeStatusLabel" style="font-size:13px; font-weight:600; color:#2F5D9E;">กำลังโหลดข้อมูล...</div>
+        <div id="userNavBlock"></div>
+      </div>
+    </div>
+
+    <div class="tag-header" style="background: linear-gradient(135deg, #1B3563 0%, #2F5D9E 100%); border-bottom-color: #79A7F0;">
+      <div class="header">
+        <div class="left">
+          <div class="logo">TR</div>
+          <div>
+            <div class="eyebrow" style="color: #A9CAFF;">VEHICLE TRANSPORT SCHEDULE — LIVE (POSTGRESQL)</div>
+            <div class="title">ระบบแผนการเดินรถและการขนส่ง</div>
+          </div>
+        </div>
+        <div class="right">
+          <div class="brand-name">SIPHYA CONSTRUCTION</div>
+          <div class="brand-sub" style="color: #A9CAFF;">FLEET &amp; LOGISTICS PLANNING</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label>ประเภทคำขอ</label>
+        <select id="r_type" onchange="loadRouteData()">
+          <option value="">ทั้งหมด</option>
+          <option value="ขอจองรถ">ขอจองรถ</option>
+          <option value="ขอด่วน">ขอด่วน</option>
+          <option value="ยกเลิก">ยกเลิก</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1;">
+        <label>ค้นหา (ต้นทาง / ปลายทาง / ผู้ขอ / รายการ)</label>
+        <input type="text" id="r_search" placeholder="พิมพ์เพื่อค้นหา..." oninput="loadRouteData()">
+      </div>
+    </div>
+
+    <div class="data-card">
+      <div class="table-scroll">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>ประเภท</th>
+              <th>ต้นทาง</th>
+              <th>ปลายทาง</th>
+              <th>ประเภทรถ</th>
+              <th>เวลารับของ</th>
+              <th>เวลาส่งของ</th>
+              <th>รายการสิ่งของ</th>
+              <th>แผนกผู้ส่ง</th>
+              <th>ผู้ขอจอง</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="routeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal ขอจองรถ -->
+  <div class="modal-overlay" id="addRouteModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>แบบฟอร์มขอจองรถขนส่ง</h3>
+        <button class="modal-close" onclick="closeAddRouteModal()">&times;</button>
+      </div>
+      <form onsubmit="submitRouteForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ประเภทคำขอ *</label>
+            <select id="mr_type">
+              <option value="ขอจองรถ">ขอจองรถ (ปกติ)</option>
+              <option value="ขอด่วน">ขอด่วน (เร่งด่วน)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ประเภทรถ</label>
+            <select id="mr_truck">
+              <option value="4 ล้อกระบะ">4 ล้อกระบะ</option>
+              <option value="6 ล้อ">6 ล้อ</option>
+              <option value="6 ล้อติดเครน">6 ล้อติดเครน</option>
+              <option value="10 ล้อ">10 ล้อ</option>
+              <option value="เทรลเลอร์">เทรลเลอร์</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ต้นทาง *</label>
+            <input type="text" id="mr_origin" required placeholder="เช่น คลังหลัก, ไซต์ A">
+          </div>
+          <div class="form-group">
+            <label>ปลายทาง *</label>
+            <input type="text" id="mr_dest" required placeholder="เช่น ไซต์ Origin Thonglor">
+          </div>
+          <div class="form-group">
+            <label>เวลารับของ</label>
+            <input type="datetime-local" id="mr_pickup">
+          </div>
+          <div class="form-group">
+            <label>เวลาส่งของ</label>
+            <input type="datetime-local" id="mr_dropoff">
+          </div>
+          <div class="form-group full">
+            <label>รายการสิ่งของที่ขนส่ง *</label>
+            <textarea id="mr_items" rows="2" required placeholder="ระบุรายการและปริมาณคร่าวๆ"></textarea>
+          </div>
+          <div class="form-group">
+            <label>แผนกผู้ส่ง</label>
+            <input type="text" id="mr_dept" placeholder="เช่น ฝ่ายจัดซื้อ / สโตร์">
+          </div>
+          <div class="form-group">
+            <label>ผู้ขอจอง *</label>
+            <input type="text" id="mr_req" required placeholder="ชื่อ-นามสกุล">
+          </div>
+          <div class="form-group full">
+            <label>หมายเหตุ</label>
+            <textarea id="mr_note" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddRouteModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" style="background:#2F5D9E;">ส่งคำขอจองรถ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api-client.js"></script>
+  <script>
+    async function loadRouteData() {
+      try {
+        const type = document.getElementById('r_type').value;
+        const search = document.getElementById('r_search').value;
+        const res = await API.get('/api/route/logs', { doc_type: type, search: search });
+        if (res.ok) {
+          document.getElementById('routeStatusLabel').textContent = `ทั้งหมด ${res.result.rows.length} รายการ`;
+          document.getElementById('routeTableBody').innerHTML = res.result.rows.map(r => `
+            <tr>
+              <td><span class="badge" style="background:${r.doc_type === 'ขอด่วน' ? '#C6282822' : '#2F5D9E22'};color:${r.doc_type === 'ขอด่วน' ? '#C62828' : '#2F5D9E'};">${r.doc_type}</span></td>
+              <td><strong>${r.origin || '-'}</strong></td>
+              <td><strong>${r.destination || '-'}</strong></td>
+              <td>${r.truck_type || '-'}</td>
+              <td>${r.pickup_schedule || '-'}</td>
+              <td>${r.dropoff_schedule || '-'}</td>
+              <td>${r.item_list || '-'}</td>
+              <td>${r.sender_dept || '-'}</td>
+              <td>${r.requester || '-'}</td>
+              <td>${r.note || '-'}</td>
+            </tr>
+          `).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;">ไม่มีข้อมูล</td></tr>';
+        }
+      } catch (err) {
+        hubToast('เกิดข้อผิดพลาด: ' + err.message);
+      }
+    }
+
+    function openAddRouteModal() { document.getElementById('addRouteModal').classList.add('open'); }
+    function closeAddRouteModal() { document.getElementById('addRouteModal').classList.remove('open'); }
+
+    async function submitRouteForm(e) {
+      e.preventDefault();
+      try {
+        const payload = {
+          doc_type: document.getElementById('mr_type').value,
+          truck_type: document.getElementById('mr_truck').value,
+          origin: document.getElementById('mr_origin').value,
+          destination: document.getElementById('mr_dest').value,
+          pickup_schedule: document.getElementById('mr_pickup').value || null,
+          dropoff_schedule: document.getElementById('mr_dropoff').value || null,
+          item_list: document.getElementById('mr_items').value,
+          sender_dept: document.getElementById('mr_dept').value,
+          requester: document.getElementById('mr_req').value,
+          note: document.getElementById('mr_note').value
+        };
+        const res = await API.post('/api/route/add', payload);
+        if (res.ok) {
+          hubToast('บันทึกคำขอจองรถสำเร็จ!');
+          closeAddRouteModal();
+          loadRouteData();
+        }
+      } catch (err) {
+        hubToast('บันทึกไม่สำเร็จ: ' + err.message);
+      }
+    }
+
+    loadRouteData();
+  </script>
+</body>
+</html>

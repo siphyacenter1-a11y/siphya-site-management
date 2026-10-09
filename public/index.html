@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ศูนย์รวมระบบบริหารจัดการหน้างาน - Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    header {
+      background: linear-gradient(145deg, #0B1F4B 0%, #17326E 100%);
+      color: #fff;
+      padding: 48px 24px 88px;
+      border-bottom: 4px solid var(--amber);
+      box-shadow: 0 4px 20px rgba(11, 31, 75, 0.15);
+    }
+    .header-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    header h1 {
+      font-size: clamp(24px, 4vw, 34px);
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    header p {
+      color: #C4CCD6;
+      font-size: 15px;
+      margin-top: 8px;
+      font-weight: 300;
+      max-width: 60ch;
+    }
+    .db-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(30, 158, 106, 0.2);
+      border: 1px solid rgba(95, 211, 165, 0.35);
+      color: #79F0C2;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .db-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5FD3A5;
+      box-shadow: 0 0 0 3px rgba(95, 211, 165, 0.25);
+    }
+
+    main {
+      max-width: 1040px;
+      margin: -50px auto 0;
+      padding: 0 20px 48px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--accent);
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: var(--ink);
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      column-gap: 18px;
+      row-gap: 6px;
+      box-shadow: 0 2px 8px rgba(22, 34, 58, 0.05);
+      transition: transform .2s ease, box-shadow .2s ease;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 24px rgba(22, 34, 58, 0.12);
+    }
+    .card .icon {
+      grid-row: 1 / span 3;
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .card .icon svg {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .card h2 {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.35;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-badge {
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--field);
+      color: var(--muted);
+    }
+    .card p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .card .enter {
+      margin-top: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card .enter svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform .15s ease;
+    }
+    .card:hover .enter svg {
+      transform: translateX(4px);
+    }
+
+    /* System Stats Quick Bar */
+    .quick-stats {
+      background: #FFFFFF;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .stat-node {
+      text-align: center;
+    }
+    .stat-node .s-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .stat-node .s-lbl {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px 20px 40px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; gap: 14px; }
+      .card { padding: 18px; grid-template-columns: 52px 1fr; }
+      .card .icon { width: 52px; height: 52px; }
+      header { padding: 32px 20px 72px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>ศูนย์รวมระบบบริหารจัดการหน้างาน</h1>
+        <p>เชื่อมต่อฐานข้อมูล PostgreSQL โดยตรง — ข้อมูลแบบเรียลไทม์ แม่นยำ และปลอดภัย</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+        <div id="userNavBlock"></div>
+        <div class="db-badge">
+          <span class="db-dot"></span>
+          <span id="dbStatus">PostgreSQL: Connected</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Quick Stats Bar -->
+    <div class="quick-stats" id="quickStats">
+      <div class="stat-node">
+        <div class="s-val" id="qsTransport">-</div>
+        <div class="s-lbl">เบิก-จ่ายวัสดุ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsWaste">-</div>
+        <div class="s-lbl">เที่ยวขนย้ายขยะ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsRoute">-</div>
+        <div class="s-lbl">แผนเดินรถ</div>
+      </div>
+      <div class="stat-node">
+        <div class="s-val" id="qsChecklist">-</div>
+        <div class="s-lbl">เช็กลิสต์ตรวจไซต์</div>
+      </div>
+    </div>
+
+    <!-- System Cards Grid -->
+    <div class="grid">
+
+      <!-- 1. ติดตามขนส่งวัสดุภายในไซต์ -->
+      <a class="card" href="/transport" style="--accent:#B36B12;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+        </div>
+        <h2>
+          <span>ติดตามขนส่งวัสดุภายในไซต์</span>
+          <span class="card-badge" id="bTransport">...</span>
+        </h2>
+        <p>ดูสถานะการเบิก-จ่ายวัสดุแบบเรียลไทม์ ผ่านกราฟและตารางสรุปข้อมูล</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 2. ติดตามขยะภายในไซต์ -->
+      <a class="card" href="/waste" style="--accent:#2F6F62;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        </div>
+        <h2>
+          <span>ติดตามขยะภายในไซต์</span>
+          <span class="card-badge" id="bWaste">...</span>
+        </h2>
+        <p>บันทึกการขนย้ายขยะ สรุปปริมาณคิว (m³) และค่าใช้จ่ายรายโครงการ</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 3. ระบบแผนการเดินรถ -->
+      <a class="card" href="/route" style="--accent:#2F5D9E;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M1 6h13v10H1zM14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        </div>
+        <h2>
+          <span>ระบบแผนการเดินรถ</span>
+          <span class="card-badge" id="bRoute">...</span>
+        </h2>
+        <p>ขอจองรถ ขอด่วน หรือยกเลิก พร้อมติดตามตารางการจัดส่งรายวัน</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <!-- 4. เช็กลิสต์ตรวจพื้นที่ประจำวัน -->
+      <a class="card" href="/checklist" style="--accent:#A8462F;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/></svg>
+        </div>
+        <h2>
+          <span>เช็กลิสต์ตรวจพื้นที่ประจำวัน</span>
+          <span class="card-badge" id="bChecklist">...</span>
+        </h2>
+        <p>ตรวจพื้นที่ก่อสร้างรายวัน บันทึกข้อบกพร่อง และดูรายงานสรุป</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
+    </div>
+  </main>
+
+  <footer>
+    Site Management Hub &bull; Siphya Group &bull; Powered by Node.js &amp; PostgreSQL
+  </footer>
+
+  <script src="/js/api-client.js"></script>
+  <script>
+    async function loadHubSummary() {
+      try {
+        const res = await API.get('/api/hub/summary');
+        if (res.ok && res.data) {
+          const sys = res.data.systems;
+          document.getElementById('qsTransport').textContent = sys.transport.total.toLocaleString();
+          document.getElementById('qsWaste').textContent = sys.waste.total.toLocaleString();
+          document.getElementById('qsRoute').textContent = sys.route.total.toLocaleString();
+          document.getElementById('qsChecklist').textContent = sys.checklist.total.toLocaleString();
+
+          document.getElementById('bTransport').textContent = sys.transport.badge;
+          document.getElementById('bWaste').textContent = sys.waste.badge;
+          document.getElementById('bRoute').textContent = sys.route.badge;
+          document.getElementById('bChecklist').textContent = sys.checklist.badge;
+        }
+      } catch (err) {
+        console.error('Failed to load hub summary:', err);
+        document.getElementById('dbStatus').textContent = 'PostgreSQL: Error connecting';
+        document.getElementById('dbStatus').parentElement.style.background = 'rgba(198, 40, 40, 0.2)';
+      }
+    }
+
+    loadHubSummary();
+  </script>
+</body>
+</html>

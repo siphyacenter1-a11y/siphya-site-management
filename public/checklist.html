@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>เช็กลิสต์ตรวจพื้นที่ประจำวัน - PostgreSQL</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    body { padding: 68px 22px 60px; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .topbar .actions { display: flex; gap: 8px; }
+    .topbar button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 16px; border: none; border-radius: 10px; background: var(--field); color: var(--ink); cursor: pointer; }
+    .topbar button.primary { background: #A8462F; color: #fff; }
+
+    .data-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
+    .table-scroll { overflow-x: auto; border-radius: 10px; max-height: 520px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+    table.data th { position: sticky; top: 0; background: #A8462F; text-align: left; color: #fff; font-weight: 500; font-size: 12.5px; padding: 11px 14px; }
+    table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+    table.data tbody tr:nth-child(even) { background: var(--paper); }
+  </style>
+</head>
+<body>
+  <a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="actions">
+        <button onclick="loadChecklistData()">↻ Refresh</button>
+        <button class="primary" onclick="openAddChecklistModal()">+ บันทึกผลการตรวจไซต์</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div id="checklistStatus" style="font-size:13px; font-weight:600; color:#A8462F;">กำลังโหลดข้อมูล...</div>
+        <div id="userNavBlock"></div>
+      </div>
+    </div>
+
+    <div class="tag-header" style="background: linear-gradient(135deg, #612214 0%, #A8462F 100%); border-bottom-color: #F4A879;">
+      <div class="header">
+        <div class="left">
+          <div class="logo">CL</div>
+          <div>
+            <div class="eyebrow" style="color: #FFC9B8;">DAILY SITE SUPERVISOR CHECKLIST — LIVE (POSTGRESQL)</div>
+            <div class="title">เช็กลิสต์ตรวจพื้นที่ก่อสร้างประจำวัน</div>
+          </div>
+        </div>
+        <div class="right">
+          <div class="brand-name">SIPHYA CONSTRUCTION</div>
+          <div class="brand-sub" style="color: #FFC9B8;">SAFETY &amp; QUALITY SUPERVISION</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-card">
+      <div class="table-scroll">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>วันที่ตรวจ</th>
+              <th>ไซต์งาน</th>
+              <th>ผู้ตรวจ</th>
+              <th>เวลาบันทึก</th>
+              <th>ผู้ลงนาม 1</th>
+              <th>ผู้ลงนาม 2</th>
+              <th>ผู้ลงนาม 3</th>
+            </tr>
+          </thead>
+          <tbody id="checklistTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal เช็กลิสต์ -->
+  <div class="modal-overlay" id="addChecklistModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>บันทึกผลการตรวจไซต์งานประจำวัน</h3>
+        <button class="modal-close" onclick="closeAddChecklistModal()">&times;</button>
+      </div>
+      <form onsubmit="submitChecklistForm(event)">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>ชื่อโครงการ / ไซต์งาน *</label>
+            <input type="text" id="c_site" required placeholder="เช่น Origin Thonglor World">
+          </div>
+          <div class="form-group">
+            <label>วันที่ตรวจ *</label>
+            <input type="date" id="c_date" required>
+          </div>
+          <div class="form-group">
+            <label>ผู้ตรวจสอบ *</label>
+            <input type="text" id="c_rec" required placeholder="ชื่อโฟร์แมน / ผู้ตรวจ">
+          </div>
+          <div class="form-group">
+            <label>ผู้ลงนามรับทราบ 1</label>
+            <input type="text" id="c_s1" placeholder="วิศวกรประจำไซต์">
+          </div>
+          <div class="form-group">
+            <label>ผู้ลงนามรับทราบ 2</label>
+            <input type="text" id="c_s2" placeholder="จป.วิชาชีพ / Safety">
+          </div>
+          <div class="form-group full">
+            <label>ผู้ลงนามรับทราบ 3</label>
+            <input type="text" id="c_s3" placeholder="ผู้จัดการโครงการ">
+          </div>
+          <div class="form-group full">
+            <label>สรุปผลการตรวจสอบ / ข้อควรแก้ไข</label>
+            <textarea id="c_note" rows="3" placeholder="ระบุสภาพพื้นที่ ความปลอดภัย หรือสิ่งแวดล้อม"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddChecklistModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" style="background:#A8462F;">บันทึกรายงาน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api-client.js"></script>
+  <script>
+    async function loadChecklistData() {
+      try {
+        const res = await API.get('/api/checklist/logs');
+        if (res.ok) {
+          document.getElementById('checklistStatus').textContent = `ทั้งหมด ${res.result.rows.length} บันทึก`;
+          document.getElementById('checklistTableBody').innerHTML = res.result.rows.map(r => `
+            <tr>
+              <td><strong>${r.inspection_date || '-'}</strong></td>
+              <td>${r.site_name || '-'}</td>
+              <td>${r.recorded_by || '-'}</td>
+              <td>${r.submission_time || '-'}</td>
+              <td>${r.signer1 || '-'}</td>
+              <td>${r.signer2 || '-'}</td>
+              <td>${r.signer3 || '-'}</td>
+            </tr>
+          `).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;">ไม่มีข้อมูล</td></tr>';
+        }
+      } catch (err) {
+        hubToast('เกิดข้อผิดพลาด: ' + err.message);
+      }
+    }
+
+    function openAddChecklistModal() {
+      document.getElementById('c_date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('addChecklistModal').classList.add('open');
+    }
+    function closeAddChecklistModal() { document.getElementById('addChecklistModal').classList.remove('open'); }
+
+    async function submitChecklistForm(e) {
+      e.preventDefault();
+      try {
+        const payload = {
+          site_name: document.getElementById('c_site').value,
+          inspection_date: document.getElementById('c_date').value,
+          recorded_by: document.getElementById('c_rec').value,
+          signer1: document.getElementById('c_s1').value,
+          signer2: document.getElementById('c_s2').value,
+          signer3: document.getElementById('c_s3').value,
+          checklist_data: { note: document.getElementById('c_note').value }
+        };
+        const res = await API.post('/api/checklist/add', payload);
+        if (res.ok) {
+          hubToast('บันทึกผลการตรวจไซต์สำเร็จ!');
+          closeAddChecklistModal();
+          loadChecklistData();
+        }
+      } catch (err) {
+        hubToast('บันทึกไม่สำเร็จ: ' + err.message);
+      }
+    }
+
+    loadChecklistData();
+  </script>
+</body>
+</html>

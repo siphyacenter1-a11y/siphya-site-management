@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบติดตามขยะภายในไซต์ - SIPHYA CONSTRUCTION</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    * { box-sizing: border-box; font-family: 'Prompt', 'Sarabun', sans-serif; }
+    body { background-color: #ebede8; color: #333; margin: 0; padding: 25px 15px 60px; }
+    .container { max-width: 860px; margin: 0 auto; }
+
+    /* Top User Bar */
+    .user-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid #dce1d8;
+      border-radius: 12px;
+      padding: 10px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .user-top-bar .live-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #2d6a4f;
+      font-weight: 600;
+      font-size: 12.5px;
+    }
+    .user-top-bar .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1E9E6A;
+      box-shadow: 0 0 0 3px rgba(30,158,106,0.2);
+    }
+
+    .header-title { text-align: center; margin-bottom: 22px; }
+    .header-title .sub-tag { font-size: 11px; letter-spacing: 2px; color: #6b7c65; font-weight: 700; text-transform: uppercase; }
+    .header-title h1 { color: #1e3a29; font-size: 26px; margin: 4px 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
+    .header-title p { color: #737f70; font-size: 13px; margin: 0; }
+
+    .nav-tabs { display: flex; gap: 12px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 13px; border: 1.5px solid #d0d7cd; background: #ffffff; color: #3b4837; font-size: 14.5px; font-weight: 700; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .tab-btn.active { background: #2d6a4f; color: white; border-color: #2d6a4f; box-shadow: 0 4px 12px rgba(45,106,79,0.25); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card { background: #f7f8f5; border: 1px solid #dce1d8; border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    .card-title { font-size: 15px; font-weight: 700; color: #1e3a29; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .card-title .badge { background: #2d6a4f; color: white; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 12.5px; font-weight: 700; color: #2d3748; margin-bottom: 5px; display: block; }
+    label .req { color: #e53e3e; }
+
+    input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, textarea {
+      width: 100%; padding: 9px 12px; background: #f0f2ed; border: 1px solid #d0d7cd; border-radius: 8px; font-size: 13.5px; color: #2d3748; outline: none;
+    }
+    input[type="date"], input[type="month"] { font-family: inherit; min-height: 38px; }
+    input:focus, select:focus, textarea:focus { border-color: #2d6a4f; background: #ffffff; }
+
+    .row { display: flex; gap: 12px; }
+    .col { flex: 1; }
+
+    .custom-time-wrapper { position: relative; width: 100%; }
+    .custom-time-input {
+      width: 100%; padding: 9px 35px 9px 12px;
+      background: #f0f2ed; border: 1px solid #d0d7cd;
+      border-radius: 8px; font-size: 13.5px; color: #2d3748; cursor: pointer;
+    }
+    .custom-time-icon {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%); pointer-events: none;
+      font-size: 14px; color: #555;
+    }
+
+    .time-picker-popover {
+      display: none; position: absolute; top: 105%; left: 0;
+      z-index: 999; background: #ffffff; border: 1px solid #cbd5e0;
+      border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      padding: 8px; gap: 5px; align-items: center;
+    }
+    .time-picker-popover.open { display: flex; }
+    .time-select-scroll {
+      height: 120px; overflow-y: auto; width: 60px;
+      border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc;
+    }
+    .time-option {
+      padding: 6px 0; text-align: center; font-size: 13px;
+      font-weight: 600; cursor: pointer; color: #2d3748;
+    }
+    .time-option:hover, .time-option.selected { background: #2d6a4f; color: white; }
+
+    .btn-action { background: #e2ebd8; color: #2d6a4f; border: 1px solid #b8caa7; padding: 7px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12.5px; white-space: nowrap; }
+    .btn-action:hover { background: #d3e2c6; }
+
+    .progress-multi { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 12px; background: #e2e8f0; }
+
+    .legend-box { display: flex; justify-content: space-between; font-size: 11.5px; margin-top: 8px; color: #4a5568; font-weight: 600; flex-wrap: wrap; gap: 4px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+    .photo-upload-box { border: 1.5px dashed #2d6a4f; background: #f0f4ee; border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; min-height: 95px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .photo-upload-box:hover { background: #e4ebe1; }
+    .photo-upload-box input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; top:0; left:0; }
+    .photo-upload-box img { max-width: 100%; max-height: 80px; border-radius: 6px; display: none; object-fit: cover; border: 1px solid #CCD3E0; }
+    .photo-upload-box .compressing { display: none; font-size: 11px; color: #2d6a4f; font-weight: 700; margin-top: 4px; }
+
+    .btn-submit { background: #2d6a4f; color: white; border: none; width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(45,106,79,0.25); transition: background .15s ease; }
+    .btn-submit:hover { background: #1b4332; }
+    .btn-submit:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    .draft-banner { background: #fff8e1; border: 1px solid #f0d78c; color: #7a5c00; font-size: 12.5px; font-weight: 600; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
+    .draft-banner button { background: transparent; border: 1px solid #b8933f; color: #7a5c00; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+    /* Dashboard Export Strip */
+    .export-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #FFFFFF;
+      border: 1px solid #dce1d8;
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .export-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-export {
+      text-decoration: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .15s ease;
+      color: #fff;
+    }
+    .btn-excel { background: #1E8A5C; }
+    .btn-excel:hover { background: #166E49; }
+    .btn-pdf { background: #0B1F4B; }
+    .btn-pdf:hover { background: #152C63; }
+    .btn-print { background: #2F5D9E; }
+    .btn-print:hover { background: #23487A; }
+
+    .kpi-row { display: flex; gap: 12px; margin-bottom: 18px; }
+    .kpi-card { flex: 1; padding: 16px 20px; border-radius: 12px; color: white; position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    .kpi-card.green1 { background: #1b4332; }
+    .kpi-card.green2 { background: #2d6a4f; }
+    .kpi-card.orange { background: #c05621; }
+    .kpi-card .kpi-title { font-size: 12px; font-weight: 600; opacity: 0.9; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .kpi-card .kpi-val { font-size: 24px; font-weight: 700; }
+
+    .dash-group-box { background: #ffffff; border: 1px solid #dce1d8; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    .dash-group-header { font-size: 14px; font-weight: 700; color: #1e3a29; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+    table.dash-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.dash-table th { background: #f0f4ee; color: #2d6a4f; padding: 9px 8px; font-size: 11.5px; font-weight: 700; text-align: center; border-radius: 4px; }
+    table.dash-table td { padding: 9px 8px; text-align: center; color: #4a5568; border-bottom: 1px solid #f0f0f0; }
+    table.dash-table tr:hover td { background: #f8faf7; }
+
+    .photo-thumb-link {
+      display: inline-block;
+      margin: 0 2px;
+      font-size: 11.5px;
+      color: #2F5D9E;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .photo-thumb-link:hover { text-decoration: underline; }
+
+    .field-missing { border-color:#e53e3e !important; background:#fff5f5 !important; }
+    .photo-upload-box.field-missing { border:2px solid #e53e3e !important; background:#fff5f5 !important; }
+  </style>
+</head>
+<body>
+
+<a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+
+<div class="container">
+
+  <!-- Top User Navigation & Status Bar -->
+  <div class="user-top-bar">
+    <div class="live-tag">
+      <span class="live-dot"></span>
+      <span>SIPHYA SITE HUB &bull; PostgreSQL Live Database</span>
+    </div>
+    <div id="userNavBlock" style="display:flex; align-items:center; gap:10px;"></div>
+  </div>
+
+  <div class="header-title">
+    <div class="sub-tag">— SITE OPERATIONS —</div>
+    <h1>♻️ ระบบติดตามขยะภายในไซต์</h1>
+    <p>Waste Tracking System — บันทึกและติดตามข้อมูลการขนย้ายขยะภายในไซต์งาน</p>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" id="tabFormBtn" onclick="switchTab('form')">📝 บันทึกข้อมูลไซต์งาน</button>
+    <button class="tab-btn" id="tabDashBtn" onclick="switchTab('dash')">📊 Dashboard สรุปผล</button>
+  </div>
+
+  <!-- ================= TAB 1: FORM ================= -->
+  <div id="tabForm" class="tab-content active">
+
+    <div class="draft-banner" id="draftBanner">
+      <span>💾 พบข้อมูลที่กรอกค้างไว้ (อาจเน็ตหลุดตอนก่อนหน้า) ต้องการกู้คืนหรือไม่?</span>
+      <button type="button" onclick="clearDraft(); document.getElementById('draftBanner').style.display='none';">ทิ้งไป</button>
+    </div>
+
+    <form id="form">
+
+      <!-- หัวข้อที่ 1: สถานที่และเวลา -->
+      <div class="card">
+        <div class="card-title"><span class="badge">1</span> ข้อมูลสถานที่และเวลา</div>
+
+        <div class="form-group">
+          <label>โครงการ <span class="req">*</span></label>
+          <div style="display: flex; gap: 8px;">
+            <select id="project" style="flex:1;" required></select>
+            <button type="button" class="btn-action" onclick="addProject()">+ เพิ่มโครงการ</button>
+          </div>
+          <input type="text" id="newProject" placeholder="พิมพ์ชื่อโครงการใหม่..." style="margin-top: 6px; display:none;">
+        </div>
+
+        <div class="row">
+          <div class="col form-group">
+            <label>วันที่ (ตามบิล) <span class="req">*</span></label>
+            <input type="date" id="date" name="date" required>
+          </div>
+          <div class="col form-group">
+            <label>ชั้น / โซน <span class="req">*</span></label>
+            <input type="text" id="location" placeholder="เช่น ชั้น 3 หรือ โซน A" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col form-group">
+            <label>เวลาเข้า <span class="req">*</span></label>
+            <div class="custom-time-wrapper">
+              <input type="text" id="timeIn" class="custom-time-input" readonly placeholder="-- : --" required>
+              <span class="custom-time-icon">🕒</span>
+              <div class="time-picker-popover" id="popover-timeIn">
+                <div class="time-select-scroll" id="hours-timeIn"></div>
+                <strong style="font-size:16px; color:#2d6a4f;">:</strong>
+                <div class="time-select-scroll" id="mins-timeIn"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col form-group">
+            <label>เวลารถออก <span class="req">*</span></label>
+            <div class="custom-time-wrapper">
+              <input type="text" id="time" class="custom-time-input" readonly placeholder="-- : --" required>
+              <span class="custom-time-icon">🕒</span>
+              <div class="time-picker-popover" id="popover-time">
+                <div class="time-select-scroll" id="hours-time"></div>
+                <strong style="font-size:16px; color:#2d6a4f;">:</strong>
+                <div class="time-select-scroll" id="mins-time"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>ผู้บันทึกข้อมูล <span class="req">*</span></label>
+          <input type="text" id="recorder" placeholder="ระบุผู้ขนย้าย/ผู้บันทึก" required>
+        </div>
+      </div>
+
+      <!-- หัวข้อที่ 2: รายละเอียดการขนส่ง -->
+      <div class="card">
+        <div class="card-title"><span class="badge">2</span> รายละเอียดการขนส่ง</div>
+
+        <div class="row">
+          <div class="col form-group">
+            <label>เลขที่บิล <span class="req">*</span></label>
+            <input type="text" id="billNo" placeholder="ระบุเลขที่บิล" required>
+          </div>
+          <div class="col form-group">
+            <label>เลขทะเบียนรถ <span class="req">*</span></label>
+            <input type="text" id="plateNo" placeholder="ระบุทะเบียนรถ" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col form-group">
+            <label>ประเภทรถ <span class="req">*</span></label>
+            <select id="truckSelect">
+              <option value="6 ล้อเล็ก">🚚 6 ล้อเล็ก (3 คิว / 550 บาท)</option>
+              <option value="6 ล้อใหญ่">🚛 6 ล้อใหญ่ (6 คิว / 1,100 บาท)</option>
+              <option value="10 ล้อ">🚛 10 ล้อ (13.5 คิว / 2,500 บาท)</option>
+            </select>
+          </div>
+          <div class="col form-group">
+            <label>จำนวนเที่ยว <span class="req">*</span></label>
+            <input type="number" id="trips" value="1" readonly style="background-color: #e9ecef; cursor: not-allowed;">
+          </div>
+        </div>
+      </div>
+
+      <!-- หัวข้อที่ 3: สัดส่วนประเภทขยะ (%) -->
+      <div class="card">
+        <div class="card-title"><span class="badge">3</span> สัดส่วนประเภทขยะ (%)</div>
+        <div class="row">
+          <div class="col form-group">
+            <label><span style="color:#2d6a4f;">●</span> เศษคอนกรีต-ปูน</label>
+            <input type="number" id="wasteConcrete" value="25" min="0" max="100" oninput="updateProgressBar()">
+          </div>
+          <div class="col form-group">
+            <label><span style="color:#40916c;">●</span> เศษวัสดุก่อสร้าง</label>
+            <input type="number" id="wasteConstruction" value="25" min="0" max="100" oninput="updateProgressBar()">
+          </div>
+          <div class="col form-group">
+            <label><span style="color:#c05621;">●</span> วัสดุ Packing</label>
+            <input type="number" id="wastePacking" value="25" min="0" max="100" oninput="updateProgressBar()">
+          </div>
+          <div class="col form-group">
+            <label><span style="color:#3182ce;">●</span> งานระบบ</label>
+            <input type="number" id="wasteSystem" value="25" min="0" max="100" oninput="updateProgressBar()">
+          </div>
+        </div>
+
+        <div class="progress-multi">
+          <div id="barConc" style="background: #2d6a4f; width: 25%; transition: width 0.3s;"></div>
+          <div id="barConst" style="background: #40916c; width: 25%; transition: width 0.3s;"></div>
+          <div id="barPack" style="background: #c05621; width: 25%; transition: width 0.3s;"></div>
+          <div id="barSys" style="background: #3182ce; width: 25%; transition: width 0.3s;"></div>
+        </div>
+
+        <div class="legend-box">
+          <div class="legend-item"><span class="dot" style="background:#2d6a4f;"></span> คอนกรีต-ปูน <span id="txtConc">25%</span></div>
+          <div class="legend-item"><span class="dot" style="background:#40916c;"></span> ก่อสร้าง <span id="txtConst">25%</span></div>
+          <div class="legend-item"><span class="dot" style="background:#c05621;"></span> Packing <span id="txtPack">25%</span></div>
+          <div class="legend-item"><span class="dot" style="background:#3182ce;"></span> งานระบบ <span id="txtSys">25%</span></div>
+          <div>รวม: <span id="txtTotal">100%</span></div>
+        </div>
+      </div>
+
+      <!-- หัวข้อที่ 4: หลักฐานรูปภาพ -->
+      <div class="card">
+        <div class="card-title"><span class="badge">4</span> หลักฐานรูปภาพ <span style="color:#e53e3e;">*</span></div>
+        <div class="row">
+          <div class="col">
+            <div class="photo-upload-box">
+              <input type="file" id="photo1" accept="image/*" capture="environment" onchange="previewImg(this, 'p1', 'icon1')">
+              <div id="icon1"><span style="font-size:22px;">📷</span><div style="font-size:11px; font-weight:700; margin-top:3px;">1. รูปหน้ารถ (เห็นป้ายทะเบียน)</div></div>
+              <img id="p1" alt="หน้ารถ">
+              <div class="compressing" id="compressing1">⏳ กำลังย่อรูป...</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="photo-upload-box">
+              <input type="file" id="photo2" accept="image/*" capture="environment" onchange="previewImg(this, 'p2', 'icon2')">
+              <div id="icon2"><span style="font-size:22px;">🚚</span><div style="font-size:11px; font-weight:700; margin-top:3px;">2. รูปขยะบนรถ (มุมสูง)</div></div>
+              <img id="p2" alt="ขยะบนรถ">
+              <div class="compressing" id="compressing2">⏳ กำลังย่อรูป...</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="photo-upload-box">
+              <input type="file" id="photo3" accept="image/*" capture="environment" onchange="previewImg(this, 'p3', 'icon3')">
+              <div id="icon3"><span style="font-size:22px;">🔒</span><div style="font-size:11px; font-weight:700; margin-top:3px;">3. รูปก่อนคลุมผ้า</div></div>
+              <img id="p3" alt="ก่อนคลุมผ้า">
+              <div class="compressing" id="compressing3">⏳ กำลังย่อรูป...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label>หมายเหตุ</label>
+          <textarea id="note" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)..."></textarea>
+        </div>
+      </div>
+
+      <button type="submit" id="saveBtn" class="btn-submit">💾 บันทึกข้อมูลเข้า PostgreSQL</button>
+    </form>
+  </div>
+
+  <!-- ================= TAB 2: DASHBOARD ================= -->
+  <div id="tabDash" class="tab-content">
+
+    <!-- Export Actions Strip -->
+    <div class="export-strip">
+      <div style="font-size:13px; font-weight:700; color:#1e3a29;">
+        📑 ส่งออกรายงาน (Export Reports)
+      </div>
+      <div class="export-buttons">
+        <a href="/api/export/waste/excel" class="btn-export btn-excel">
+          📊 Export Excel
+        </a>
+        <a href="/api/export/waste/pdf" target="_blank" class="btn-export btn-pdf">
+          📄 Export PDF
+        </a>
+        <a href="/api/export/waste/print" target="_blank" class="btn-export btn-print">
+          🖨️ พิมพ์รายงานหน้างาน
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card">
+      <div class="row">
+        <div class="col form-group" style="margin:0;">
+          <label>🔍 กรองตามโครงการ:</label>
+          <select id="filterProject" onchange="filterDashboard()">
+            <option value="">-- แสดงทั้งหมด --</option>
+          </select>
+        </div>
+        <div class="col form-group" style="margin:0;">
+          <label>📅 กรองตามเดือน/ปี:</label>
+          <input type="month" id="filterMonth" onchange="filterDashboard()">
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi-card green1">
+        <div class="kpi-title">🚛 จำนวนเที่ยวรวม</div>
+        <div class="kpi-val" id="kpiTrips">0 เที่ยว</div>
+      </div>
+      <div class="kpi-card green2">
+        <div class="kpi-title">📦 ปริมาณขยะรวม</div>
+        <div class="kpi-val" id="kpiVol">0 คิว</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-title">💰 ค่าใช้จ่ายรวม</div>
+        <div class="kpi-val" id="kpiCost">0 บาท</div>
+      </div>
+    </div>
+
+    <!-- Grouped Records List Container -->
+    <div id="dashListContainer">
+      <div class="card" style="text-align:center; color:#718096; padding:30px;">⏳ กำลังโหลดข้อมูลจาก PostgreSQL...</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="/js/api-client.js"></script>
+<script>
+function $(id) { return document.getElementById(id); }
+
+let globalDashData = [];
+let isSubmitting = false;
+
+const DRAFT_KEY = 'waste_form_draft_v1';
+const DRAFT_FIELDS = ['project', 'date', 'location', 'billNo', 'plateNo', 'recorder', 'note', 'truckSelect', 'timeIn', 'time'];
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function todayYMD() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function saveDraft() {
+  try {
+    const draft = {};
+    DRAFT_FIELDS.forEach(id => {
+      if ($(id)) draft[id] = $(id).value;
+    });
+    draft.wasteConcrete = $('wasteConcrete') ? $('wasteConcrete').value : '';
+    draft.wasteConstruction = $('wasteConstruction') ? $('wasteConstruction').value : '';
+    draft.wastePacking = $('wastePacking') ? $('wastePacking').value : '';
+    draft.wasteSystem = $('wasteSystem') ? $('wasteSystem').value : '';
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch (e) {}
+}
+
+function hasDraft() {
+  try {
+    return !!localStorage.getItem(DRAFT_KEY);
+  } catch (e) {
+    return false;
+  }
+}
+
+function restoreDraft() {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+    const draft = JSON.parse(saved);
+    Object.keys(draft).forEach(key => {
+      if (key === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(draft[key] || '')) return;
+      if ($(key) && draft[key]) $(key).value = draft[key];
+    });
+    updateProgressBar();
+  } catch (e) {}
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch (e) {}
+}
+
+function compressImage(file, maxWidth, quality) {
+  maxWidth = maxWidth || 1280;
+  quality = quality || 0.75;
+  const TARGET_ASPECT = 733 / 550;
+
+  return new Promise((resolve) => {
+    if (!file) { resolve(''); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const srcW = img.width;
+          const srcH = img.height;
+          const srcAspect = srcW / srcH;
+
+          let cropW, cropH, cropX, cropY;
+          if (srcAspect > TARGET_ASPECT) {
+            cropH = srcH;
+            cropW = srcH * TARGET_ASPECT;
+            cropX = (srcW - cropW) / 2;
+            cropY = 0;
+          } else {
+            cropW = srcW;
+            cropH = srcW / TARGET_ASPECT;
+            cropX = 0;
+            cropY = (srcH - cropH) / 2;
+          }
+
+          const outW = Math.round(Math.min(maxWidth, cropW));
+          const outH = Math.round(outW / TARGET_ASPECT);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (err) {
+          resolve(e.target.result);
+        }
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+function setupCustomUserNav() {
+  const user = API.getUser();
+  const navContainer = $('userNavBlock');
+  if (!navContainer) return;
+
+  if (user) {
+    const isAdmin = user.role === 'admin';
+    navContainer.innerHTML = `
+      ${isAdmin ? `<a href="/admin" style="background:#F2B705; color:#0B1F4B; font-weight:700; text-decoration:none; padding:5px 12px; font-size:12px; border-radius:6px;">📊 แผงควบคุมแอดมิน</a>` : ''}
+      <span style="font-weight:600; color:#1e3a29;">👤 ${user.full_name || user.username} (${user.role})</span>
+      <button onclick="API.logout()" style="background:#eee; border:1px solid #ccc; color:#555; padding:4px 10px; font-size:11.5px; border-radius:6px; cursor:pointer;">ออกจากระบบ</button>
+    `;
+  } else {
+    navContainer.innerHTML = `
+      <a href="/login" style="background:#2d6a4f; color:#fff; font-weight:600; text-decoration:none; padding:5px 12px; font-size:12px; border-radius:6px;">🔐 เข้าสู่ระบบ</a>
+    `;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setupCustomUserNav();
+
+  if ($('date')) {
+    $('date').value = todayYMD();
+  }
+
+  setup24hTimePicker('timeIn');
+  setup24hTimePicker('time');
+  updateProgressBar();
+  loadProjectList();
+
+  if (hasDraft()) {
+    $('draftBanner').style.display = 'flex';
+    restoreDraft();
+  }
+
+  DRAFT_FIELDS.concat(['wasteConcrete', 'wasteConstruction', 'wastePacking', 'wasteSystem']).forEach(id => {
+    if ($(id)) {
+      $(id).addEventListener('input', saveDraft);
+      $(id).addEventListener('change', saveDraft);
+    }
+  });
+
+  const formEl = $('form');
+  if (formEl) {
+    formEl.addEventListener('submit', handleFormSubmit);
+  }
+});
+
+function switchTab(tab) {
+  if (tab === 'form') {
+    $('tabForm').classList.add('active');
+    $('tabDash').classList.remove('active');
+    $('tabFormBtn').classList.add('active');
+    $('tabDashBtn').classList.remove('active');
+  } else {
+    $('tabDash').classList.add('active');
+    $('tabForm').classList.remove('active');
+    $('tabDashBtn').classList.add('active');
+    $('tabFormBtn').classList.remove('active');
+    loadDashboardData();
+  }
+}
+
+function setup24hTimePicker(inputId) {
+  const input = $(inputId);
+  const popover = $('popover-' + inputId);
+  const hoursContainer = $('hours-' + inputId);
+  const minsContainer = $('mins-' + inputId);
+
+  if (!input || !popover || !hoursContainer || !minsContainer) return;
+
+  let selectedHour = "12";
+  let selectedMin = "00";
+
+  for (let i = 0; i < 24; i++) {
+    const val = String(i).padStart(2, '0');
+    const div = document.createElement('div');
+    div.className = 'time-option' + (val === '12' ? ' selected' : '');
+    div.textContent = val;
+    div.onclick = function(e) {
+      e.stopPropagation();
+      hoursContainer.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      selectedHour = val;
+      updateInputValue();
+    };
+    hoursContainer.appendChild(div);
+  }
+
+  for (let i = 0; i < 60; i += 5) {
+    const val = String(i).padStart(2, '0');
+    const div = document.createElement('div');
+    div.className = 'time-option' + (val === '00' ? ' selected' : '');
+    div.textContent = val;
+    div.onclick = function(e) {
+      e.stopPropagation();
+      minsContainer.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      selectedMin = val;
+      updateInputValue();
+    };
+    minsContainer.appendChild(div);
+  }
+
+  function updateInputValue() {
+    input.value = `${selectedHour}:${selectedMin}`;
+    saveDraft();
+    if (showMissing) setTimeout(applyMissingMarks, 0);
+  }
+
+  input.parentElement.onclick = function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('.time-picker-popover').forEach(p => p.classList.remove('open'));
+    popover.classList.toggle('open');
+    if (!input.value) updateInputValue();
+  };
+}
+
+document.addEventListener('click', function() {
+  document.querySelectorAll('.time-picker-popover').forEach(p => p.classList.remove('open'));
+});
+
+function updateProgressBar() {
+  const conc = Number($('wasteConcrete').value) || 0;
+  const c = Number($('wasteConstruction').value) || 0;
+  const p = Number($('wastePacking').value) || 0;
+  const s = Number($('wasteSystem').value) || 0;
+  const total = conc + c + p + s;
+
+  if ($('barConc')) $('barConc').style.width = conc + '%';
+  if ($('barConst')) $('barConst').style.width = c + '%';
+  if ($('barPack')) $('barPack').style.width = p + '%';
+  if ($('barSys')) $('barSys').style.width = s + '%';
+
+  if ($('txtConc')) $('txtConc').textContent = conc + '%';
+  if ($('txtConst')) $('txtConst').textContent = c + '%';
+  if ($('txtPack')) $('txtPack').textContent = p + '%';
+  if ($('txtSys')) $('txtSys').textContent = s + '%';
+  if ($('txtTotal')) $('txtTotal').textContent = total + '%';
+}
+
+function previewImg(input, imgId, iconId) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      if ($(imgId)) {
+        $(imgId).src = e.target.result;
+        $(imgId).style.display = 'block';
+      }
+      if ($(iconId)) {
+        $(iconId).style.display = 'none';
+      }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function loadProjectList() {
+  try {
+    const res = await API.get('/api/waste/projects');
+    const sel = $('project');
+    if (!sel || !res.ok) return;
+    const previousValue = sel.value;
+    sel.innerHTML = '<option value="">-- เลือกโครงการ --</option>';
+    if (res.result && res.result.length > 0) {
+      res.result.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name;
+        sel.appendChild(opt);
+      });
+    }
+    if (previousValue) sel.value = previousValue;
+  } catch (err) {
+    console.error('Error loading projects:', err);
+  }
+}
+
+async function addProject() {
+  const inp = $('newProject');
+  if (!inp) return;
+  if (inp.style.display === 'none' || !inp.style.display) {
+    inp.style.display = 'block';
+    inp.focus();
+  } else {
+    const val = inp.value.trim();
+    if (!val) {
+      alert('กรุณากรอกชื่อโครงการใหม่');
+      return;
+    }
+    try {
+      const res = await API.post('/api/waste/projects', { name: val });
+      if (res.ok) {
+        alert('✅ เพิ่มโครงการเรียบร้อยแล้ว');
+        inp.value = '';
+        inp.style.display = 'none';
+        await loadProjectList();
+        if (res.result && res.result.id) {
+          $('project').value = res.result.id;
+        }
+      } else {
+        alert('⚠️ เพิ่มโครงการไม่สำเร็จ: ' + (res.error || ''));
+      }
+    } catch (err) {
+      alert('⚠️ เกิดข้อผิดพลาด: ' + err.message);
+    }
+  }
+}
+
+const REQUIRED_FIELDS = [
+  { id: 'project',     label: 'โครงการ' },
+  { id: 'date',        label: 'วันที่ (ตามบิล)' },
+  { id: 'location',    label: 'ชั้น / โซน' },
+  { id: 'timeIn',      label: 'เวลาเข้า' },
+  { id: 'time',        label: 'เวลารถออก' },
+  { id: 'recorder',    label: 'ผู้บันทึกข้อมูล' },
+  { id: 'billNo',      label: 'เลขที่บิล' },
+  { id: 'plateNo',     label: 'เลขทะเบียนรถ' },
+  { id: 'truckSelect', label: 'ประเภทรถ' }
+];
+const REQUIRED_PHOTOS = [
+  { id: 'photo1', label: 'รูปหน้ารถ (ตอนเข้าไซต์ให้เห็นป้ายทะเบียน)' },
+  { id: 'photo2', label: 'รูปขยะบนรถ (ภาพมุมสูง)' },
+  { id: 'photo3', label: 'รูปก่อนคลุมผ้า' }
+];
+let showMissing = false;
+
+function getMissingFields() {
+  const missing = [];
+  REQUIRED_FIELDS.forEach(f => {
+    const el = $(f.id);
+    let bad = !el || !String(el.value || '').trim();
+    if (!bad && f.id === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(el.value)) bad = true;
+    if (bad) missing.push({ el, label: f.label });
+  });
+  REQUIRED_PHOTOS.forEach(p => {
+    const input = $(p.id);
+    if (!input || !input.files || !input.files[0]) {
+      missing.push({ el: input ? input.closest('.photo-upload-box') : null, label: p.label });
+    }
+  });
+  return missing;
+}
+
+function applyMissingMarks() {
+  document.querySelectorAll('.field-missing').forEach(el => el.classList.remove('field-missing'));
+  if (!showMissing) return [];
+  const missing = getMissingFields();
+  missing.forEach(m => { if (m.el) m.el.classList.add('field-missing'); });
+  if (!missing.length) showMissing = false;
+  return missing;
+}
+
+function validateWasteForm() {
+  showMissing = true;
+  const missing = applyMissingMarks();
+  if (!missing.length) return true;
+  const first = missing[0].el;
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  alert('⚠️ กรุณากรอกให้ครบก่อนบันทึก (' + missing.length + ' ช่อง):\n- ' + missing.map(m => m.label).join('\n- '));
+  return false;
+}
+
+['input', 'change', 'click'].forEach(ev => {
+  document.addEventListener(ev, () => { if (showMissing) setTimeout(applyMissingMarks, 0); });
+});
+
+async function handleFormSubmit(e) {
+  e.preventDefault();
+  if (isSubmitting) return;
+
+  if (!validateWasteForm()) return;
+
+  const conc = Number($('wasteConcrete').value) || 0;
+  const c = Number($('wasteConstruction').value) || 0;
+  const p = Number($('wastePacking').value) || 0;
+  const s = Number($('wasteSystem').value) || 0;
+
+  if ((conc + c + p + s) !== 100) {
+    alert('⚠️ ผลรวมสัดส่วนขยะต้องเท่ากับ 100% พอดี (ปัจจุบัน ' + (conc + c + p + s) + '%)');
+    return;
+  }
+
+  isSubmitting = true;
+  const btn = $('saveBtn');
+  function resetBtn() {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.backgroundColor = "#2d6a4f";
+    btn.textContent = '💾 บันทึกข้อมูลเข้า PostgreSQL';
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.style.backgroundColor = "#a0aec0";
+    btn.textContent = '⏳ กำลังประมวลผลรูปภาพและส่งข้อมูล...';
+  }
+
+  try {
+    const images = await Promise.all([
+      compressImage($('photo1').files[0]),
+      compressImage($('photo2').files[0]),
+      compressImage($('photo3').files[0])
+    ]);
+
+    const payload = {
+      project_id: $('project').value,
+      date: $('date').value,
+      location: $('location').value,
+      timeIn: $('timeIn').value,
+      time: $('time').value,
+      recorder: $('recorder').value,
+      billNo: $('billNo').value,
+      plateNo: $('plateNo').value,
+      truck: $('truckSelect').value,
+      trips: $('trips').value,
+      wasteConcrete: conc,
+      wasteConstruction: c,
+      wastePacking: p,
+      wasteSystem: s,
+      note: $('note').value,
+      photo1: images[0],
+      photo2: images[1],
+      photo3: images[2]
+    };
+
+    const res = await API.post('/api/waste/add', payload);
+    isSubmitting = false;
+
+    if (res.ok) {
+      alert('✅ บันทึกข้อมูลการขนย้ายขยะสำเร็จเข้าสู่ PostgreSQL เรียบร้อย!');
+      clearDraft();
+      if ($('draftBanner')) $('draftBanner').style.display = 'none';
+      resetBtn();
+
+      $('form').reset();
+      showMissing = false; applyMissingMarks();
+
+      ['p1', 'p2', 'p3'].forEach(id => { if ($(id)) $(id).style.display = 'none'; });
+      ['icon1', 'icon2', 'icon3'].forEach(id => { if ($(id)) $(id).style.display = 'block'; });
+
+      updateProgressBar();
+      $('date').value = todayYMD();
+    } else {
+      alert('⚠️ บันทึกไม่สำเร็จ: ' + (res.error || res.message || ''));
+      resetBtn();
+    }
+  } catch (err) {
+    isSubmitting = false;
+    console.error(err);
+    alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+    resetBtn();
+  }
+}
+
+async function loadDashboardData() {
+  const container = $('dashListContainer');
+  if (container) {
+    container.innerHTML = '<div class="card" style="text-align:center; color:#718096; padding:30px;">⏳ กำลังโหลดข้อมูลจาก PostgreSQL...</div>';
+  }
+  try {
+    const res = await API.get('/api/waste/dashboard');
+    if (res.ok) {
+      globalDashData = res.rows || [];
+      populateProjectFilter();
+      filterDashboard();
+    } else {
+      if (container) container.innerHTML = '<div class="card" style="text-align:center; color:#c53030;">⚠️ โหลดข้อมูลไม่สำเร็จ</div>';
+    }
+  } catch (err) {
+    console.error(err);
+    if (container) container.innerHTML = '<div class="card" style="text-align:center; color:#c53030;">⚠️ เกิดข้อผิดพลาด: ' + err.message + '</div>';
+  }
+}
+
+function populateProjectFilter() {
+  const sel = $('filterProject');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- แสดงทั้งหมด --</option>';
+  const projects = [...new Set(globalDashData.map(r => r['โครงการ']).filter(Boolean))];
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    sel.appendChild(opt);
+  });
+  sel.value = current;
+}
+
+function filterDashboard() {
+  const proj = $('filterProject') ? $('filterProject').value.trim() : '';
+  const monthVal = $('filterMonth') ? $('filterMonth').value.trim() : '';
+
+  let filtered = globalDashData;
+
+  if (proj) {
+    filtered = filtered.filter(r => String(r['โครงการ'] || '').trim() === proj);
+  }
+
+  if (monthVal) {
+    filtered = filtered.filter(r => {
+      const dateStr = String(r['วันที่'] || '').trim();
+      return dateStr.startsWith(monthVal);
+    });
+  }
+
+  let totalTrips = 0, totalVol = 0, totalCost = 0;
+  filtered.forEach(r => {
+    totalTrips += Number(r['จำนวนเที่ยว']) || 0;
+    totalVol += Number(r['ปริมาณขยะ (คิว)']) || 0;
+    totalCost += Number(r['ค่าใช้จ่ายรวม (บาท)']) || 0;
+  });
+
+  if ($('kpiTrips')) $('kpiTrips').textContent = totalTrips.toLocaleString() + ' เที่ยว';
+  if ($('kpiVol')) $('kpiVol').textContent = totalVol.toFixed(1) + ' คิว';
+  if ($('kpiCost')) $('kpiCost').textContent = totalCost.toLocaleString() + ' บาท';
+
+  const container = $('dashListContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="card" style="text-align:center; color:#718096; padding:30px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</div>';
+    return;
+  }
+
+  const grouped = {};
+  filtered.forEach(r => {
+    const pName = r['โครงการ'] || 'ไม่ระบุโครงการ';
+    if (!grouped[pName]) grouped[pName] = [];
+    grouped[pName].push(r);
+  });
+
+  for (const pName in grouped) {
+    const items = grouped[pName];
+    let pTrips = 0, pVol = 0, pCost = 0;
+    items.forEach(i => {
+      pTrips += Number(i['จำนวนเที่ยว']) || 0;
+      pVol += Number(i['ปริมาณขยะ (คิว)']) || 0;
+      pCost += Number(i['ค่าใช้จ่ายรวม (บาท)']) || 0;
+    });
+
+    const box = document.createElement('div');
+    box.className = 'dash-group-box';
+    box.innerHTML = `
+      <div class="dash-group-header">
+        <div>🏗️ <strong>โครงการ: ${escapeHtml(pName)}</strong></div>
+        <div style="font-size:12px; background:#e2ebd8; color:#2d6a4f; padding:4px 10px; border-radius:12px; font-weight:700;">
+          ${items.length} รายการ | ${pTrips} เที่ยว | ${pVol.toFixed(1)} คิว | ${pCost.toLocaleString()} บาท
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>เลขที่บิล</th>
+              <th>ทะเบียนรถ</th>
+              <th>ประเภท</th>
+              <th>เที่ยว</th>
+              <th>คิว (m³)</th>
+              <th>ค่าใช้จ่าย</th>
+              <th>รูปถ่ายหลักฐาน</th>
+              <th>ผู้บันทึก</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(r => `
+              <tr>
+                <td>${r['วันที่']}</td>
+                <td><strong>${escapeHtml(r['เลขที่บิล'])}</strong></td>
+                <td>${escapeHtml(r['ทะเบียนรถ'])}</td>
+                <td>${escapeHtml(r['ประเภทรถ'])}</td>
+                <td>${r['จำนวนเที่ยว']}</td>
+                <td style="font-weight:700; color:#2d6a4f;">${parseFloat(r['ปริมาณขยะ (คิว)']).toFixed(1)}</td>
+                <td style="font-weight:700;">${parseFloat(r['ค่าใช้จ่ายรวม (บาท)']).toLocaleString()} ฿</td>
+                <td>
+                  ${r['รูปหน้ารถ'] ? `<a href="${r['รูปหน้ารถ']}" target="_blank" class="photo-thumb-link">📷 หน้ารถ</a>` : ''}
+                  ${r['รูปขยะบนรถ'] ? `<a href="${r['รูปขยะบนรถ']}" target="_blank" class="photo-thumb-link">🚚 กองขยะ</a>` : ''}
+                  ${r['รูปก่อนคลุมผ้า'] ? `<a href="${r['รูปก่อนคลุมผ้า']}" target="_blank" class="photo-thumb-link">🔒 ผ้าใบ</a>` : ''}
+                  ${!r['รูปหน้ารถ'] && !r['รูปขยะบนรถ'] && !r['รูปก่อนคลุมผ้า'] ? '-' : ''}
+                </td>
+                <td>${escapeHtml(r['ผู้บันทึก']) || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    container.appendChild(box);
+  }
+}
+</script>
+
+</body>
+</html>

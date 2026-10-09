@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.pdf
+*.png
+scratch_waste.html
+.DS_Store
+Thumbs.db

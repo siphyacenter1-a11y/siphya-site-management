@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>ระบบติดตามการเบิก-จ่ายวัสดุประจำไซต์ - PostgreSQL</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <style>
+    body { padding: 68px 22px 60px; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .topbar .actions { display: flex; gap: 8px; }
+    .topbar button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 16px; border: none; border-radius: 10px; background: var(--field); color: var(--ink); cursor: pointer; }
+    .topbar button.primary { background: var(--ink); color: #fff; }
+    .topbar button:hover { filter: brightness(0.95); }
+    .topbar .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--green); font-weight: 600; }
+    .topbar .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(30,158,106,0.18); }
+
+    .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .filters { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+    .filters .field { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+    .filters label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .filters select, .filters input { font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid transparent; border-radius: 10px; background: var(--field); color: var(--ink); }
+    .filters select:focus, .filters input:focus { outline: none; border-color: var(--ink); background: #fff; }
+    .filters button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 10px 18px; border: none; background: var(--field); color: var(--ink); border-radius: 10px; cursor: pointer; }
+
+    .stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 14px; margin-bottom: 20px; }
+    .stat-item { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; overflow: hidden; }
+    .stat-item::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
+    .stat-item.s1 { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .stat-item.s1 .label { color: #A3BBEB; }
+    .stat-item.s1 .value { color: #fff; }
+    .stat-item.s1::after { background: var(--mint); }
+    .stat-item.s2::after { background: var(--green); }
+    .stat-item.s3::after { background: var(--amber); }
+    .stat-item.s4::after { background: var(--blue); }
+    .stat-item.s5::after { background: var(--coral); }
+    .stat-item .label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+    .stat-item .value { font-size: 26px; font-weight: 700; margin-top: 4px; color: var(--ink); }
+
+    .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 16px; margin-bottom: 20px; }
+    .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px 18px; }
+    .chart-card h3, .summary-panel h3, .data-card h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 14px; }
+    .chart-wrap { position: relative; height: 200px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 12.5px; color: var(--muted); justify-content: center; }
+    .legend span.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+    .summary-panel, .data-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+    table.summary { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.summary th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12.5px; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+    table.summary td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); }
+    table.summary td.num { text-align: right; }
+
+    .table-scroll { overflow-x: auto; border-radius: 10px; max-height: 520px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+    table.data th { position: sticky; top: 0; background: var(--ink); text-align: left; color: #DCE4F5; font-weight: 500; font-size: 12.5px; padding: 11px 14px; z-index: 2; }
+    table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+    table.data tbody tr:nth-child(even) { background: var(--paper); }
+    table.data tbody tr:hover { background: #EAEEF7; }
+
+    .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .empty { text-align: center; padding: 44px 0; color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="actions">
+        <button class="primary" onclick="loadData()">↻ Refresh</button>
+        <button id="autoBtn" onclick="toggleAuto()">Auto-refresh: OFF</button>
+        <button class="primary" style="background:var(--green);" onclick="openAddModal()">+ บันทึกการเบิกวัสดุ</button>
+        <a href="/api/export/transport/excel" class="btn" style="background:#B36B12; color:#fff; text-decoration:none; padding:9px 14px; font-size:13px; border-radius:10px;">
+          📊 Export Excel
+        </a>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div class="status"><span class="dot"></span><span id="rowCountLabel">กำลังโหลดจาก PostgreSQL...</span></div>
+        <div id="userNavBlock"></div>
+      </div>
+    </div>
+
+    <div class="tag-header">
+      <div class="header">
+        <div class="left">
+          <div class="logo">SP</div>
+          <div>
+            <div class="eyebrow">MATERIAL DELIVERY REPORT — LIVE (POSTGRESQL)</div>
+            <div class="title">สรุปสถานะการเบิก-จ่ายวัสดุ</div>
+          </div>
+        </div>
+        <div class="right">
+          <div class="brand-name">SIPHYA CONSTRUCTION</div>
+          <div class="brand-sub">LOGISTICS &amp; STORE MANAGEMENT</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-row">
+      <div id="updatedAtLabel">อัปเดตล่าสุด: -</div>
+      <div id="filteredCountLabel"></div>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label>ประเภทวัสดุ</label>
+        <select id="f-ประเภทวัสดุ" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
+      </div>
+      <div class="field">
+        <label>อาคาร</label>
+        <select id="f-อาคาร" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
+      </div>
+      <div class="field">
+        <label>สถานะ</label>
+        <select id="f-สถานะ2" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
+      </div>
+      <div class="field" style="flex:1; min-width:180px;">
+        <label>ค้นหา (รายการ / ผู้เบิก / Mat. Code)</label>
+        <input id="f-search" type="text" placeholder="พิมพ์คำค้นหา..." oninput="applyFilters()">
+      </div>
+      <button onclick="clearFilters()">ล้างตัวกรอง</button>
+    </div>
+
+    <div class="stat-strip" id="kpiRow"></div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>ภาพรวมประเภทวัสดุที่เบิก</h3>
+        <div class="chart-wrap"><canvas id="donutMat"></canvas></div>
+        <div class="legend" id="legendMat"></div>
+      </div>
+      <div class="chart-card">
+        <h3>สถานะการดำเนินงานทั้งหมด</h3>
+        <div class="chart-wrap"><canvas id="donutStatus"></canvas></div>
+        <div class="legend" id="legendStatus"></div>
+      </div>
+      <div class="chart-card">
+        <h3>จำนวนที่เบิกแยกตามประเภทวัสดุ</h3>
+        <div class="chart-wrap"><canvas id="barItem"></canvas></div>
+      </div>
+    </div>
+
+    <div class="summary-panel">
+      <h3>สรุปยอดรวมตามรายการวัสดุ</h3>
+      <table class="summary" id="summaryTable">
+        <thead><tr><th>รายการ</th><th style="text-align:right;">จำนวนครั้งที่เบิก</th><th style="text-align:right;">จำนวนรวมที่เบิก</th><th style="text-align:right;">สัดส่วน</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="data-card">
+      <h3>ข้อมูลทั้งหมด (PostgreSQL)</h3>
+      <div class="table-scroll">
+        <table class="data" id="dataTable">
+          <thead><tr id="dataTableHead"></tr></thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="emptyState" style="display:none;">ไม่พบข้อมูลตามเงื่อนไขที่กรอง</div>
+    </div>
+  </div>
+
+  <!-- Modal: บันทึกการเบิกวัสดุใหม่ -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>บันทึกการเบิก-จ่ายวัสดุใหม่</h3>
+        <button class="modal-close" onclick="closeAddModal()">&times;</button>
+      </div>
+      <form id="addForm" onsubmit="submitAddForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>วันที่ขอเบิก</label>
+            <input type="date" id="m_request_date" required>
+          </div>
+          <div class="form-group">
+            <label>Mat. Code</label>
+            <input type="text" id="m_mat_code" placeholder="เช่น MAT-001">
+          </div>
+          <div class="form-group full">
+            <label>รายการวัสดุ *</label>
+            <input type="text" id="m_mat_item" required placeholder="เช่น ปูนซีเมนต์, เหล็กเส้น DB20">
+          </div>
+          <div class="form-group">
+            <label>ประเภทวัสดุ</label>
+            <input type="text" id="m_mat_type" placeholder="เช่น งานโครงสร้าง, งานสถาปัตย์" required>
+          </div>
+          <div class="form-group">
+            <label>อาคาร</label>
+            <input type="text" id="m_building" placeholder="เช่น อาคาร A, อาคารจอดรถ">
+          </div>
+          <div class="form-group">
+            <label>ชั้น</label>
+            <input type="text" id="m_floor" placeholder="เช่น ชั้น 3, ชั้นใต้ดิน">
+          </div>
+          <div class="form-group">
+            <label>จำนวน</label>
+            <input type="number" id="m_quantity" step="0.1" required placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>หน่วย</label>
+            <input type="text" id="m_unit" placeholder="เช่น ถุง, เส้น, แผ่น" required>
+          </div>
+          <div class="form-group">
+            <label>สถานะ</label>
+            <select id="m_status2">
+              <option value="เบิก">เบิก</option>
+              <option value="เบิกด่วน">เบิกด่วน</option>
+              <option value="ส่งแล้ว">ส่งแล้ว</option>
+              <option value="ส่งด่วนแล้ว">ส่งด่วนแล้ว</option>
+              <option value="รอดำเนินการ">รอดำเนินการ</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>ผู้ขอเบิก / ผู้รับ</label>
+            <input type="text" id="m_requester" placeholder="ชื่อ-นามสกุล หรือ ผู้รับเหมา">
+          </div>
+          <div class="form-group full">
+            <label>หมายเหตุ</label>
+            <textarea id="m_note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-success">บันทึกลงฐานข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="hubToast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="/js/api-client.js"></script>
+  <script>
+    var ALL_ROWS = [];
+    var ALL_HEADERS = [];
+    var donutMatChart, donutStatusChart, barItemChart;
+    var autoTimer = null;
+
+    var STATUS_COLOR_PRESET = {
+      'เบิก': '#0B1F4B', 'เบิกด่วน': '#C4610F', 'ส่งแล้ว': '#1E8A5C',
+      'ส่งด่วนแล้ว': '#17797A', 'รอดำเนินการ': '#A56F00', 'กำลังจัดส่ง': '#2F5D9E', 'ยกเลิก': '#C62828'
+    };
+    function getStatusColor(val) {
+      return STATUS_COLOR_PRESET[val] || '#8A93A5';
+    }
+
+    async function loadData() {
+      document.getElementById('rowCountLabel').textContent = 'กำลังโหลดจาก PostgreSQL...';
+      try {
+        const res = await API.get('/api/transport/logs');
+        if (res.ok) {
+          ALL_ROWS = res.result.rows;
+          ALL_HEADERS = res.result.headers;
+          document.getElementById('rowCountLabel').textContent = 'ข้อมูลทั้งหมด ' + ALL_ROWS.length.toLocaleString() + ' รายการ';
+          document.getElementById('updatedAtLabel').textContent = 'อัปเดตล่าสุด: ' + new Date(res.result.updatedAt).toLocaleString('th-TH');
+          populateFilterOptions();
+          renderDataTableHeader();
+          applyFilters();
+        }
+      } catch (err) {
+        document.getElementById('rowCountLabel').textContent = 'โหลดไม่สำเร็จ';
+        hubToast('เกิดข้อผิดพลาด: ' + err.message);
+      }
+    }
+
+    function populateFilterOptions() {
+      fillSelect('f-ประเภทวัสดุ', uniqueValues('ประเภทวัสดุ'));
+      fillSelect('f-อาคาร', uniqueValues('อาคาร'));
+      fillSelect('f-สถานะ2', uniqueValues('สถานะ2'));
+    }
+
+    function uniqueValues(f) {
+      var s = {};
+      ALL_ROWS.forEach(r => { if (r[f]) s[r[f]] = true; });
+      return Object.keys(s).sort();
+    }
+
+    function fillSelect(id, vals) {
+      var sel = document.getElementById(id);
+      var cur = sel.value;
+      sel.innerHTML = '<option value="">ทั้งหมด</option>';
+      vals.forEach(v => {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        sel.appendChild(opt);
+      });
+      sel.value = cur;
+    }
+
+    function getFilteredRows() {
+      var matF = document.getElementById('f-ประเภทวัสดุ').value;
+      var bldF = document.getElementById('f-อาคาร').value;
+      var stF = document.getElementById('f-สถานะ2').value;
+      var q = document.getElementById('f-search').value.trim().toLowerCase();
+
+      return ALL_ROWS.filter(r => {
+        if (matF && r['ประเภทวัสดุ'] !== matF) return false;
+        if (bldF && r['อาคาร'] !== bldF) return false;
+        if (stF && r['สถานะ2'] !== stF) return false;
+        if (q) {
+          var hay = [r['รายการวัสดุ'], r['ผู้ขอเบิก/ผู้รับ'], r['Mat. Code']].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function clearFilters() {
+      document.getElementById('f-ประเภทวัสดุ').value = '';
+      document.getElementById('f-อาคาร').value = '';
+      document.getElementById('f-สถานะ2').value = '';
+      document.getElementById('f-search').value = '';
+      applyFilters();
+    }
+
+    function applyFilters() {
+      var rows = getFilteredRows();
+      document.getElementById('filteredCountLabel').textContent = 'แสดง ' + rows.length.toLocaleString() + ' จาก ' + ALL_ROWS.length.toLocaleString() + ' รายการ';
+      renderKpis(rows);
+      renderDonut('donutMat', 'legendMat', groupCount(rows, 'ประเภทวัสดุ'));
+      renderDonut('donutStatus', 'legendStatus', groupCount(rows, 'สถานะ2'), true);
+      renderBarTop(rows);
+      renderSummaryTable(rows);
+      renderDataTable(rows);
+    }
+
+    function groupCount(rows, f) {
+      var m = {};
+      rows.forEach(r => { var k = r[f] || '(ไม่ระบุ)'; m[k] = (m[k] || 0) + 1; });
+      return m;
+    }
+
+    function renderKpis(rows) {
+      var total = rows.length;
+      var sent = rows.filter(r => r['สถานะ2'] === 'ส่งแล้ว' || r['สถานะ2'] === 'ส่งด่วนแล้ว').length;
+      var matTypes = Object.keys(groupCount(rows, 'ประเภทวัสดุ')).length;
+      var bldTypes = Object.keys(groupCount(rows, 'อาคาร')).length;
+      var totalQty = rows.reduce((acc, r) => acc + (parseFloat(r['จำนวนที่เบิก/ย้าย']) || 0), 0);
+
+      var kpis = [
+        { label: 'รายการทั้งหมด', value: total.toLocaleString(), cls: 's1' },
+        { label: 'ส่งแล้ว', value: sent.toLocaleString() + ' (' + (total ? Math.round(sent / total * 100) : 0) + '%)', cls: 's2' },
+        { label: 'ประเภทวัสดุ', value: matTypes + ' ชนิด', cls: 's3' },
+        { label: 'อาคาร', value: bldTypes + ' อาคาร', cls: 's4' },
+        { label: 'จำนวนรวมที่เบิก', value: totalQty.toLocaleString(), cls: 's5' }
+      ];
+      document.getElementById('kpiRow').innerHTML = kpis.map(k =>
+        '<div class="stat-item ' + k.cls + '"><div class="label">' + k.label + '</div><div class="value">' + k.value + '</div></div>'
+      ).join('');
+    }
+
+    function renderDonut(canvasId, legendId, dataMap, isStatus) {
+      var labels = Object.keys(dataMap);
+      var values = labels.map(l => dataMap[l]);
+      var total = values.reduce((a, b) => a + b, 0);
+      var palette = ['#0B1F4B', '#1E9E6A', '#F2B705', '#2F5D9E', '#F4A879', '#8A93A5', '#7C3AED'];
+      var colors = labels.map((l, i) => isStatus ? getStatusColor(l) : palette[i % palette.length]);
+
+      var existing = canvasId === 'donutMat' ? donutMatChart : donutStatusChart;
+      if (existing) existing.destroy();
+
+      var chart = new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+      });
+      if (canvasId === 'donutMat') donutMatChart = chart; else donutStatusChart = chart;
+
+      document.getElementById(legendId).innerHTML = labels.map((l, i) => {
+        var pct = total ? Math.round(values[i] / total * 100) : 0;
+        return '<span><span class="dot" style="background:' + colors[i] + ';"></span>' + l + ' ' + pct + '%</span>';
+      }).join('') || '<span>ไม่มีข้อมูล</span>';
+    }
+
+    function renderBarTop(rows) {
+      var source = groupCount(rows, 'ประเภทวัสดุ');
+      var entries = Object.keys(source).map(k => [k, source[k]]).sort((a, b) => b[1] - a[1]).slice(0, 7);
+      if (barItemChart) barItemChart.destroy();
+      barItemChart = new Chart(document.getElementById('barItem'), {
+        type: 'bar',
+        data: {
+          labels: entries.map(e => e[0]),
+          datasets: [{ data: entries.map(e => e[1]), backgroundColor: '#1E3A7A', borderRadius: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderSummaryTable(rows) {
+      var counts = groupCount(rows, 'รายการวัสดุ');
+      var entries = Object.keys(counts).map(k => [k, counts[k]]).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      var total = rows.length;
+      document.querySelector('#summaryTable tbody').innerHTML = entries.map(e =>
+        '<tr><td>' + e[0] + '</td><td class="num">' + e[1].toLocaleString() + '</td><td class="num">-</td><td class="num">' + (total ? Math.round(e[1] / total * 100) : 0) + '%</td></tr>'
+      ).join('') || '<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';
+    }
+
+    function renderDataTableHeader() {
+      document.getElementById('dataTableHead').innerHTML = ALL_HEADERS.map(h => '<th>' + h + '</th>').join('');
+    }
+
+    function renderDataTable(rows) {
+      document.getElementById('dataTableBody').innerHTML = rows.slice(0, 300).map(r => {
+        return '<tr>' + ALL_HEADERS.map(h => {
+          var val = r[h] ?? '';
+          if (h === 'สถานะ2' || h === 'สถานะ') {
+            var c = getStatusColor(val);
+            return '<td><span class="badge" style="background:' + c + '22;color:' + c + ';">' + val + '</span></td>';
+          }
+          return '<td>' + val + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      document.getElementById('emptyState').style.display = rows.length ? 'none' : 'block';
+    }
+
+    function toggleAuto() {
+      var btn = document.getElementById('autoBtn');
+      if (autoTimer) {
+        clearInterval(autoTimer); autoTimer = null;
+        btn.textContent = 'Auto-refresh: OFF';
+      } else {
+        autoTimer = setInterval(loadData, 30000);
+        btn.textContent = 'Auto-refresh: ON (30s)';
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('m_request_date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('addModal').classList.add('open');
+    }
+    function closeAddModal() {
+      document.getElementById('addModal').classList.remove('open');
+    }
+
+    async function submitAddForm(e) {
+      e.preventDefault();
+      try {
+        const payload = {
+          request_date: document.getElementById('m_request_date').value,
+          mat_code: document.getElementById('m_mat_code').value,
+          mat_item: document.getElementById('m_mat_item').value,
+          mat_type: document.getElementById('m_mat_type').value,
+          building: document.getElementById('m_building').value,
+          floor: document.getElementById('m_floor').value,
+          quantity: document.getElementById('m_quantity').value,
+          unit: document.getElementById('m_unit').value,
+          status2: document.getElementById('m_status2').value,
+          requester_receiver: document.getElementById('m_requester').value,
+          note: document.getElementById('m_note').value
+        };
+
+        const res = await API.post('/api/transport/add', payload);
+        if (res.ok) {
+          hubToast('บันทึกข้อมูลลง PostgreSQL สำเร็จแล้ว!');
+          closeAddModal();
+          document.getElementById('addForm').reset();
+          loadData();
+        }
+      } catch (err) {
+        hubToast('บันทึกไม่สำเร็จ: ' + err.message);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
