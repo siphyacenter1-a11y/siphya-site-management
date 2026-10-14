@@ -26,7 +26,10 @@ node scripts/set_checklist_pin.js remove <id>
 
 รหัสโครงการอ่านจากวงเล็บท้ายชื่อหน่วยงาน เช่น `ORG Origin Thonglor World (0DJ)` → `0DJ`
 
-แล้ว restart server (`npm start`)
+แล้ว restart server ด้วย `npm start`
+
+> **อย่าใช้ `npm run dev` กับเครื่องที่ใช้งานจริง** โหมดนั้นรีสตาร์ทตัวเองเมื่อไฟล์ใน `node_modules` ถูกแตะ
+> (บน Windows เกิดตอน Chrome ทำ PDF ครั้งแรก) ทำให้การออก PDF/NPO ครั้งแรกล้มกลางคัน
 
 ## ใช้งาน
 
