@@ -17,6 +17,7 @@
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.20.2",
     "pg": "^8.13.1",
-    "puppeteer": "^24.43.1"
+    "puppeteer": "^24.43.1",
+    "sharp": "^0.34.5"
   }
 }

@@ -3,70 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ระบบติดตามขยะภายในไซต์ - SIPHYA CONSTRUCTION</title>
+  <title>ระบบติดตามขยะภายในไซต์</title>
   
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/hub.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/site-hub.css">
+  <script src="/js/gas-shim.js"></script>
   <style>
-    * { box-sizing: border-box; font-family: 'Prompt', 'Sarabun', sans-serif; }
-    body { background-color: #ebede8; color: #333; margin: 0; padding: 25px 15px 60px; }
-    .container { max-width: 860px; margin: 0 auto; }
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
+    body { background-color: #ebede8; color: #333; margin: 0; padding: 25px 15px; }
+    .container { max-width: 820px; margin: 0 auto; }
 
-    /* Top User Bar */
-    .user-top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #ffffff;
-      border: 1px solid #dce1d8;
-      border-radius: 12px;
-      padding: 10px 18px;
-      margin-bottom: 20px;
-      font-size: 13px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .user-top-bar .live-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: #2d6a4f;
-      font-weight: 600;
-      font-size: 12.5px;
-    }
-    .user-top-bar .live-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #1E9E6A;
-      box-shadow: 0 0 0 3px rgba(30,158,106,0.2);
-    }
-
-    .header-title { text-align: center; margin-bottom: 22px; }
-    .header-title .sub-tag { font-size: 11px; letter-spacing: 2px; color: #6b7c65; font-weight: 700; text-transform: uppercase; }
-    .header-title h1 { color: #1e3a29; font-size: 26px; margin: 4px 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
-    .header-title p { color: #737f70; font-size: 13px; margin: 0; }
+    .header-title { text-align: center; margin-bottom: 20px; }
+    .header-title .sub-tag { font-size: 10px; letter-spacing: 2px; color: #6b7c65; font-weight: 700; text-transform: uppercase; }
+    .header-title h1 { color: #1e3a29; font-size: 24px; margin: 4px 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
+    .header-title p { color: #8c9689; font-size: 12px; margin: 0; }
 
     .nav-tabs { display: flex; gap: 12px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 13px; border: 1.5px solid #d0d7cd; background: #ffffff; color: #3b4837; font-size: 14.5px; font-weight: 700; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
-    .tab-btn.active { background: #2d6a4f; color: white; border-color: #2d6a4f; box-shadow: 0 4px 12px rgba(45,106,79,0.25); }
+    .tab-btn { flex: 1; padding: 12px; border: 1.5px solid #d0d7cd; background: #ffffff; color: #3b4837; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .tab-btn.active { background: #2d6a4f; color: white; border-color: #2d6a4f; box-shadow: 0 4px 10px rgba(45,106,79,0.2); }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .card { background: #f7f8f5; border: 1px solid #dce1d8; border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-    .card-title { font-size: 15px; font-weight: 700; color: #1e3a29; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .card-title .badge { background: #2d6a4f; color: white; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; }
+    .card { background: #f7f8f5; border: 1px solid #dce1d8; border-radius: 12px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    .card-title { font-size: 14px; font-weight: 700; color: #1e3a29; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .card-title .badge { background: #2d6a4f; color: white; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
 
     .form-group { margin-bottom: 12px; }
-    label { font-size: 12.5px; font-weight: 700; color: #2d3748; margin-bottom: 5px; display: block; }
+    label { font-size: 12px; font-weight: 700; color: #2d3748; margin-bottom: 5px; display: block; }
     label .req { color: #e53e3e; }
 
-    input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, textarea {
-      width: 100%; padding: 9px 12px; background: #f0f2ed; border: 1px solid #d0d7cd; border-radius: 8px; font-size: 13.5px; color: #2d3748; outline: none;
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      width: 100%; padding: 8px 12px; background: #f0f2ed; border: 1px solid #d0d7cd; border-radius: 8px; font-size: 13px; color: #2d3748; outline: none;
     }
-    input[type="date"], input[type="month"] { font-family: inherit; min-height: 38px; }
+    input[type="date"] { font-family: inherit; min-height: 35px; }
     input:focus, select:focus, textarea:focus { border-color: #2d6a4f; background: #ffffff; }
 
     .row { display: flex; gap: 12px; }
@@ -74,9 +44,9 @@
 
     .custom-time-wrapper { position: relative; width: 100%; }
     .custom-time-input {
-      width: 100%; padding: 9px 35px 9px 12px;
+      width: 100%; padding: 8px 35px 8px 12px;
       background: #f0f2ed; border: 1px solid #d0d7cd;
-      border-radius: 8px; font-size: 13.5px; color: #2d3748; cursor: pointer;
+      border-radius: 8px; font-size: 13px; color: #2d3748; cursor: pointer;
     }
     .custom-time-icon {
       position: absolute; right: 10px; top: 50%;
@@ -101,114 +71,59 @@
     }
     .time-option:hover, .time-option.selected { background: #2d6a4f; color: white; }
 
-    .btn-action { background: #e2ebd8; color: #2d6a4f; border: 1px solid #b8caa7; padding: 7px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12.5px; white-space: nowrap; }
-    .btn-action:hover { background: #d3e2c6; }
+    .btn-action { background: #e2ebd8; color: #2d6a4f; border: 1px solid #b8caa7; padding: 7px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .btn-action.danger { background: #fce8e6; color: #c53030; border-color: #f5c6cb; }
 
     .progress-multi { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 12px; background: #e2e8f0; }
 
-    .legend-box { display: flex; justify-content: space-between; font-size: 11.5px; margin-top: 8px; color: #4a5568; font-weight: 600; flex-wrap: wrap; gap: 4px; }
+    .legend-box { display: flex; justify-content: space-between; font-size: 11px; margin-top: 8px; color: #4a5568; font-weight: 600; flex-wrap: wrap; gap: 4px; }
     .legend-item { display: flex; align-items: center; gap: 4px; }
     .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-    .photo-upload-box { border: 1.5px dashed #2d6a4f; background: #f0f4ee; border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; min-height: 95px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .photo-upload-box { border: 1.5px dashed #2d6a4f; background: #f0f4ee; border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; min-height: 85px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .photo-upload-box:hover { background: #e4ebe1; }
     .photo-upload-box input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; top:0; left:0; }
-    .photo-upload-box img { max-width: 100%; max-height: 80px; border-radius: 6px; display: none; object-fit: cover; border: 1px solid #CCD3E0; }
+    .photo-upload-box img { max-width: 100%; max-height: 70px; border-radius: 6px; display: none; object-fit: cover; }
     .photo-upload-box .compressing { display: none; font-size: 11px; color: #2d6a4f; font-weight: 700; margin-top: 4px; }
 
-    .btn-submit { background: #2d6a4f; color: white; border: none; width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(45,106,79,0.25); transition: background .15s ease; }
+    .btn-submit { background: #2d6a4f; color: white; border: none; width: 100%; padding: 13px; font-size: 15px; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(45,106,79,0.25); }
     .btn-submit:hover { background: #1b4332; }
     .btn-submit:disabled { background: #a0aec0; cursor: not-allowed; }
 
-    .draft-banner { background: #fff8e1; border: 1px solid #f0d78c; color: #7a5c00; font-size: 12.5px; font-weight: 600; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
+    .draft-banner { background: #fff8e1; border: 1px solid #f0d78c; color: #7a5c00; font-size: 12px; font-weight: 600; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
     .draft-banner button { background: transparent; border: 1px solid #b8933f; color: #7a5c00; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
-    /* Dashboard Export Strip */
-    .export-strip {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #FFFFFF;
-      border: 1px solid #dce1d8;
-      border-radius: 12px;
-      padding: 12px 18px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .export-buttons {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .btn-export {
-      text-decoration: none;
-      padding: 8px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all .15s ease;
-      color: #fff;
-    }
-    .btn-excel { background: #1E8A5C; }
-    .btn-excel:hover { background: #166E49; }
-    .btn-pdf { background: #0B1F4B; }
-    .btn-pdf:hover { background: #152C63; }
-    .btn-print { background: #2F5D9E; }
-    .btn-print:hover { background: #23487A; }
-
-    .kpi-row { display: flex; gap: 12px; margin-bottom: 18px; }
-    .kpi-card { flex: 1; padding: 16px 20px; border-radius: 12px; color: white; position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    .kpi-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .kpi-card { flex: 1; padding: 14px 18px; border-radius: 12px; color: white; position: relative; overflow: hidden; }
     .kpi-card.green1 { background: #1b4332; }
     .kpi-card.green2 { background: #2d6a4f; }
     .kpi-card.orange { background: #c05621; }
-    .kpi-card .kpi-title { font-size: 12px; font-weight: 600; opacity: 0.9; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-    .kpi-card .kpi-val { font-size: 24px; font-weight: 700; }
+    .kpi-card .kpi-title { font-size: 11px; font-weight: 600; opacity: 0.9; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .kpi-card .kpi-val { font-size: 22px; font-weight: 700; }
 
-    .dash-group-box { background: #ffffff; border: 1px solid #dce1d8; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-    .dash-group-header { font-size: 14px; font-weight: 700; color: #1e3a29; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .dash-group-box { background: #ffffff; border: 1px solid #dce1d8; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .dash-group-header { font-size: 13px; font-weight: 700; color: #1e3a29; border-bottom: 1px solid #edf2f7; padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-    table.dash-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    table.dash-table th { background: #f0f4ee; color: #2d6a4f; padding: 9px 8px; font-size: 11.5px; font-weight: 700; text-align: center; border-radius: 4px; }
-    table.dash-table td { padding: 9px 8px; text-align: center; color: #4a5568; border-bottom: 1px solid #f0f0f0; }
-    table.dash-table tr:hover td { background: #f8faf7; }
-
-    .photo-thumb-link {
-      display: inline-block;
-      margin: 0 2px;
-      font-size: 11.5px;
-      color: #2F5D9E;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .photo-thumb-link:hover { text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f0f4ee; color: #2d6a4f; padding: 8px; font-size: 11px; font-weight: 700; text-align: center; border-radius: 4px; }
+    td { padding: 8px; font-size: 12px; text-align: center; color: #4a5568; border-bottom: 1px solid #f0f0f0; }
 
     .field-missing { border-color:#e53e3e !important; background:#fff5f5 !important; }
     .photo-upload-box.field-missing { border:2px solid #e53e3e !important; background:#fff5f5 !important; }
+    .missing-text { color:#e53e3e; font-size:11px; font-weight:700; margin-top:3px; }
   </style>
 </head>
 <body>
 
-<a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
-
 <div class="container">
 
-  <!-- Top User Navigation & Status Bar -->
-  <div class="user-top-bar">
-    <div class="live-tag">
-      <span class="live-dot"></span>
-      <span>SIPHYA SITE HUB &bull; PostgreSQL Live Database</span>
-    </div>
-    <div id="userNavBlock" style="display:flex; align-items:center; gap:10px;"></div>
-  </div>
+  <a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
 
   <div class="header-title">
     <div class="sub-tag">— SITE OPERATIONS —</div>
     <h1>♻️ ระบบติดตามขยะภายในไซต์</h1>
     <p>Waste Tracking System — บันทึกและติดตามข้อมูลการขนย้ายขยะภายในไซต์งาน</p>
+    <p style="margin-top:6px"><a href="/npo" style="color:#2d6a4f;font-weight:700">📄 ออกรายงาน NPO (ธุรการ)</a></p>
   </div>
 
   <div class="nav-tabs">
@@ -216,17 +131,16 @@
     <button class="tab-btn" id="tabDashBtn" onclick="switchTab('dash')">📊 Dashboard สรุปผล</button>
   </div>
 
-  <!-- ================= TAB 1: FORM ================= -->
+  <!-- TAB 1: FORM -->
   <div id="tabForm" class="tab-content active">
 
     <div class="draft-banner" id="draftBanner">
       <span>💾 พบข้อมูลที่กรอกค้างไว้ (อาจเน็ตหลุดตอนก่อนหน้า) ต้องการกู้คืนหรือไม่?</span>
-      <button type="button" onclick="clearDraft(); document.getElementById('draftBanner').style.display='none';">ทิ้งไป</button>
+      <button type="button" onclick="clearDraft(); $('draftBanner').style.display='none';">ทิ้งไป</button>
     </div>
 
     <form id="form">
 
-      <!-- หัวข้อที่ 1: สถานที่และเวลา -->
       <div class="card">
         <div class="card-title"><span class="badge">1</span> ข้อมูลสถานที่และเวลา</div>
 
@@ -242,11 +156,11 @@
         <div class="row">
           <div class="col form-group">
             <label>วันที่ (ตามบิล) <span class="req">*</span></label>
-            <input type="date" id="date" name="date" required>
+            <input type="date" id="date" name="date">
           </div>
           <div class="col form-group">
             <label>ชั้น / โซน <span class="req">*</span></label>
-            <input type="text" id="location" placeholder="เช่น ชั้น 3 หรือ โซน A" required>
+            <input type="text" id="location" placeholder="เช่น ชั้น 3 หรือ โซน A">
           </div>
         </div>
 
@@ -254,7 +168,7 @@
           <div class="col form-group">
             <label>เวลาเข้า <span class="req">*</span></label>
             <div class="custom-time-wrapper">
-              <input type="text" id="timeIn" class="custom-time-input" readonly placeholder="-- : --" required>
+              <input type="text" id="timeIn" class="custom-time-input" readonly placeholder="-- : --">
               <span class="custom-time-icon">🕒</span>
               <div class="time-picker-popover" id="popover-timeIn">
                 <div class="time-select-scroll" id="hours-timeIn"></div>
@@ -267,7 +181,7 @@
           <div class="col form-group">
             <label>เวลารถออก <span class="req">*</span></label>
             <div class="custom-time-wrapper">
-              <input type="text" id="time" class="custom-time-input" readonly placeholder="-- : --" required>
+              <input type="text" id="time" class="custom-time-input" readonly placeholder="-- : --">
               <span class="custom-time-icon">🕒</span>
               <div class="time-picker-popover" id="popover-time">
                 <div class="time-select-scroll" id="hours-time"></div>
@@ -280,22 +194,21 @@
 
         <div class="form-group">
           <label>ผู้บันทึกข้อมูล <span class="req">*</span></label>
-          <input type="text" id="recorder" placeholder="ระบุผู้ขนย้าย/ผู้บันทึก" required>
+          <input type="text" id="recorder" placeholder="ระบุผู้ขนย้าย/ผู้บันทึก">
         </div>
       </div>
 
-      <!-- หัวข้อที่ 2: รายละเอียดการขนส่ง -->
       <div class="card">
         <div class="card-title"><span class="badge">2</span> รายละเอียดการขนส่ง</div>
 
         <div class="row">
           <div class="col form-group">
             <label>เลขที่บิล <span class="req">*</span></label>
-            <input type="text" id="billNo" placeholder="ระบุเลขที่บิล" required>
+            <input type="text" id="billNo" placeholder="ระบุเลขที่บิล">
           </div>
           <div class="col form-group">
             <label>เลขทะเบียนรถ <span class="req">*</span></label>
-            <input type="text" id="plateNo" placeholder="ระบุทะเบียนรถ" required>
+            <input type="text" id="plateNo" placeholder="ระบุทะเบียนรถ">
           </div>
         </div>
 
@@ -310,12 +223,12 @@
           </div>
           <div class="col form-group">
             <label>จำนวนเที่ยว <span class="req">*</span></label>
-            <input type="number" id="trips" value="1" readonly style="background-color: #e9ecef; cursor: not-allowed;">
+            <input type="number" id="trips" class="form-control" value="1" readonly style="background-color: #e9ecef; cursor: not-allowed;">
           </div>
         </div>
       </div>
 
-      <!-- หัวข้อที่ 3: สัดส่วนประเภทขยะ (%) -->
+      <!-- หัวข้อที่ 3: สัดส่วนประเภทขยะ (4 ช่อง) -->
       <div class="card">
         <div class="card-title"><span class="badge">3</span> สัดส่วนประเภทขยะ (%)</div>
         <div class="row">
@@ -353,68 +266,47 @@
         </div>
       </div>
 
-      <!-- หัวข้อที่ 4: หลักฐานรูปภาพ -->
       <div class="card">
         <div class="card-title"><span class="badge">4</span> หลักฐานรูปภาพ <span style="color:#e53e3e;">*</span></div>
         <div class="row">
           <div class="col">
             <div class="photo-upload-box">
               <input type="file" id="photo1" accept="image/*" capture="environment" onchange="previewImg(this, 'p1', 'icon1')">
-              <div id="icon1"><span style="font-size:22px;">📷</span><div style="font-size:11px; font-weight:700; margin-top:3px;">1. รูปหน้ารถ (เห็นป้ายทะเบียน)</div></div>
-              <img id="p1" alt="หน้ารถ">
+              <div id="icon1"><span style="font-size:20px;">📷</span><div style="font-size:11px; font-weight:700; margin-top:3px;">1. รูปหน้ารถ (ตอนเข้าไซต์ให้เห็นป้ายทะเบียน) </div></div>
+              <img id="p1">
               <div class="compressing" id="compressing1">⏳ กำลังย่อรูป...</div>
             </div>
           </div>
           <div class="col">
             <div class="photo-upload-box">
               <input type="file" id="photo2" accept="image/*" capture="environment" onchange="previewImg(this, 'p2', 'icon2')">
-              <div id="icon2"><span style="font-size:22px;">🚚</span><div style="font-size:11px; font-weight:700; margin-top:3px;">2. รูปขยะบนรถ (มุมสูง)</div></div>
-              <img id="p2" alt="ขยะบนรถ">
+              <div id="icon2"><span style="font-size:20px;">🚚</span><div style="font-size:11px; font-weight:700; margin-top:3px;">2. รูปขยะบนรถ (ภาพมุมสูง)</div></div>
+              <img id="p2">
               <div class="compressing" id="compressing2">⏳ กำลังย่อรูป...</div>
             </div>
           </div>
           <div class="col">
             <div class="photo-upload-box">
               <input type="file" id="photo3" accept="image/*" capture="environment" onchange="previewImg(this, 'p3', 'icon3')">
-              <div id="icon3"><span style="font-size:22px;">🔒</span><div style="font-size:11px; font-weight:700; margin-top:3px;">3. รูปก่อนคลุมผ้า</div></div>
-              <img id="p3" alt="ก่อนคลุมผ้า">
+              <div id="icon3"><span style="font-size:20px;">🔒</span><div style="font-size:11px; font-weight:700; margin-top:3px;">3. รูปก่อนคลุมผ้า (ให้เห็นปริมาณขยะก่อนคลุมผ้า)</div></div>
+              <img id="p3">
               <div class="compressing" id="compressing3">⏳ กำลังย่อรูป...</div>
             </div>
           </div>
         </div>
 
-        <div class="form-group" style="margin-top:14px;">
+        <div class="form-group" style="margin-top:12px;">
           <label>หมายเหตุ</label>
           <textarea id="note" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)..."></textarea>
         </div>
       </div>
 
-      <button type="submit" id="saveBtn" class="btn-submit">💾 บันทึกข้อมูลเข้า PostgreSQL</button>
+      <button type="submit" id="saveBtn" class="btn-submit">💾 บันทึกข้อมูล</button>
     </form>
   </div>
 
-  <!-- ================= TAB 2: DASHBOARD ================= -->
+  <!-- TAB 2: DASHBOARD -->
   <div id="tabDash" class="tab-content">
-
-    <!-- Export Actions Strip -->
-    <div class="export-strip">
-      <div style="font-size:13px; font-weight:700; color:#1e3a29;">
-        📑 ส่งออกรายงาน (Export Reports)
-      </div>
-      <div class="export-buttons">
-        <a href="/api/export/waste/excel" class="btn-export btn-excel">
-          📊 Export Excel
-        </a>
-        <a href="/api/export/waste/pdf" target="_blank" class="btn-export btn-pdf">
-          📄 Export PDF
-        </a>
-        <a href="/api/export/waste/print" target="_blank" class="btn-export btn-print">
-          🖨️ พิมพ์รายงานหน้างาน
-        </a>
-      </div>
-    </div>
-
-    <!-- Filters Card -->
     <div class="card">
       <div class="row">
         <div class="col form-group" style="margin:0;">
@@ -425,12 +317,11 @@
         </div>
         <div class="col form-group" style="margin:0;">
           <label>📅 กรองตามเดือน/ปี:</label>
-          <input type="month" id="filterMonth" onchange="filterDashboard()">
+          <input type="month" id="filterMonth" onchange="filterDashboard()" style="width:100%;">
         </div>
       </div>
     </div>
 
-    <!-- KPI Cards -->
     <div class="kpi-row">
       <div class="kpi-card green1">
         <div class="kpi-title">🚛 จำนวนเที่ยวรวม</div>
@@ -446,16 +337,13 @@
       </div>
     </div>
 
-    <!-- Grouped Records List Container -->
     <div id="dashListContainer">
-      <div class="card" style="text-align:center; color:#718096; padding:30px;">⏳ กำลังโหลดข้อมูลจาก PostgreSQL...</div>
+      <div class="card" style="text-align:center; color:#718096;">กำลังโหลดข้อมูล...</div>
     </div>
-
   </div>
 
 </div>
 
-<script src="/js/api-client.js"></script>
 <script>
 function $(id) { return document.getElementById(id); }
 
@@ -475,9 +363,43 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+function getFormattedDate(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// "2026-09-30" -> "30/09/2026" (รูปแบบที่ Code.gs รองรับ)
+function toDMY(ymd) {
+  const p = String(ymd || '').split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : '';
+}
 function todayYMD() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function formatTimeString(val) {
+  if (!val) return '-';
+  let strVal = String(val);
+  if (strVal.includes('T')) {
+    try {
+      const d = new Date(strVal);
+      const hours = String(d.getUTCHours()).padStart(2, '0');
+      const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+      if (hours === '00' && minutes === '00') {
+        const localHours = String(d.getHours()).padStart(2, '0');
+        const localMins = String(d.getMinutes()).padStart(2, '0');
+        if (localHours === '00' && localMins === '00') return '-';
+        return `${localHours}:${localMins}`;
+      }
+      return `${hours}:${minutes}`;
+    } catch(e) {
+      return '-';
+    }
+  }
+  return strVal;
 }
 
 function saveDraft() {
@@ -491,7 +413,8 @@ function saveDraft() {
     draft.wastePacking = $('wastePacking') ? $('wastePacking').value : '';
     draft.wasteSystem = $('wasteSystem') ? $('wasteSystem').value : '';
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch (e) {}
+  } catch (e) {
+  }
 }
 
 function hasDraft() {
@@ -508,11 +431,13 @@ function restoreDraft() {
     if (!saved) return;
     const draft = JSON.parse(saved);
     Object.keys(draft).forEach(key => {
+      // ร่างเก่าเก็บวันที่แบบ วว/ดด/ปปปป ซึ่งช่องปฏิทินใช้ไม่ได้ ข้ามไป
       if (key === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(draft[key] || '')) return;
       if ($(key) && draft[key]) $(key).value = draft[key];
     });
     updateProgressBar();
-  } catch (e) {}
+  } catch (e) {
+  }
 }
 
 function clearDraft() {
@@ -521,10 +446,15 @@ function clearDraft() {
   } catch (e) {}
 }
 
+// เพิ่มเติมจากเดิม: ครอปกลางภาพให้เป็นสัดส่วนคงที่ (TARGET_ASPECT) เสมอ ไม่ว่าภาพต้นฉบับ
+// จะถ่ายแนวตั้ง แนวนอน หรือสัดส่วนใดก็ตาม เพื่อให้รูปที่ไปโผล่ในรายงาน (Code.gs)
+// "เต็มกรอบเซลล์พอดี" ทุกใบ ไม่มีช่องว่างเหลือ
+//
+// *** สำคัญ: TARGET_ASPECT ต้องตรงกับ REPORT_IMG_ASPECT ใน Code.gs (Site Management) เป๊ะๆ เสมอ ***
 function compressImage(file, maxWidth, quality) {
   maxWidth = maxWidth || 1280;
-  quality = quality || 0.75;
-  const TARGET_ASPECT = 733 / 550;
+  quality = quality || 0.7;
+  const TARGET_ASPECT = 733 / 550; // กว้าง:สูง — ต้องตรงกับขนาดเซลล์รูปในรายงาน (REPORT_IMG_COL_WIDTH / REPORT_IMG_ROW_HEIGHT)
 
   return new Promise((resolve) => {
     if (!file) { resolve(''); return; }
@@ -537,13 +467,16 @@ function compressImage(file, maxWidth, quality) {
           const srcH = img.height;
           const srcAspect = srcW / srcH;
 
+          // คำนวณกรอบครอปกลางภาพให้ได้สัดส่วน TARGET_ASPECT เสมอ
           let cropW, cropH, cropX, cropY;
           if (srcAspect > TARGET_ASPECT) {
+            // รูปต้นฉบับ "กว้างกว่า" สัดส่วนเป้าหมาย -> ครอปด้านข้าง (ซ้าย-ขวา) ออก
             cropH = srcH;
             cropW = srcH * TARGET_ASPECT;
             cropX = (srcW - cropW) / 2;
             cropY = 0;
           } else {
+            // รูปต้นฉบับ "สูงกว่า" สัดส่วนเป้าหมาย (เช่นถ่ายแนวตั้ง) -> ครอปบน-ล่างออก
             cropW = srcW;
             cropH = srcW / TARGET_ASPECT;
             cropX = 0;
@@ -572,31 +505,9 @@ function compressImage(file, maxWidth, quality) {
   });
 }
 
-function setupCustomUserNav() {
-  const user = API.getUser();
-  const navContainer = $('userNavBlock');
-  if (!navContainer) return;
-
-  if (user) {
-    const isAdmin = user.role === 'admin';
-    navContainer.innerHTML = `
-      ${isAdmin ? `<a href="/admin" style="background:#F2B705; color:#0B1F4B; font-weight:700; text-decoration:none; padding:5px 12px; font-size:12px; border-radius:6px;">📊 แผงควบคุมแอดมิน</a>` : ''}
-      <span style="font-weight:600; color:#1e3a29;">👤 ${user.full_name || user.username} (${user.role})</span>
-      <button onclick="API.logout()" style="background:#eee; border:1px solid #ccc; color:#555; padding:4px 10px; font-size:11.5px; border-radius:6px; cursor:pointer;">ออกจากระบบ</button>
-    `;
-  } else {
-    navContainer.innerHTML = `
-      <a href="/login" style="background:#2d6a4f; color:#fff; font-weight:600; text-decoration:none; padding:5px 12px; font-size:12px; border-radius:6px;">🔐 เข้าสู่ระบบ</a>
-    `;
-  }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
-  setupCustomUserNav();
-
-  if ($('date')) {
-    $('date').value = todayYMD();
-  }
+  // ช่องวันที่เป็นปฏิทิน เริ่มต้นว่าง ให้เลือกตามบิล และห้ามเลือกวันในอนาคต
+  if ($('date')) $('date').max = todayYMD();
 
   setup24hTimePicker('timeIn');
   setup24hTimePicker('time');
@@ -615,10 +526,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  const formEl = $('form');
+  const formEl = document.querySelector('form') || $('form');
   if (formEl) {
     formEl.addEventListener('submit', handleFormSubmit);
   }
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+      if (event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        return false;
+      }
+    }
+  });
 });
 
 function switchTab(tab) {
@@ -725,33 +645,36 @@ function previewImg(input, imgId, iconId) {
       if ($(iconId)) {
         $(iconId).style.display = 'none';
       }
-    };
+    }
     reader.readAsDataURL(input.files[0]);
   }
 }
 
-async function loadProjectList() {
-  try {
-    const res = await API.get('/api/waste/projects');
-    const sel = $('project');
-    if (!sel || !res.ok) return;
-    const previousValue = sel.value;
-    sel.innerHTML = '<option value="">-- เลือกโครงการ --</option>';
-    if (res.result && res.result.length > 0) {
-      res.result.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = item.name;
-        sel.appendChild(opt);
-      });
-    }
-    if (previousValue) sel.value = previousValue;
-  } catch (err) {
-    console.error('Error loading projects:', err);
-  }
+function loadProjectList() {
+  google.script.run
+    .withSuccessHandler(function(list) {
+      const sel = $('project');
+      if (!sel) return;
+      const previousValue = sel.value;
+      sel.innerHTML = '<option value="">-- เลือกโครงการ --</option>';
+      if (list && list.length > 0) {
+        list.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item;
+          opt.textContent = item;
+          sel.appendChild(opt);
+        });
+      }
+      if (previousValue) sel.value = previousValue;
+    })
+    .withFailureHandler(function(err) {
+      console.error(err);
+      alert('⚠️ โหลดรายชื่อโครงการไม่สำเร็จ กรุณาลองรีเฟรชหน้าอีกครั้ง');
+    })
+    .WASTE_getProjects();
 }
 
-async function addProject() {
+function addProject() {
   const inp = $('newProject');
   if (!inp) return;
   if (inp.style.display === 'none' || !inp.style.display) {
@@ -763,25 +686,23 @@ async function addProject() {
       alert('กรุณากรอกชื่อโครงการใหม่');
       return;
     }
-    try {
-      const res = await API.post('/api/waste/projects', { name: val });
-      if (res.ok) {
-        alert('✅ เพิ่มโครงการเรียบร้อยแล้ว');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        alert('เพิ่มโครงการเรียบร้อย');
         inp.value = '';
         inp.style.display = 'none';
-        await loadProjectList();
-        if (res.result && res.result.id) {
-          $('project').value = res.result.id;
-        }
-      } else {
-        alert('⚠️ เพิ่มโครงการไม่สำเร็จ: ' + (res.error || ''));
-      }
-    } catch (err) {
-      alert('⚠️ เกิดข้อผิดพลาด: ' + err.message);
-    }
+        loadProjectList();
+      })
+      .withFailureHandler(function(err) {
+        console.error(err);
+        alert('⚠️ เพิ่มโครงการไม่สำเร็จ กรุณาตรวจสอบสัญญาณอินเทอร์เน็ตแล้วลองใหม่');
+      })
+      .WASTE_saveNewProject(val);
   }
 }
 
+// ช่องที่บังคับกรอก — ถ้าช่องไหนไม่บังคับ ลบบรรทัดนั้นออก
+// (ต้องลบช่องเดียวกันออกจาก REQUIRED ใน WASTE_saveData ของ Code.gs ด้วย)
 const REQUIRED_FIELDS = [
   { id: 'project',     label: 'โครงการ' },
   { id: 'date',        label: 'วันที่ (ตามบิล)' },
@@ -796,7 +717,7 @@ const REQUIRED_FIELDS = [
 const REQUIRED_PHOTOS = [
   { id: 'photo1', label: 'รูปหน้ารถ (ตอนเข้าไซต์ให้เห็นป้ายทะเบียน)' },
   { id: 'photo2', label: 'รูปขยะบนรถ (ภาพมุมสูง)' },
-  { id: 'photo3', label: 'รูปก่อนคลุมผ้า' }
+  { id: 'photo3', label: 'รูปก่อนคลุมผ้า (ให้เห็นปริมาณขยะก่อนคลุมผ้า)' }
 ];
 let showMissing = false;
 
@@ -805,6 +726,7 @@ function getMissingFields() {
   REQUIRED_FIELDS.forEach(f => {
     const el = $(f.id);
     let bad = !el || !String(el.value || '').trim();
+    // ช่องปฏิทินให้ค่าเป็น ปปปป-ดด-วว
     if (!bad && f.id === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(el.value)) bad = true;
     if (bad) missing.push({ el, label: f.label });
   });
@@ -836,11 +758,12 @@ function validateWasteForm() {
   return false;
 }
 
+// พอเริ่มแสดงกรอบแดงแล้ว กรอกช่องไหนครบ กรอบแดงช่องนั้นหายทันที
 ['input', 'change', 'click'].forEach(ev => {
   document.addEventListener(ev, () => { if (showMissing) setTimeout(applyMissingMarks, 0); });
 });
 
-async function handleFormSubmit(e) {
+function handleFormSubmit(e) {
   e.preventDefault();
   if (isSubmitting) return;
 
@@ -862,89 +785,101 @@ async function handleFormSubmit(e) {
     if (!btn) return;
     btn.disabled = false;
     btn.style.backgroundColor = "#2d6a4f";
-    btn.textContent = '💾 บันทึกข้อมูลเข้า PostgreSQL';
+    btn.textContent = '💾 บันทึกข้อมูล';
   }
   if (btn) {
     btn.disabled = true;
     btn.style.backgroundColor = "#a0aec0";
-    btn.textContent = '⏳ กำลังประมวลผลรูปภาพและส่งข้อมูล...';
+    btn.textContent = '⏳ กำลังบีบอัดรูปภาพ...';
   }
 
-  try {
-    const images = await Promise.all([
-      compressImage($('photo1').files[0]),
-      compressImage($('photo2').files[0]),
-      compressImage($('photo3').files[0])
-    ]);
+  const formData = {
+    project: $('project').value,
+    date: toDMY($('date').value), // แปลง ปปปป-ดด-วว -> วว/ดด/ปปปป ก่อนส่ง (ห้ามส่งแบบเดิม วันที่จะเลื่อน)
+    location: $('location').value,
+    timeIn: $('timeIn').value,
+    time: $('time').value,
+    recorder: $('recorder').value,
+    billNo: $('billNo').value,
+    plateNo: $('plateNo').value,
+    truck: $('truckSelect').value,
+    trips: $('trips').value,
+    wasteConcrete: conc,
+    wasteConstruction: c,
+    wastePacking: p,
+    wasteSystem: s,
+    note: $('note').value
+  };
 
-    const payload = {
-      project_id: $('project').value,
-      date: $('date').value,
-      location: $('location').value,
-      timeIn: $('timeIn').value,
-      time: $('time').value,
-      recorder: $('recorder').value,
-      billNo: $('billNo').value,
-      plateNo: $('plateNo').value,
-      truck: $('truckSelect').value,
-      trips: $('trips').value,
-      wasteConcrete: conc,
-      wasteConstruction: c,
-      wastePacking: p,
-      wasteSystem: s,
-      note: $('note').value,
-      photo1: images[0],
-      photo2: images[1],
-      photo3: images[2]
-    };
+  Promise.all([
+    compressImage($('photo1').files[0]),
+    compressImage($('photo2').files[0]),
+    compressImage($('photo3').files[0])
+  ]).then(images => {
+    formData.photo1 = images[0];
+    formData.photo2 = images[1];
+    formData.photo3 = images[2];
+    if (btn) btn.textContent = '⏳ กำลังบันทึกข้อมูล...';
 
-    const res = await API.post('/api/waste/add', payload);
-    isSubmitting = false;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        isSubmitting = false;
 
-    if (res.ok) {
-      alert('✅ บันทึกข้อมูลการขนย้ายขยะสำเร็จเข้าสู่ PostgreSQL เรียบร้อย!');
-      clearDraft();
-      if ($('draftBanner')) $('draftBanner').style.display = 'none';
-      resetBtn();
+        if (res && res.success === false) {
+          alert('⚠️ ' + (res.message || 'บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลแล้วลองใหม่'));
+          resetBtn();
+          return;
+        }
 
-      $('form').reset();
-      showMissing = false; applyMissingMarks();
+        if (res && res.duplicatePrevented) {
+          alert('ℹ️ ข้อมูลนี้เคยถูกบันทึกไปแล้ว ระบบจึงไม่บันทึกซ้ำให้');
+        } else {
+          alert('✅ บันทึกข้อมูลสำเร็จเรียบร้อย!');
+        }
 
-      ['p1', 'p2', 'p3'].forEach(id => { if ($(id)) $(id).style.display = 'none'; });
-      ['icon1', 'icon2', 'icon3'].forEach(id => { if ($(id)) $(id).style.display = 'block'; });
+        clearDraft();
+        if ($('draftBanner')) $('draftBanner').style.display = 'none';
+        resetBtn();
 
-      updateProgressBar();
-      $('date').value = todayYMD();
-    } else {
-      alert('⚠️ บันทึกไม่สำเร็จ: ' + (res.error || res.message || ''));
-      resetBtn();
-    }
-  } catch (err) {
+        $('form').reset();
+        showMissing = false; applyMissingMarks();
+
+        ['p1', 'p2', 'p3'].forEach(id => { if ($(id)) $(id).style.display = 'none'; });
+        ['icon1', 'icon2', 'icon3'].forEach(id => { if ($(id)) $(id).style.display = 'block'; });
+
+        updateProgressBar();
+        $('date').value = ''; // ให้เลือกวันที่ตามบิลใหม่ทุกครั้ง
+      })
+      .withFailureHandler(function(err) {
+        isSubmitting = false;
+        console.error(err);
+        alert('❌ บันทึกไม่สำเร็จ กรุณาตรวจสอบสัญญาณอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง (ข้อมูลที่กรอกไว้ยังอยู่ ไม่ต้องพิมพ์ใหม่)');
+        resetBtn();
+      })
+      .WASTE_saveData(formData);
+  }).catch(function(err) {
     isSubmitting = false;
     console.error(err);
-    alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+    alert('❌ เกิดข้อผิดพลาดขณะเตรียมรูปภาพ กรุณาลองใหม่อีกครั้ง');
     resetBtn();
-  }
+  });
 }
 
-async function loadDashboardData() {
-  const container = $('dashListContainer');
-  if (container) {
-    container.innerHTML = '<div class="card" style="text-align:center; color:#718096; padding:30px;">⏳ กำลังโหลดข้อมูลจาก PostgreSQL...</div>';
-  }
-  try {
-    const res = await API.get('/api/waste/dashboard');
-    if (res.ok) {
-      globalDashData = res.rows || [];
+function loadDashboardData() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      globalDashData = data.rows || [];
       populateProjectFilter();
       filterDashboard();
-    } else {
-      if (container) container.innerHTML = '<div class="card" style="text-align:center; color:#c53030;">⚠️ โหลดข้อมูลไม่สำเร็จ</div>';
-    }
-  } catch (err) {
-    console.error(err);
-    if (container) container.innerHTML = '<div class="card" style="text-align:center; color:#c53030;">⚠️ เกิดข้อผิดพลาด: ' + err.message + '</div>';
-  }
+    })
+    .withFailureHandler(function(err) {
+      console.error(err);
+      const container = $('dashListContainer');
+      if (container) {
+        container.innerHTML = '<div class="card" style="text-align:center; color:#c53030;">⚠️ โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</div>';
+      }
+    })
+    .WASTE_getDashboardData();
 }
 
 function populateProjectFilter() {
@@ -972,9 +907,50 @@ function filterDashboard() {
   }
 
   if (monthVal) {
+    const thaiMonths = {
+      'มกราคม': '01', 'กุมภาพันธ์': '02', 'มีนาคม': '03', 'เมษายน': '04',
+      'พฤษภาคม': '05', 'มิถุนายน': '06', 'กรกฎาคม': '07', 'สิงหาคม': '08',
+      'กันยายน': '09', 'ตุลาคม': '10', 'พฤศจิกายน': '11', 'ธันวาคม': '12'
+    };
+
+    let targetMonth = '';
+    let targetYear = '';
+
+    for (let tMonth in thaiMonths) {
+      if (monthVal.includes(tMonth)) {
+        targetMonth = thaiMonths[tMonth];
+        const matchYear = monthVal.match(/\d{4}/);
+        if (matchYear) targetYear = matchYear[0];
+        break;
+      }
+    }
+
+    if (!targetMonth && monthVal.includes('-')) {
+      const parts = monthVal.split('-');
+      if (parts.length === 2) {
+        targetYear = parts[0];
+        targetMonth = parts[1];
+      }
+    }
+
     filtered = filtered.filter(r => {
-      const dateStr = String(r['วันที่'] || '').trim();
-      return dateStr.startsWith(monthVal);
+      let dateStr = String(r['วันที่'] || '').trim();
+      if (!dateStr) return false;
+
+      if (dateStr.includes('/')) {
+        const dateParts = dateStr.split('/');
+        if (dateParts.length === 3) {
+          const dMonth = dateParts[1];
+          const dYear = dateParts[2];
+
+          if (targetMonth && targetYear) {
+            return (dMonth === targetMonth && dYear === targetYear);
+          } else if (targetMonth) {
+            return dMonth === targetMonth;
+          }
+        }
+      }
+      return dateStr.includes(monthVal);
     });
   }
 
@@ -985,8 +961,8 @@ function filterDashboard() {
     totalCost += Number(r['ค่าใช้จ่ายรวม (บาท)']) || 0;
   });
 
-  if ($('kpiTrips')) $('kpiTrips').textContent = totalTrips.toLocaleString() + ' เที่ยว';
-  if ($('kpiVol')) $('kpiVol').textContent = totalVol.toFixed(1) + ' คิว';
+  if ($('kpiTrips')) $('kpiTrips').textContent = totalTrips + ' เที่ยว';
+  if ($('kpiVol')) $('kpiVol').textContent = totalVol + ' คิว';
   if ($('kpiCost')) $('kpiCost').textContent = totalCost.toLocaleString() + ' บาท';
 
   const container = $('dashListContainer');
@@ -994,7 +970,7 @@ function filterDashboard() {
   container.innerHTML = '';
 
   if (filtered.length === 0) {
-    container.innerHTML = '<div class="card" style="text-align:center; color:#718096; padding:30px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</div>';
+    container.innerHTML = '<div class="card" style="text-align:center; color:#718096;">ไม่พบข้อมูลตามเงื่อนไข</div>';
     return;
   }
 
@@ -1018,48 +994,37 @@ function filterDashboard() {
     box.className = 'dash-group-box';
     box.innerHTML = `
       <div class="dash-group-header">
-        <div>🏗️ <strong>โครงการ: ${escapeHtml(pName)}</strong></div>
-        <div style="font-size:12px; background:#e2ebd8; color:#2d6a4f; padding:4px 10px; border-radius:12px; font-weight:700;">
-          ${items.length} รายการ | ${pTrips} เที่ยว | ${pVol.toFixed(1)} คิว | ${pCost.toLocaleString()} บาท
+        <div>🏗️ โครงการ: ${escapeHtml(pName)}</div>
+        <div style="font-size:11px; background:#e2ebd8; color:#2d6a4f; padding:3px 8px; border-radius:12px;">
+          ${pTrips} เที่ยว | ${pVol} คิว | ${pCost.toLocaleString()} บาท
         </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="dash-table">
-          <thead>
+      <table>
+        <thead>
+          <tr>
+            <th>วันที่</th>
+            <th>ชั้น/โซน</th>
+            <th>เวลาเข้า</th>
+            <th>รถออก</th>
+            <th>ประเภทรถ</th>
+            <th>เที่ยว</th>
+            <th>ค่าใช้จ่าย</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(i => `
             <tr>
-              <th>วันที่</th>
-              <th>เลขที่บิล</th>
-              <th>ทะเบียนรถ</th>
-              <th>ประเภท</th>
-              <th>เที่ยว</th>
-              <th>คิว (m³)</th>
-              <th>ค่าใช้จ่าย</th>
-              <th>รูปถ่ายหลักฐาน</th>
-              <th>ผู้บันทึก</th>
+              <td>${escapeHtml(i['วันที่']) || '-'}</td>
+              <td>${escapeHtml(i['ชั้น/โซน']) || '-'}</td>
+              <td>${formatTimeString(i['เวลาเข้า'])}</td>
+              <td>${formatTimeString(i['เวลารถออก'])}</td>
+              <td><span style="background:#edf2f7; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(i['ประเภทรถ']) || '-'}</span></td>
+              <td>${escapeHtml(i['จำนวนเที่ยว']) || '0'}</td>
+              <td><b>${Number(i['ค่าใช้จ่ายรวม (บาท)'] || 0).toLocaleString()}</b></td>
             </tr>
-          </thead>
-          <tbody>
-            ${items.map(r => `
-              <tr>
-                <td>${r['วันที่']}</td>
-                <td><strong>${escapeHtml(r['เลขที่บิล'])}</strong></td>
-                <td>${escapeHtml(r['ทะเบียนรถ'])}</td>
-                <td>${escapeHtml(r['ประเภทรถ'])}</td>
-                <td>${r['จำนวนเที่ยว']}</td>
-                <td style="font-weight:700; color:#2d6a4f;">${parseFloat(r['ปริมาณขยะ (คิว)']).toFixed(1)}</td>
-                <td style="font-weight:700;">${parseFloat(r['ค่าใช้จ่ายรวม (บาท)']).toLocaleString()} ฿</td>
-                <td>
-                  ${r['รูปหน้ารถ'] ? `<a href="${r['รูปหน้ารถ']}" target="_blank" class="photo-thumb-link">📷 หน้ารถ</a>` : ''}
-                  ${r['รูปขยะบนรถ'] ? `<a href="${r['รูปขยะบนรถ']}" target="_blank" class="photo-thumb-link">🚚 กองขยะ</a>` : ''}
-                  ${r['รูปก่อนคลุมผ้า'] ? `<a href="${r['รูปก่อนคลุมผ้า']}" target="_blank" class="photo-thumb-link">🔒 ผ้าใบ</a>` : ''}
-                  ${!r['รูปหน้ารถ'] && !r['รูปขยะบนรถ'] && !r['รูปก่อนคลุมผ้า'] ? '-' : ''}
-                </td>
-                <td>${escapeHtml(r['ผู้บันทึก']) || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+          `).join('')}
+        </tbody>
+      </table>
     `;
     container.appendChild(box);
   }

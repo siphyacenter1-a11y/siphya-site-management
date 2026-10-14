@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ออกรายงาน NPO | ระบบติดตามขยะ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/site-hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
+    body { background: #ebede8; color: #333; margin: 0; padding: 70px 15px 40px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .header-title { text-align: center; margin-bottom: 20px; }
+    .header-title .sub-tag { font-size: 10px; letter-spacing: 2px; color: #6b7c65; font-weight: 700; }
+    .header-title h1 { color: #1e3a29; font-size: 24px; margin: 4px 0; }
+    .header-title p { color: #8c9689; font-size: 12px; margin: 0; }
+    .header-title a { color: #2d6a4f; font-weight: 700; font-size: 12px; }
+
+    .card { background: #f7f8f5; border: 1px solid #dce1d8; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+    .card-title { font-size: 14px; font-weight: 700; color: #1e3a29; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .badge { background: #2d6a4f; color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .col { flex: 1; min-width: 200px; }
+    label { font-size: 12px; font-weight: 700; color: #2d3748; margin-bottom: 5px; display: block; }
+    input, select { width: 100%; padding: 9px 12px; background: #f0f2ed; border: 1px solid #d0d7cd; border-radius: 8px; font-size: 14px; color: #2d3748; outline: none; }
+    input:focus, select:focus { border-color: #2d6a4f; background: #fff; }
+
+    .info { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .pill { background: #fff; border: 1px solid #dce1d8; border-radius: 10px; padding: 10px 14px; flex: 1; min-width: 150px; }
+    .pill .k { font-size: 11px; color: #6b7c65; font-weight: 600; }
+    .pill .v { font-size: 20px; font-weight: 700; color: #1e3a29; }
+
+    .btn { border: none; border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-main { background: #2d6a4f; color: #fff; }
+    .btn-main:hover { background: #1b4332; }
+    .btn-line { background: #fff; color: #2d6a4f; border: 1.5px solid #2d6a4f; }
+    .btn-danger { background: #fff; color: #c53030; border: 1.5px solid #f5c6cb; padding: 6px 10px; font-size: 12px; }
+    .btn-small { padding: 6px 10px; font-size: 12px; }
+    .btn:disabled { background: #a0aec0; color: #fff; border-color: #a0aec0; cursor: not-allowed; }
+    .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+    .preview-head { background: #fff; border: 1px solid #dce1d8; border-radius: 10px; padding: 12px 14px; margin: 14px 0 10px; font-size: 14px; line-height: 1.7; }
+    .preview-head b { color: #1e3a29; }
+    .table-wrap { overflow-x: auto; background: #fff; border: 1px solid #dce1d8; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th { background: #f0f4ee; color: #2d6a4f; padding: 8px; font-size: 11.5px; text-align: center; white-space: nowrap; }
+    td { padding: 7px 8px; text-align: center; border-top: 1px solid #edf0eb; white-space: nowrap; }
+    .status-issued { color: #2d6a4f; font-weight: 700; }
+    .status-cancelled { color: #a0a0a0; text-decoration: line-through; }
+    .muted { color: #8c9689; font-size: 12px; }
+    .empty { text-align: center; color: #8c9689; padding: 18px; }
+    .msg { margin-top: 10px; font-size: 13px; font-weight: 600; }
+    .msg.err { color: #c53030; }
+    .msg.ok { color: #2d6a4f; }
+    @media (max-width: 520px) { .header-title h1 { font-size: 20px; } .pill .v { font-size: 17px; } }
+  </style>
+</head>
+<body>
+<a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+<div class="container">
+  <div class="header-title">
+    <div class="sub-tag">— WASTE NPO REPORT —</div>
+    <h1>ออกรายงาน NPO ขยะ</h1>
+    <p>ดึงเที่ยวที่ยังไม่เคยออก NPO มาสร้าง PDF (A4 แนวนอน หน้าละ 3 เที่ยว) · <a href="/waste">ไปหน้าบันทึกขยะ</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="badge">1</span> เลือกโครงการและประเภทรถ</div>
+    <div class="row">
+      <div class="col"><label>โครงการ</label><select id="project"><option value="">กำลังโหลด...</option></select></div>
+      <div class="col"><label>ประเภทรถ</label><select id="truck"></select></div>
+    </div>
+    <div class="info" id="pendingInfo" style="display:none">
+      <div class="pill"><div class="k">เที่ยวที่ยังไม่ออก NPO</div><div class="v" id="pCount">-</div></div>
+      <div class="pill"><div class="k">เที่ยวเก่าสุด</div><div class="v" id="pOldest">-</div></div>
+      <div class="pill"><div class="k">ลำดับถัดไป</div><div class="v" id="pSeq">-</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="badge">2</span> ออก NPO</div>
+    <div class="row">
+      <div class="col"><label>เลข NPO</label><input id="npoNo" inputmode="numeric" placeholder="เช่น 6206284"></div>
+      <div class="col"><label>จำนวนเที่ยว</label><input id="trips" type="number" min="1" max="500" value="50"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-line" id="btnPreview">ดูตัวอย่างก่อนออก</button>
+      <button class="btn btn-main" id="btnCreate" disabled>ยืนยันออก NPO และสร้าง PDF</button>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div id="preview"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="badge">3</span> NPO ที่เคยออก <span class="muted" id="listScope"></span></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>เลข NPO</th><th>ประเภทรถ</th><th>ช่วงวันที่</th><th>ลำดับ</th><th>เที่ยว</th><th>ยอดเงิน</th><th>ออกเมื่อ</th><th>สถานะ</th><th></th></tr></thead>
+      <tbody id="list"><tr><td colspan="9" class="empty">กำลังโหลด...</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+<div class="hub-toast" id="hubToast"></div>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var run = function () { return google.script.run; };
+  var lastPreview = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(n) { return Number(n || 0).toLocaleString('th-TH'); }
+  function showMsg(t, ok) { var m = $('msg'); m.textContent = t || ''; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+  function sel() { return { projectId: Number($('project').value), truckType: $('truck').value }; }
+
+  function loadOptions() {
+    run().withSuccessHandler(function (o) {
+      var p = $('project'), keep = p.value;
+      p.innerHTML = '<option value="">-- เลือกโครงการ --</option>' + o.projects.map(function (x) {
+        return '<option value="' + x.id + '">' + esc(x.name) + (x.pending ? ' (ค้าง ' + x.pending + ' เที่ยว)' : '') + '</option>';
+      }).join('');
+      if (keep) p.value = keep;
+      if (!$('truck').options.length) {
+        $('truck').innerHTML = o.trucks.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+      }
+      loadList();
+    }).withFailureHandler(function (e) { showMsg(e.message); }).WASTE_npoOptions();
+  }
+
+  function loadPending() {
+    resetPreview();
+    var s = sel();
+    if (!s.projectId) { $('pendingInfo').style.display = 'none'; return; }
+    run().withSuccessHandler(function (r) {
+      $('pendingInfo').style.display = 'flex';
+      $('pCount').textContent = r.pendingCount + ' เที่ยว';
+      $('pOldest').textContent = r.oldestDate || '-';
+      $('pSeq').textContent = r.nextSeq;
+    }).withFailureHandler(function (e) { showMsg(e.message); }).WASTE_npoPending(s.projectId, s.truckType);
+  }
+
+  function resetPreview() { lastPreview = null; $('preview').innerHTML = ''; $('btnCreate').disabled = true; showMsg(''); }
+
+  $('btnPreview').onclick = function () {
+    var s = sel();
+    if (!s.projectId) return showMsg('กรุณาเลือกโครงการ');
+    showMsg('กำลังดึงข้อมูล...', true);
+    run().withSuccessHandler(function (p) {
+      lastPreview = { projectId: s.projectId, truckType: s.truckType, trips: Number($('trips').value) || 50 };
+      var asked = Number($('trips').value) || 50;
+      showMsg(p.rows.length < asked ? 'มีเที่ยวค้างแค่ ' + p.rows.length + ' เที่ยว จะออก NPO เท่าที่มี' : '', true);
+      $('preview').innerHTML =
+        '<div class="preview-head"><b>' + esc(p.dateText) + '</b><br>' +
+        'ลำดับ ' + p.seqStart + '–' + (p.seqStart + p.rows.length - 1) + ' · ' + p.totalTrips + ' เที่ยว · รวม <b>' + money(p.totalCost) + ' บาท</b></div>' +
+        '<div class="table-wrap"><table><thead><tr><th>ลำดับ</th><th>วันที่</th><th>เข้า</th><th>ออก</th><th>เลขที่บิล</th><th>ทะเบียน</th><th>ราคา</th></tr></thead><tbody>' +
+        p.rows.map(function (r) {
+          return '<tr><td>' + r.seq + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.timeIn) + '</td><td>' + esc(r.timeOut) +
+            '</td><td>' + esc(r.bill) + '</td><td>' + esc(r.plate) + '</td><td>' + money(r.cost) + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+      $('btnCreate').disabled = false;
+    }).withFailureHandler(function (e) { showMsg(e.message); }).WASTE_npoPreview(s.projectId, s.truckType, $('trips').value);
+  };
+
+  $('btnCreate').onclick = function () {
+    var npoNo = $('npoNo').value.trim();
+    if (!npoNo) return showMsg('กรุณากรอกเลข NPO');
+    if (!lastPreview) return showMsg('กรุณากดดูตัวอย่างก่อน');
+    if (!confirm('ยืนยันออก NPO ' + npoNo + ' ?\nเที่ยวในตัวอย่างจะถูกผูกกับ NPO นี้')) return;
+    var win = null;
+    try { win = window.open('', '_blank'); if (win) win.document.write('<p style="font-family:sans-serif;padding:24px">กำลังสร้าง PDF กรุณารอสักครู่...</p>'); } catch (e) { win = null; }
+    $('btnCreate').disabled = true;
+    showMsg('กำลังสร้าง PDF (อาจใช้เวลา 1-2 นาที)...', true);
+    run().withSuccessHandler(function (r) {
+      if (win && !win.closed) win.location.href = r.pdfUrl; else window.open(r.pdfUrl, '_blank');
+      $('npoNo').value = '';
+      loadOptions(); loadPending();   // loadPending ล้างตัวอย่างและข้อความเดิม จึงแสดงข้อความหลังจากนี้
+      showMsg('ออก NPO ' + npoNo + ' เรียบร้อย (PDF เปิดในแท็บใหม่ หรือกด PDF ในรายการด้านล่าง)', true);
+      hubToast('ออก NPO เรียบร้อย');
+    }).withFailureHandler(function (e) {
+      if (win && !win.closed) win.close();
+      $('btnCreate').disabled = false;
+      showMsg(e.message);
+    }).WASTE_npoCreate({ projectId: lastPreview.projectId, truckType: lastPreview.truckType, npoNo: npoNo, trips: lastPreview.trips });
+  };
+
+  function loadList() {
+    var pid = Number($('project').value) || 0;
+    $('listScope').textContent = pid ? '(เฉพาะโครงการที่เลือก)' : '(ทุกโครงการ)';
+    run().withSuccessHandler(function (rows) {
+      if (!rows.length) { $('list').innerHTML = '<tr><td colspan="9" class="empty">ยังไม่มี NPO</td></tr>'; return; }
+      $('list').innerHTML = rows.map(function (r) {
+        var ok = r.status === 'issued';
+        return '<tr class="' + (ok ? '' : 'status-cancelled') + '" title="' + esc(r.project) + (r.cancel_reason ? ' · ยกเลิก: ' + esc(r.cancel_reason) : '') + '">' +
+          '<td><b>' + esc(r.npo_no) + '</b></td><td>' + esc(r.truck_type) + '</td><td>' + esc(r.date_from) + ' – ' + esc(r.date_to) + '</td>' +
+          '<td>' + r.seq_start + '–' + (r.seq_start + r.trip_count - 1) + '</td><td>' + r.trip_count + '</td><td>' + money(r.total_cost) + '</td>' +
+          '<td>' + esc(r.created_at) + '</td><td class="' + (ok ? 'status-issued' : '') + '">' + (ok ? 'ออกแล้ว' : 'ยกเลิก') + '</td>' +
+          '<td>' + (ok ? '<button class="btn btn-line btn-small" onclick="openPdf(' + r.id + ')">PDF</button> ' +
+            '<button class="btn btn-danger" onclick="cancelNpo(' + r.id + ',\'' + esc(r.npo_no) + '\')">ยกเลิก</button>' : '') + '</td></tr>';
+      }).join('');
+    }).withFailureHandler(function (e) { $('list').innerHTML = '<tr><td colspan="9" class="empty">' + esc(e.message) + '</td></tr>'; }).WASTE_npoList(pid);
+  }
+
+  function openPdf(id) {
+    var win = null;
+    try { win = window.open('', '_blank'); if (win) win.document.write('<p style="font-family:sans-serif;padding:24px">กำลังเปิด PDF...</p>'); } catch (e) {}
+    run().withSuccessHandler(function (r) { if (win && !win.closed) win.location.href = r.url; else window.open(r.url, '_blank'); })
+      .withFailureHandler(function (e) { if (win) win.close(); hubToast(e.message, 5000); }).WASTE_npoPdf(id);
+  }
+
+  function cancelNpo(id, no) {
+    var reason = prompt('ยกเลิก NPO ' + no + '\nเที่ยวทั้งหมดในใบนี้จะกลับไปเป็น "ยังไม่ออก NPO"\n\nเหตุผลที่ยกเลิก:');
+    if (reason === null) return;
+    if (!reason.trim()) { hubToast('กรุณาระบุเหตุผล'); return; }
+    run().withSuccessHandler(function () { hubToast('ยกเลิก NPO ' + no + ' แล้ว'); loadOptions(); loadPending(); })
+      .withFailureHandler(function (e) { hubToast(e.message, 5000); }).WASTE_npoCancel({ npoId: id, reason: reason.trim() });
+  }
+
+  $('project').onchange = function () { loadPending(); loadList(); };
+  $('truck').onchange = loadPending;
+  $('trips').oninput = resetPreview;
+  loadOptions();
+</script>
+</body>
+</html>

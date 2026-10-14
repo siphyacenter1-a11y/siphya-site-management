@@ -17,8 +17,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { sitePool } = require('../db');
-
-class UserError extends Error {}
+const { UserError, withTx, htmlToPdf } = require('./common');
 
 const ITEM_IDS = ['1.1', '1.2', '2.1', '2.2', '3.1', '4.1', '4.2', '4.3', '5.1', '5.2',
   '6.1', '6.2', '7.1', '8.1', '8.2', '9.1', '10.1'];
@@ -137,21 +136,6 @@ async function writeItems(client, checklistId, items, keepUrls) {
   // เก็บสำเนาไว้ใน checklist_data ด้วย ให้ API เดิม (/api/checklist/logs) ยังอ่านได้
   await client.query('UPDATE site_supervisor_checklists SET checklist_data = $2 WHERE id = $1',
     [checklistId, JSON.stringify(summary)]);
-}
-
-async function withTx(fn) {
-  const client = await sitePool.connect();
-  try {
-    await client.query('BEGIN');
-    const out = await fn(client);
-    await client.query('COMMIT');
-    return out;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw err;
-  } finally {
-    client.release();
-  }
 }
 
 // อ่านหัวฟอร์มพร้อมล็อกแถว และตรวจว่ายังเป็นรายการเดิม (submittedAt ต้องตรง)
@@ -451,19 +435,6 @@ const PDF_CSS =
   'tr{page-break-inside:avoid;}' +
   '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
 
-let browserPromise = null;
-function getBrowser() {
-  if (!browserPromise) {
-    const puppeteer = require('puppeteer');
-    browserPromise = puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-dev-shm-usage']
-    }).catch(err => { browserPromise = null; throw err; });
-  }
-  return browserPromise;
-}
-
 async function CHECKLIST_getPrintPdf(req) {
   if (!req || !req.html) throw new UserError('ไม่มีข้อมูลสำหรับสร้าง PDF');
   let body = String(req.html)
@@ -487,16 +458,7 @@ async function CHECKLIST_getPrintPdf(req) {
   const full = '<!doctype html><html><head><meta charset="UTF-8"><style>' + getFontCss() + PDF_CSS +
     '</style></head><body>' + inl.html + '</body></html>';
 
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  let pdf;
-  try {
-    await page.setJavaScriptEnabled(false);
-    await page.setContent(full, { waitUntil: 'load', timeout: 60000 });
-    pdf = await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true });
-  } finally {
-    await page.close().catch(() => {});
-  }
+  const pdf = await htmlToPdf(full, { format: 'A4' });
 
   const safe = s => String(s).replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, '').replace(/\s+/g, ' ').trim();
   const fileName = `เช็คลิสต์_${safe(row.site_name || 'ไม่ระบุหน่วยงาน')}_${safe(row.d || 'ไม่ระบุวันที่')}_${row.id}.pdf`;

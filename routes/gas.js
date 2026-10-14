@@ -9,9 +9,11 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
+const { UserError } = require('../services/common');
 const checklist = require('../services/checklist');
+const waste = require('../services/waste');
 
-const ALLOWED = Object.assign({}, checklist.functions);
+const ALLOWED = Object.assign({}, checklist.functions, waste.functions);
 
 // รับทั้ง application/json และ text/plain (gas-shim ส่งเป็น text/plain เหมือนตอนใช้ Apps Script)
 router.use(express.text({ type: 'text/plain', limit: '30mb' }));
@@ -30,10 +32,10 @@ router.post('/', authenticateToken, async (req, res) => {
 
   const args = Array.isArray(body.args) ? body.args : [];
   try {
-    const result = await handler.apply(null, args);
+    const result = await handler.apply({ user: req.user }, args); // this.user = ผู้ที่ login
     res.json({ ok: true, result: result === undefined ? null : result });
   } catch (err) {
-    if (err instanceof checklist.UserError) {
+    if (err instanceof UserError) {
       return res.json({ ok: false, error: err.message });
     }
     console.error(`[api/gas] ${fn} error:`, err);
