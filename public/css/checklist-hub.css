@@ -1,0 +1,43 @@
+/* hub.css — ชุดสีและฟอนต์กลาง (ย้ายมาจาก Style.html) */
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --hub-ink:      #0B1F4B;
+  --hub-ink-2:    #1B3070;
+  --hub-bg:       #F7F6F2;
+  --hub-card:     #FFFFFF;
+  --hub-surface2: #F2F1EC;
+  --hub-line:     #E1E3E9;
+  --hub-line-soft:#EDEEF2;
+  --hub-muted:    #5A6478;
+  --hub-faint:    #8A93A5;
+
+  --hub-green:    #1E9E6A;
+  --hub-green-bg: #E3F5EC;
+  --hub-amber:    #C4610F;
+  --hub-amber-bg: #FDF1E4;
+  --hub-red:      #C62828;
+  --hub-red-bg:   #FDECEC;
+  --hub-blue:     #2F5D9E;
+}
+
+body { font-family: 'Prompt', 'Segoe UI', sans-serif; }
+
+.hub-home-fab {
+  position: fixed; top: 14px; left: 14px; z-index: 9999;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--hub-ink); color: #fff; text-decoration: none;
+  padding: 9px 16px; border-radius: 999px;
+  font-family: 'Prompt', sans-serif; font-size: 13px; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(11,31,75,0.25);
+}
+.hub-home-fab:hover { background: var(--hub-ink-2); }
+.hub-home-fab svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.hub-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--hub-ink); color: #fff; font-size: 13px; font-weight: 600;
+  padding: 10px 18px; border-radius: 999px; box-shadow: 0 4px 14px rgba(11,31,75,.25);
+  z-index: 9999; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+}
+.hub-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }

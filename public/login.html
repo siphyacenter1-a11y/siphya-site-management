@@ -207,7 +207,11 @@
         if (res.ok) {
           hubToast('เข้าสู่ระบบสำเร็จ! กำลังเปลี่ยนหน้า...');
           setTimeout(() => {
-            if (res.user.role === 'admin') {
+            // กลับไปหน้าที่ส่งมา login (เช่น /login?next=/checklist) ถ้าเป็นหน้าภายในระบบ
+            const next = new URLSearchParams(location.search).get('next') || '';
+            if (/^\/[a-zA-Z0-9_\-\/]*$/.test(next) && !next.startsWith('//')) {
+              window.location.href = next;
+            } else if (res.user.role === 'admin') {
               window.location.href = '/admin';
             } else {
               window.location.href = '/';
