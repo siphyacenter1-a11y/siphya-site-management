@@ -7,7 +7,9 @@
 
 ```bash
 git pull
-npm install                      # ติดตั้ง puppeteer เพิ่ม (โหลด Chrome สำหรับทำ PDF ~170 MB ครั้งแรก)
+npm install                      # ติดตั้ง puppeteer เพิ่ม
+npx puppeteer browsers install chrome   # โหลด Chrome สำหรับทำ PDF (~170 MB ครั้งแรก)
+                                 # จำเป็นใน npm 11+ ที่ไม่รัน install script ของ puppeteer ให้อัตโนมัติ
 node scripts/migrate_checklist.js   # สร้าง/อัปเดตตาราง รันซ้ำได้ ไม่ลบข้อมูลเดิม
 ```
 
