@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>บันทึกการเบิก-จ่ายวัสดุ | ระบบขนส่งวัสดุ</title>
+  <link rel="stylesheet" href="/css/site-hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    :root { --ink:#0B1F4B; --line:#E1E3E9; --soft:#5A6478; --bg:#F7F6F2; --card:#fff; --dirty:#FFF6DB; --err:#FDECEC; --new:#EAF4FF; --ok:#1E9E6A; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Prompt', 'Segoe UI', sans-serif; font-size: 13px; }
+    .top { position: sticky; top: 0; z-index: 20; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px 10px 130px; }
+    .top h1 { margin: 0 0 6px; font-size: 17px; }
+    .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .bar select, .bar input[type=search] { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .bar select { font-weight: 600; max-width: 340px; }
+    .btn { font: inherit; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 7px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .btn:hover { border-color: var(--ink); }
+    .btn.main { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .btn.main:disabled { background: #9AA3B5; border-color: #9AA3B5; cursor: default; }
+    .btn.danger { color: #C62828; }
+    .spacer { flex: 1; }
+    .hint { color: var(--soft); font-size: 12px; margin-top: 6px; }
+    .msg { white-space: pre-line; margin: 10px 16px 0; padding: 10px 12px; border-radius: 8px; display: none; }
+    .msg.err { display: block; background: var(--err); color: #8E1B1B; }
+    .msg.ok { display: block; background: #E3F5EC; color: #135E40; }
+
+    .wrap { padding: 10px 16px 60px; overflow-x: auto; }
+    table { border-collapse: collapse; background: #fff; min-width: 1500px; width: 100%; }
+    th { position: sticky; top: 0; background: #EEF1F7; font-size: 12px; font-weight: 600; padding: 6px 4px; border: 1px solid var(--line); white-space: nowrap; }
+    td { border: 1px solid var(--line); padding: 0; height: 32px; }
+    td.ro { background: #FAFAFB; color: var(--soft); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    td.no { text-align: center; color: var(--soft); padding: 0 6px; width: 46px; }
+    td.chk { text-align: center; width: 30px; }
+    td input, td select { width: 100%; height: 31px; border: 0; padding: 0 6px; font: inherit; background: transparent; color: var(--ink); }
+    td input:focus, td select:focus { outline: 2px solid #2F5D9E; outline-offset: -2px; background: #fff; }
+    td input[type=number] { text-align: right; }
+    tr.dirty td:not(.ro) { background: var(--dirty); }
+    tr.new td:not(.ro) { background: var(--new); }
+    tr.err td { background: var(--err) !important; }
+    .nf { color: #C62828; font-weight: 600; }
+    .w-date { min-width: 130px; } .w-mat { min-width: 140px; } .w-sel { min-width: 110px; } .w-qty { min-width: 80px; }
+    .w-req { min-width: 170px; } .w-note { min-width: 140px; } .w-wh { min-width: 90px; }
+    .more { margin: 10px 0; text-align: center; }
+
+    .modal-bg { position: fixed; inset: 0; background: rgba(11,31,75,.35); display: none; align-items: flex-start; justify-content: center; z-index: 50; overflow: auto; padding: 30px 12px; }
+    .modal { background: #fff; border-radius: 14px; width: 100%; max-width: 760px; padding: 18px 20px; }
+    .modal h2 { margin: 0 0 12px; font-size: 16px; }
+    .modal h3 { margin: 18px 0 8px; font-size: 14px; }
+    .modal label { font-size: 12px; color: var(--soft); display: block; margin-bottom: 3px; }
+    .modal input, .modal textarea, .modal select { font: inherit; width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
+    .grid2 { display: grid; grid-template-columns: 90px 1fr 120px 90px; gap: 8px; align-items: end; }
+    .bld { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 8px; display: grid; grid-template-columns: 160px 1fr 70px; gap: 8px; }
+    .bld textarea { height: 60px; }
+    .modal .row-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    @media (max-width: 700px) { .top { padding-left: 16px; padding-top: 60px; } .grid2 { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+
+<div class="top">
+  <h1>บันทึกการเบิก-จ่ายวัสดุ</h1>
+  <div class="bar">
+    <select id="project"><option>กำลังโหลด...</option></select>
+    <button class="btn" id="btnAdd">+ เพิ่ม 5 แถว</button>
+    <button class="btn main" id="btnSave" disabled>💾 บันทึก</button>
+    <button class="btn danger" id="btnDel">ลบแถวที่เลือก</button>
+    <input type="search" id="q" placeholder="ค้นหา Mat code / รายการ / ผู้ขอ">
+    <span class="spacer"></span>
+    <button class="btn" id="btnReload">↻ โหลดใหม่</button>
+    <button class="btn" id="btnDash">📊 Dashboard</button>
+    <button class="btn" id="btnSettings" style="display:none">⚙ ตั้งค่าโครงการ</button>
+  </div>
+  <div class="hint">พิมพ์ Mat. Code แล้วประเภท/รายการ/หน่วยขึ้นเอง · สถานะคำนวณจากวันที่ (เลือกเองได้เฉพาะ ย้าย/ยกเลิก) ·
+    วางข้อมูลที่ก๊อปจาก Excel/Google Sheet ได้หลายแถว (คลิกช่องแรกที่จะวางแล้วกด Ctrl+V) · <b>แถวสีเหลือง/ฟ้า = ยังไม่บันทึก</b></div>
+</div>
+<div class="msg" id="msg"></div>
+
+<div class="wrap">
+  <table>
+    <thead><tr>
+      <th><input type="checkbox" id="chkAll"></th><th>ลำดับ</th><th>วันที่เบิก</th><th>วันที่รับวัสดุ</th><th>สถานะ</th>
+      <th>Mat. Code</th><th>ประเภทวัสดุ</th><th>รายการวัสดุ</th><th>อาคาร</th><th>ชั้น</th><th>จำนวนที่เบิก/ย้าย</th>
+      <th>หน่วย</th><th>คลัง</th><th>สถานะ2</th><th>ผู้ขอเบิก/ผู้รับ</th><th>หมายเหตุ</th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+  <div class="more" id="more"></div>
+</div>
+<datalist id="dlMat"></datalist>
+<datalist id="dlReq"></datalist>
+
+<div class="modal-bg" id="setBg">
+  <div class="modal">
+    <h2>⚙ ตั้งค่าโครงการ (ผู้ดูแลระบบ)</h2>
+    <h3>โครงการ</h3>
+    <div class="grid2">
+      <div><label>รหัส</label><input id="pCode" placeholder="0DJ"></div>
+      <div><label>ชื่อโครงการ</label><input id="pName"></div>
+      <div><label>ตัวย่อโลโก้</label><input id="pLogo"></div>
+      <div><label>เปิดใช้</label><select id="pActive"><option value="1">เปิด</option><option value="0">ปิด</option></select></div>
+    </div>
+    <div class="row-actions"><button class="btn" id="pNew">+ โครงการใหม่</button><button class="btn main" id="pSave">บันทึกโครงการ</button></div>
+    <h3>อาคาร / ชั้น ของโครงการ <span id="bProj"></span></h3>
+    <div class="hint" style="margin:0 0 8px">ชั้นพิมพ์คั่นด้วยเครื่องหมายจุลภาคหรือขึ้นบรรทัดใหม่ เรียงตามที่ต้องการให้แสดงใน dropdown</div>
+    <div id="bList"></div>
+    <div class="row-actions"><button class="btn" id="bAdd">+ เพิ่มอาคาร</button><button class="btn main" id="bSave">บันทึกอาคาร/ชั้น</button></div>
+    <div class="msg" id="setMsg" style="margin:10px 0 0"></div>
+    <div class="row-actions"><button class="btn" id="setClose">ปิด</button></div>
+  </div>
+</div>
+<div class="hub-toast" id="hubToast"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var run = function () { return google.script.run; };
+  var STATUS_MANUAL = ['ย้าย', 'ยกเลิก'];
+  var S = { code: '', data: null, master: {}, rows: [], showAll: false, isAdmin: false };
+  var LIMIT = 200;
+  var COLS = ['chk', 'no', 'requestDate', 'receiveDate', 'status', 'matCode', 'type', 'item', 'building', 'floor', 'qty', 'unit', 'warehouse', 'status2', 'requester', 'note'];
+  var EDITABLE = { requestDate: 1, receiveDate: 1, status: 1, matCode: 1, building: 1, floor: 1, qty: 1, warehouse: 1, status2: 1, requester: 1, note: 1 };
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function msg(t, ok) { var m = $('msg'); m.textContent = t || ''; m.className = 'msg' + (t ? (ok ? ' ok' : ' err') : ''); }
+  function status2Of(s) { s = String(s || ''); if (!s) return ''; if (s.indexOf('เบิกด่วน') > -1) return 'ส่งด่วนแล้ว'; if (s.indexOf('เบิก') > -1) return 'ส่งแล้ว'; if (s.indexOf('ย้าย') > -1) return 'ย้ายครบแล้ว'; if (s.indexOf('ยกเลิก') > -1) return 'ยกเลิก'; return ''; }
+  function autoStatus(r) { if (STATUS_MANUAL.indexOf(r.statusManual) > -1) return r.statusManual; if (!r.receiveDate) return ''; return r.requestDate && r.requestDate === r.receiveDate ? 'เบิกด่วน' : 'เบิก'; }
+  function dirtyCount() { return S.rows.filter(function (r) { return r.dirty; }).length; }
+  function refreshSaveBtn() { var n = dirtyCount(); $('btnSave').disabled = !n; $('btnSave').textContent = n ? '💾 บันทึก (' + n + ' แถว)' : '💾 บันทึก'; }
+
+  // วันที่ที่วางมาจาก Excel/Sheet: 7/7/2026, 07/07/2026, 2026-07-07
+  function toISO(v) {
+    v = String(v || '').trim(); if (!v) return '';
+    var m = v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (m) { var y = +m[3]; if (y > 2400) y -= 543; return y + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); }
+    m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+    return v;
+  }
+
+  function lookup(r) {
+    var mc = String(r.matCode || '').trim().toUpperCase();
+    if (!mc) { r.type = r.item = r.unit = ''; return; }
+    var m = S.master[mc.slice(0, 7)];
+    r.type = m ? m[1] : S.data.notFound; r.item = m ? m[2] : S.data.notFound; r.unit = m ? m[3] : '';
+  }
+
+  function floorsOf(b) { var x = (S.data.buildings || []).filter(function (k) { return k.name === b; })[0]; return x ? x.floors : []; }
+
+  function fromServer(r) {
+    var manual = STATUS_MANUAL.indexOf(r.status) > -1 ? r.status : '';
+    var auto2 = !r.status2 || r.status2 === status2Of(r.status);
+    return { id: r.id, no: r.no, requestDate: r.requestDate, receiveDate: r.receiveDate, statusManual: manual,
+      matCode: r.matCode, type: r.type, item: r.item, building: r.building, floor: r.floor, qty: r.qty,
+      unit: r.unit, warehouse: r.warehouse, status2: auto2 ? '' : r.status2, requester: r.requester, note: r.note, dirty: false };
+  }
+  function blank() { return { id: null, no: '', requestDate: '', receiveDate: '', statusManual: '', matCode: '', type: '', item: '', building: '', floor: '', qty: '', unit: '', warehouse: '', status2: '', requester: '', note: '', dirty: false, isNew: true }; }
+  function isEmpty(r) { return !r.id && !['requestDate', 'receiveDate', 'matCode', 'building', 'qty', 'requester', 'note'].some(function (k) { return String(r[k] || '').trim(); }); }
+
+  // ---------- render ----------
+  function optList(list, cur, firstLabel) {
+    var h = firstLabel !== undefined ? '<option value="">' + esc(firstLabel) + '</option>' : '<option value=""></option>';
+    var seen = false;
+    list.forEach(function (v) { if (v === cur) seen = true; h += '<option' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>'; });
+    if (cur && !seen) h += '<option selected>' + esc(cur) + '</option>';
+    return h;
+  }
+  function rowHtml(r, idx) {
+    var st = autoStatus(r);
+    var stLabel = STATUS_MANUAL.indexOf(r.statusManual) > -1 ? 'อัตโนมัติ' : ('อัตโนมัติ' + (st ? ': ' + st : ''));
+    var s2auto = status2Of(st);
+    var nf = r.type === S.data.notFound ? ' nf' : '';
+    return '<tr data-i="' + idx + '" class="' + (r.err ? 'err' : r.isNew && r.dirty ? 'new' : r.dirty ? 'dirty' : '') + '">' +
+      '<td class="chk"><input type="checkbox" data-k="chk"' + (r.chk ? ' checked' : '') + '></td>' +
+      '<td class="no">' + (r.no || '') + '</td>' +
+      '<td class="w-date"><input type="date" data-k="requestDate" value="' + esc(r.requestDate) + '"></td>' +
+      '<td class="w-date"><input type="date" data-k="receiveDate" value="' + esc(r.receiveDate) + '"></td>' +
+      '<td class="w-sel"><select data-k="status">' + optList(STATUS_MANUAL, r.statusManual, stLabel) + '</select></td>' +
+      '<td class="w-mat"><input data-k="matCode" list="dlMat" value="' + esc(r.matCode) + '" autocomplete="off"></td>' +
+      '<td class="ro' + nf + '" title="' + esc(r.type) + '">' + esc(r.type) + '</td>' +
+      '<td class="ro' + nf + '" title="' + esc(r.item) + '">' + esc(r.item) + '</td>' +
+      '<td class="w-sel"><select data-k="building">' + optList((S.data.buildings || []).map(function (b) { return b.name; }), r.building) + '</select></td>' +
+      '<td class="w-sel"><select data-k="floor">' + optList(floorsOf(r.building), r.floor) + '</select></td>' +
+      '<td class="w-qty"><input type="number" step="any" min="0" data-k="qty" value="' + esc(r.qty) + '"></td>' +
+      '<td class="ro">' + esc(r.unit) + '</td>' +
+      '<td class="w-wh"><input data-k="warehouse" value="' + esc(r.warehouse) + '" placeholder="' + (r.building ? esc(S.data.defaultWarehouse) : '') + '"></td>' +
+      '<td class="w-sel"><select data-k="status2">' + optList(S.data.statuses2, r.status2, 'อัตโนมัติ' + (s2auto ? ': ' + s2auto : '')) + '</select></td>' +
+      '<td class="w-req"><input data-k="requester" list="dlReq" value="' + esc(r.requester) + '"></td>' +
+      '<td class="w-note"><input data-k="note" value="' + esc(r.note) + '"></td></tr>';
+  }
+  function visibleRows() {
+    var q = $('q').value.trim().toLowerCase();
+    var list = S.rows.map(function (r, i) { return { r: r, i: i }; });
+    if (q) list = list.filter(function (x) { var r = x.r; return x.r.dirty || [r.matCode, r.item, r.type, r.requester, r.note, r.building].join(' ').toLowerCase().indexOf(q) > -1; });
+    var saved = list.filter(function (x) { return x.r.id && !x.r.dirty; });
+    var hidden = 0;
+    if (!S.showAll && !q && saved.length > LIMIT) {
+      var cut = saved[saved.length - LIMIT].i;
+      hidden = saved.length - LIMIT;
+      list = list.filter(function (x) { return !x.r.id || x.r.dirty || x.i >= cut; });
+    }
+    return { list: list, hidden: hidden };
+  }
+  function render() {
+    var v = visibleRows();
+    $('tb').innerHTML = v.list.map(function (x) { return rowHtml(x.r, x.i); }).join('');
+    $('more').innerHTML = v.hidden ? 'ซ่อนรายการเก่า ' + v.hidden + ' แถว · <button class="btn" id="showAll">แสดงทั้งหมด</button>' : '';
+    if (v.hidden) $('showAll').onclick = function () { S.showAll = true; render(); };
+    refreshSaveBtn();
+  }
+  function renderRow(i) {
+    var tr = $('tb').querySelector('tr[data-i="' + i + '"]');
+    if (!tr) return;
+    var focusKey = document.activeElement && tr.contains(document.activeElement) ? document.activeElement.getAttribute('data-k') : null;
+    var tmp = document.createElement('tbody'); tmp.innerHTML = rowHtml(S.rows[i], i);
+    tr.replaceWith(tmp.firstChild);
+    if (focusKey) { var el = $('tb').querySelector('tr[data-i="' + i + '"] [data-k="' + focusKey + '"]'); if (el) el.focus(); }
+    refreshSaveBtn();
+  }
+
+  // ---------- edit ----------
+  function setField(r, k, v) {
+    if (k === 'status') r.statusManual = v;
+    else if (k === 'matCode') { r.matCode = String(v).trim().toUpperCase(); lookup(r); }
+    else if (k === 'building') { r.building = v; if (floorsOf(v).indexOf(r.floor) < 0) r.floor = ''; }
+    else if (k === 'requestDate' || k === 'receiveDate') r[k] = toISO(v);
+    else r[k] = v;
+  }
+  $('tb').addEventListener('change', function (e) {
+    var el = e.target, k = el.getAttribute('data-k'); if (!k) return;
+    var i = +el.closest('tr').getAttribute('data-i'), r = S.rows[i];
+    if (k === 'chk') { r.chk = el.checked; return; }
+    setField(r, k, el.value); r.dirty = true; r.err = false;
+    renderRow(i);
+  });
+
+  // วางหลายแถวจาก Excel/Google Sheet
+  $('tb').addEventListener('paste', function (e) {
+    var el = e.target, k = el.getAttribute && el.getAttribute('data-k');
+    if (!k || k === 'chk') return;
+    var text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text || (text.indexOf('\t') < 0 && text.indexOf('\n') < 0)) return;
+    e.preventDefault();
+    var lines = text.replace(/\r/g, '').split('\n'); if (lines[lines.length - 1] === '') lines.pop();
+    var start = +el.closest('tr').getAttribute('data-i'), c0 = COLS.indexOf(k);
+    lines.forEach(function (line, li) {
+      var i = start + li;
+      while (i >= S.rows.length) S.rows.push(blank());
+      var r = S.rows[i];
+      line.split('\t').forEach(function (val, ci) {
+        var key = COLS[c0 + ci];
+        if (key && EDITABLE[key]) {
+          val = val.trim();
+          if (key === 'status') val = STATUS_MANUAL.indexOf(val) > -1 ? val : '';
+          if (key === 'status2') val = val === status2Of(autoStatus(r)) ? '' : val;
+          setField(r, key, val);
+        }
+      });
+      if (!isEmpty(r)) { r.dirty = true; r.err = false; }
+    });
+    render();
+    msg('วาง ' + lines.length + ' แถวแล้ว ตรวจดูแล้วกด 💾 บันทึก', true);
+  });
+
+  $('btnAdd').onclick = function () { for (var n = 0; n < 5; n++) S.rows.push(blank()); render(); var t = $('tb').querySelector('tr:last-child'); if (t) t.scrollIntoView({ block: 'center' }); };
+  $('chkAll').onchange = function () { var on = this.checked; visibleRows().list.forEach(function (x) { x.r.chk = on; }); render(); };
+  $('q').oninput = function () { render(); };
+
+  // ---------- save / delete ----------
+  $('btnSave').onclick = function () {
+    var list = S.rows.filter(function (r) { return r.dirty && !isEmpty(r); });
+    if (!list.length) { S.rows = S.rows.filter(function (r) { return !(r.dirty && isEmpty(r)); }); render(); return; }
+    var payload = list.map(function (r) {
+      return { id: r.id, no: r.no || null, requestDate: r.requestDate, receiveDate: r.receiveDate, status: r.statusManual,
+        matCode: r.matCode, building: r.building, floor: r.floor, qty: r.qty, warehouse: r.warehouse,
+        status2: r.status2, status2Auto: !r.status2, requester: r.requester, note: r.note };
+    });
+    $('btnSave').disabled = true; $('btnSave').textContent = 'กำลังบันทึก...';
+    run().withSuccessHandler(function (res) {
+      hubToast('บันทึก ' + res.saved + ' แถวแล้ว');
+      load(S.code, 'บันทึก ' + res.saved + ' แถวเรียบร้อย');
+    }).withFailureHandler(function (err) {
+      // ไฮไลต์แถวที่มีปัญหา (ข้อความบอกเลขแถว / ลำดับในชุดที่ส่ง)
+      list.forEach(function (r, j) { var tag = r.no ? 'แถว ' + r.no + ':' : 'แถว ใหม่ ' + (j + 1) + ':'; r.err = err.message.indexOf(tag) > -1; });
+      render(); msg(err.message);
+    }).TRANSPORT_saveRows(S.code, payload);
+  };
+
+  $('btnDel').onclick = function () {
+    var sel = S.rows.filter(function (r) { return r.chk; });
+    if (!sel.length) { msg('ติ๊กช่องหน้าแถวที่ต้องการลบก่อน'); return; }
+    var ids = sel.filter(function (r) { return r.id; }).map(function (r) { return r.id; });
+    if (!confirm('ลบ ' + sel.length + ' แถว?' + (ids.length ? '\n(ลบจากระบบถาวร ' + ids.length + ' แถว)' : ''))) return;
+    S.rows = S.rows.filter(function (r) { return !r.chk || r.id; });
+    if (!ids.length) { render(); return; }
+    run().withSuccessHandler(function (res) { load(S.code, 'ลบ ' + res.deleted + ' แถวแล้ว'); })
+      .withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_deleteRows(S.code, ids);
+  };
+
+  // ---------- load ----------
+  function load(code, okMsg) {
+    S.code = code;
+    try { history.replaceState(null, '', '?project=' + encodeURIComponent(code)); } catch (e) {}
+    msg(okMsg || '', true);
+    run().withSuccessHandler(function (d) {
+      S.data = d; S.isAdmin = d.isAdmin; S.showAll = false;
+      $('btnSettings').style.display = d.isAdmin ? '' : 'none';
+      S.rows = d.rows.map(fromServer);
+      for (var n = 0; n < 5; n++) S.rows.push(blank());
+      var reqs = {}; d.rows.forEach(function (r) { if (r.requester) reqs[r.requester] = 1; });
+      $('dlReq').innerHTML = Object.keys(reqs).sort().map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
+      render();
+      var last = $('tb').querySelector('tr.new, tr:last-child'); if (last && !okMsg) last.scrollIntoView({ block: 'center' });
+    }).withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_entryData(code);
+  }
+
+  function loadProjects(keep) {
+    run().withSuccessHandler(function (list) {
+      var want = keep || new URLSearchParams(location.search).get('project') || '';
+      $('project').innerHTML = list.map(function (p) { return '<option value="' + esc(p.code) + '">' + esc(p.code + ' — ' + p.name) + '</option>'; }).join('');
+      if (!list.length) { msg('ยังไม่มีโครงการที่เปิดใช้'); return; }
+      var code = list.some(function (p) { return p.code === want; }) ? want : list[0].code;
+      $('project').value = code; load(code);
+    }).withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_getProjects();
+  }
+
+  $('project').onchange = function () {
+    if (dirtyCount() && !confirm('มีแถวที่ยังไม่บันทึก เปลี่ยนโครงการแล้วจะหายไป ต้องการเปลี่ยน?')) { this.value = S.code; return; }
+    load(this.value);
+  };
+  $('btnReload').onclick = function () { if (dirtyCount() && !confirm('มีแถวที่ยังไม่บันทึก โหลดใหม่แล้วจะหายไป?')) return; load(S.code); };
+  $('btnDash').onclick = function () { location.href = '/transport?project=' + encodeURIComponent(S.code); };
+  window.addEventListener('beforeunload', function (e) { if (dirtyCount()) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ---------- settings (admin) ----------
+  function setMsg(t, ok) { var m = $('setMsg'); m.textContent = t || ''; m.className = 'msg' + (t ? (ok ? ' ok' : ' err') : ''); }
+  function fillProjectForm(p) { $('pCode').value = p.code || ''; $('pName').value = p.name || ''; $('pLogo').value = p.logo || ''; $('pActive').value = p.active === false ? '0' : '1'; $('pCode').disabled = !!p.code; }
+  function bRow(b) {
+    var d = document.createElement('div'); d.className = 'bld';
+    d.innerHTML = '<div><label>อาคาร</label><input class="bn" value="' + esc(b.name) + '"></div>' +
+      '<div><label>ชั้น</label><textarea class="bf">' + esc((b.floors || []).join(', ')) + '</textarea></div>' +
+      '<div><label>&nbsp;</label><button class="btn danger">ลบ</button></div>';
+    d.querySelector('button').onclick = function () { d.remove(); };
+    return d;
+  }
+  $('btnSettings').onclick = function () {
+    setMsg('');
+    run().withSuccessHandler(function (list) {
+      var p = list.filter(function (x) { return x.code === S.code; })[0] || {};
+      fillProjectForm(p);
+      $('bProj').textContent = S.code;
+      $('bList').innerHTML = ''; (S.data.buildings || []).forEach(function (b) { $('bList').appendChild(bRow(b)); });
+      $('setBg').style.display = 'flex';
+    }).withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_listProjects();
+  };
+  $('setClose').onclick = function () { $('setBg').style.display = 'none'; };
+  $('pNew').onclick = function () { fillProjectForm({}); $('pCode').focus(); };
+  $('pSave').onclick = function () {
+    var p = { code: $('pCode').value.trim().toUpperCase(), name: $('pName').value.trim(), logo: $('pLogo').value.trim(), active: $('pActive').value === '1' };
+    run().withSuccessHandler(function () { setMsg('บันทึกโครงการ ' + p.code + ' แล้ว', true); loadProjects(S.code); })
+      .withFailureHandler(function (e) { setMsg(e.message); }).TRANSPORT_saveProject(p);
+  };
+  $('bAdd').onclick = function () { $('bList').appendChild(bRow({ name: '', floors: [] })); };
+  $('bSave').onclick = function () {
+    var list = Array.prototype.map.call($('bList').querySelectorAll('.bld'), function (d) {
+      return { name: d.querySelector('.bn').value.trim(), floors: d.querySelector('.bf').value.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean) };
+    }).filter(function (b) { return b.name; });
+    run().withSuccessHandler(function () { setMsg('บันทึกอาคาร/ชั้นแล้ว', true); load(S.code); })
+      .withFailureHandler(function (e) { setMsg(e.message); }).TRANSPORT_saveBuildings(S.code, list);
+  };
+
+  // master list สำหรับเติมอัตโนมัติ + รายการให้เลือก
+  run().withSuccessHandler(function (rows) {
+    rows.forEach(function (m) { S.master[String(m[0]).toUpperCase()] = m; });
+    $('dlMat').innerHTML = rows.map(function (m) { return '<option value="' + esc(m[0]) + '">' + esc(m[1] + ' · ' + m[2]) + '</option>'; }).join('');
+    loadProjects();
+  }).withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_getMaster();
+})();
+</script>
+</body>
+</html>

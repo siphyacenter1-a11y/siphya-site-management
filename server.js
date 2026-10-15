@@ -35,6 +35,7 @@ app.get('/waste', (req, res) => res.sendFile(path.join(__dirname, 'public', 'was
 app.get('/route', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route.html')));
 app.get('/checklist', (req, res) => res.sendFile(path.join(__dirname, 'public', 'checklist.html')));
 app.get('/npo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'npo.html')));
+app.get('/transport-entry', (req, res) => res.sendFile(path.join(__dirname, 'public', 'transport-entry.html')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

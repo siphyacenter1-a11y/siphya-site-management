@@ -1,98 +1,133 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-  <title>ระบบติดตามการเบิก-จ่ายวัสดุประจำไซต์ - PostgreSQL</title>
+  <title>ระบบติดตามการเบิก-จ่ายวัสดุประจำไซต์</title>
+  
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/hub.css">
+  <link rel="stylesheet" href="/css/site-hub.css">
+  <script src="/js/gas-shim.js"></script>
   <style>
-    body { padding: 68px 22px 60px; }
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #F7F6F2; --card: #FFFFFF; --ink: #0B1F4B; --soft: #5A6478; --muted: #8A93A5;
+      --line: #E1E3E9; --line-soft: #EDEEF2; --field: #F2F1EC;
+      --navy: #0B1F4B; --navy-2: #1B3070; --nav-text: #8FA6D9;
+      --green: #1E9E6A; --mint: #5FD3A5; --amber: #F2B705; --blue: #2F5D9E; --coral: #F4A879; --red: #C62828;
+    }
+    body { font-family: 'Prompt', 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 68px 22px 60px; line-height: 1.5; }
     .wrap { max-width: 1180px; margin: 0 auto; }
+    .num, .value, td.num, .mono-cell { font-variant-numeric: tabular-nums; }
+
+
     .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
-    .topbar .actions { display: flex; gap: 8px; }
+    .topbar .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .topbar button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 16px; border: none; border-radius: 10px; background: var(--field); color: var(--ink); cursor: pointer; }
-    .topbar button.primary { background: var(--ink); color: #fff; }
+    .topbar button:first-child { background: var(--navy); color: #fff; }
     .topbar button:hover { filter: brightness(0.95); }
+
+    .project-pick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--soft); }
+    .project-pick select { font-family: inherit; font-size: 14px; font-weight: 600; padding: 8px 12px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--card); color: var(--ink); max-width: 320px; }
+    .project-pick select:focus { outline: none; border-color: var(--navy); }
     .topbar .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--green); font-weight: 600; }
     .topbar .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(30,158,106,0.18); }
 
-    .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .tag-header { background: var(--navy); color: #fff; border-radius: 14px; padding: 22px 26px; margin-bottom: 16px; }
+    .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .header .left { display: flex; align-items: center; gap: 16px; }
+    .logo { min-width: 46px; height: 46px; padding: 0 8px; border-radius: 12px; background: #1E3A7A; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; white-space: nowrap; }
+    .header .eyebrow { font-size: 12.5px; color: var(--nav-text); margin-bottom: 2px; }
+    .header .title { font-size: 26px; font-weight: 700; line-height: 1.3; }
+    .header .right { text-align: right; }
+    .header .brand-name { font-size: 15px; font-weight: 600; }
+    .header .brand-sub { font-size: 12px; color: var(--nav-text); margin-top: 2px; }
+
+    .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--soft); margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+
     .filters { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
     .filters .field { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
-    .filters label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .filters label { font-size: 12px; color: var(--soft); font-weight: 500; }
     .filters select, .filters input { font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid transparent; border-radius: 10px; background: var(--field); color: var(--ink); }
-    .filters select:focus, .filters input:focus { outline: none; border-color: var(--ink); background: #fff; }
+    .filters select:focus, .filters input:focus { outline: none; border-color: var(--navy); background: #fff; }
     .filters button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 10px 18px; border: none; background: var(--field); color: var(--ink); border-radius: 10px; cursor: pointer; }
+    .filters button:hover { background: var(--line); }
 
-    .stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 14px; margin-bottom: 20px; }
+    .stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 14px; margin-bottom: 20px; }
     .stat-item { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; overflow: hidden; }
     .stat-item::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
-    .stat-item.s1 { background: var(--ink); border-color: var(--ink); color: #fff; }
-    .stat-item.s1 .label { color: #A3BBEB; }
+    .stat-item.s1 { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .stat-item.s1 .label { color: var(--nav-text); }
     .stat-item.s1 .value { color: #fff; }
     .stat-item.s1::after { background: var(--mint); }
     .stat-item.s2::after { background: var(--green); }
     .stat-item.s3::after { background: var(--amber); }
     .stat-item.s4::after { background: var(--blue); }
     .stat-item.s5::after { background: var(--coral); }
-    .stat-item .label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+    .stat-item .label { font-size: 12.5px; color: var(--soft); font-weight: 500; }
     .stat-item .value { font-size: 26px; font-weight: 700; margin-top: 4px; color: var(--ink); }
 
-    .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 16px; margin-bottom: 20px; }
+    .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px,1fr)); gap: 16px; margin-bottom: 20px; }
     .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px 18px; }
     .chart-card h3, .summary-panel h3, .data-card h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 14px; }
     .chart-wrap { position: relative; height: 200px; }
-    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 12.5px; color: var(--muted); justify-content: center; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 12.5px; color: var(--soft); justify-content: center; }
     .legend span.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 
     .summary-panel, .data-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+    .data-card { margin-bottom: 0; }
     table.summary { width: 100%; border-collapse: collapse; font-size: 14px; }
-    table.summary th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12.5px; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+    table.summary th { text-align: left; color: var(--soft); font-weight: 500; font-size: 12.5px; padding: 9px 8px; border-bottom: 1px solid var(--line); }
     table.summary td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); }
     table.summary td.num { text-align: right; }
 
-    .table-scroll { overflow-x: auto; border-radius: 10px; max-height: 520px; }
+    .table-scroll { overflow-x: auto; border-radius: 10px; }
     table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
-    table.data th { position: sticky; top: 0; background: var(--ink); text-align: left; color: #DCE4F5; font-weight: 500; font-size: 12.5px; padding: 11px 14px; z-index: 2; }
+    table.data th { position: sticky; top: 0; background: var(--navy); text-align: left; color: #DCE4F5; font-weight: 500; font-size: 12.5px; padding: 11px 14px; }
     table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
-    table.data tbody tr:nth-child(even) { background: var(--paper); }
+    table.data td.mono-cell { color: var(--soft); }
+    table.data tbody tr:nth-child(even) { background: var(--bg); }
     table.data tbody tr:hover { background: #EAEEF7; }
 
     .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
     .empty { text-align: center; padding: 44px 0; color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 600px) {
+      body { padding: 64px 14px 48px; }
+      .filters .field { width: 100%; }
+      .filters button { width: 100%; }
+      .header .right { text-align: left; }
+    }
   </style>
 </head>
 <body>
-  <a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
-
+  <a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
   <div class="wrap">
+
     <div class="topbar">
       <div class="actions">
-        <button class="primary" onclick="loadData()">↻ Refresh</button>
+        <label class="project-pick">โครงการ
+          <select id="projectSelect" onchange="onProjectChange(this.value)"><option value="">กำลังโหลด...</option></select>
+        </label>
+        <button onclick="location.href='/transport-entry?project=' + encodeURIComponent(CURRENT_PROJECT)">✎ กรอก/แก้ไขข้อมูล</button>
+        <button onclick="loadData()">↻ Refresh</button>
         <button id="autoBtn" onclick="toggleAuto()">Auto-refresh: OFF</button>
-        <button class="primary" style="background:var(--green);" onclick="openAddModal()">+ บันทึกการเบิกวัสดุ</button>
-        <a href="/api/export/transport/excel" class="btn" style="background:#B36B12; color:#fff; text-decoration:none; padding:9px 14px; font-size:13px; border-radius:10px;">
-          📊 Export Excel
-        </a>
       </div>
-      <div style="display:flex; align-items:center; gap:16px;">
-        <div class="status"><span class="dot"></span><span id="rowCountLabel">กำลังโหลดจาก PostgreSQL...</span></div>
-        <div id="userNavBlock"></div>
-      </div>
+      <div class="status"><span class="dot"></span><span id="rowCountLabel">กำลังโหลด...</span></div>
     </div>
 
     <div class="tag-header">
       <div class="header">
         <div class="left">
-          <div class="logo">SP</div>
-          <div>
-            <div class="eyebrow">MATERIAL DELIVERY REPORT — LIVE (POSTGRESQL)</div>
-            <div class="title">สรุปสถานะการเบิก-จ่ายวัสดุ</div>
+          <div class="logo" id="logoInitial">•</div>
+          <div class="text-block">
+            <div class="eyebrow" id="reportSubtitle">MATERIAL DELIVERY REPORT — LIVE</div>
+            <div class="title" id="reportTitle">สรุปสถานะการเบิก-จ่ายวัสดุ</div>
           </div>
         </div>
         <div class="right">
-          <div class="brand-name">SIPHYA CONSTRUCTION</div>
+          <div class="brand-name" id="companyName">โครงการ</div>
           <div class="brand-sub">LOGISTICS &amp; STORE MANAGEMENT</div>
         </div>
       </div>
@@ -128,17 +163,17 @@
     <div class="charts-row">
       <div class="chart-card">
         <h3>ภาพรวมประเภทวัสดุที่เบิก</h3>
-        <div class="chart-wrap"><canvas id="donutMat"></canvas></div>
+        <div class="chart-wrap"><canvas id="donutMat" role="img" aria-label="สัดส่วนวัสดุแยกตามประเภท">กำลังโหลดข้อมูล</canvas></div>
         <div class="legend" id="legendMat"></div>
       </div>
       <div class="chart-card">
         <h3>สถานะการดำเนินงานทั้งหมด</h3>
-        <div class="chart-wrap"><canvas id="donutStatus"></canvas></div>
+        <div class="chart-wrap"><canvas id="donutStatus" role="img" aria-label="สัดส่วนตามสถานะการส่ง">กำลังโหลดข้อมูล</canvas></div>
         <div class="legend" id="legendStatus"></div>
       </div>
       <div class="chart-card">
         <h3>จำนวนที่เบิกแยกตามประเภทวัสดุ</h3>
-        <div class="chart-wrap"><canvas id="barItem"></canvas></div>
+        <div class="chart-wrap"><canvas id="barItem" role="img" aria-label="จำนวนที่เบิกรวมแยกตามประเภทวัสดุ">กำลังโหลดข้อมูล</canvas></div>
       </div>
     </div>
 
@@ -151,7 +186,7 @@
     </div>
 
     <div class="data-card">
-      <h3>ข้อมูลทั้งหมด (PostgreSQL)</h3>
+      <h3>ข้อมูลทั้งหมด</h3>
       <div class="table-scroll">
         <table class="data" id="dataTable">
           <thead><tr id="dataTableHead"></tr></thead>
@@ -160,111 +195,149 @@
       </div>
       <div class="empty" id="emptyState" style="display:none;">ไม่พบข้อมูลตามเงื่อนไขที่กรอง</div>
     </div>
-  </div>
 
-  <!-- Modal: บันทึกการเบิกวัสดุใหม่ -->
-  <div class="modal-overlay" id="addModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>บันทึกการเบิก-จ่ายวัสดุใหม่</h3>
-        <button class="modal-close" onclick="closeAddModal()">&times;</button>
-      </div>
-      <form id="addForm" onsubmit="submitAddForm(event)">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>วันที่ขอเบิก</label>
-            <input type="date" id="m_request_date" required>
-          </div>
-          <div class="form-group">
-            <label>Mat. Code</label>
-            <input type="text" id="m_mat_code" placeholder="เช่น MAT-001">
-          </div>
-          <div class="form-group full">
-            <label>รายการวัสดุ *</label>
-            <input type="text" id="m_mat_item" required placeholder="เช่น ปูนซีเมนต์, เหล็กเส้น DB20">
-          </div>
-          <div class="form-group">
-            <label>ประเภทวัสดุ</label>
-            <input type="text" id="m_mat_type" placeholder="เช่น งานโครงสร้าง, งานสถาปัตย์" required>
-          </div>
-          <div class="form-group">
-            <label>อาคาร</label>
-            <input type="text" id="m_building" placeholder="เช่น อาคาร A, อาคารจอดรถ">
-          </div>
-          <div class="form-group">
-            <label>ชั้น</label>
-            <input type="text" id="m_floor" placeholder="เช่น ชั้น 3, ชั้นใต้ดิน">
-          </div>
-          <div class="form-group">
-            <label>จำนวน</label>
-            <input type="number" id="m_quantity" step="0.1" required placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>หน่วย</label>
-            <input type="text" id="m_unit" placeholder="เช่น ถุง, เส้น, แผ่น" required>
-          </div>
-          <div class="form-group">
-            <label>สถานะ</label>
-            <select id="m_status2">
-              <option value="เบิก">เบิก</option>
-              <option value="เบิกด่วน">เบิกด่วน</option>
-              <option value="ส่งแล้ว">ส่งแล้ว</option>
-              <option value="ส่งด่วนแล้ว">ส่งด่วนแล้ว</option>
-              <option value="รอดำเนินการ">รอดำเนินการ</option>
-            </select>
-          </div>
-          <div class="form-group full">
-            <label>ผู้ขอเบิก / ผู้รับ</label>
-            <input type="text" id="m_requester" placeholder="ชื่อ-นามสกุล หรือ ผู้รับเหมา">
-          </div>
-          <div class="form-group full">
-            <label>หมายเหตุ</label>
-            <textarea id="m_note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeAddModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-success">บันทึกลงฐานข้อมูล</button>
-        </div>
-      </form>
-    </div>
   </div>
-
-  <div id="hubToast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-  <script src="/js/api-client.js"></script>
   <script>
     var ALL_ROWS = [];
     var ALL_HEADERS = [];
+
+    var CHART_COLORS_MAT = ['#0B1F4B', '#1E9E6A', '#F2B705', '#2F5D9E', '#F4A879', '#8A93A5'];
+    var CHART_COLORS_BAR = ['#0B1F4B', '#1B3070', '#2F4A8F', '#5B77B5', '#9AAED6'];
+
+    var STATUS_COLOR_PRESET = {
+      'เบิก': '#0B1F4B',
+      'เบิกด่วน': '#C4610F',
+      'ส่งแล้ว': '#1E8A5C',
+      'ส่งด่วนแล้ว': '#17797A',
+      'รอดำเนินการ': '#A56F00',
+      'กำลังจัดส่ง': '#2F5D9E',
+      'ยกเลิก': '#C62828'
+    };
+    var STATUS_COLOR_FALLBACK_PALETTE = ['#6A5FA8', '#8A93A5', '#A64B85', '#B5803F', '#5F8A2F', '#3F78B5'];
+    var statusColorCache = {};
+    var statusFallbackIdx = 0;
+    function getStatusColor(value) {
+      if (!value) return '#8A93A5';
+      if (statusColorCache[value]) return statusColorCache[value];
+      var color = STATUS_COLOR_PRESET[value];
+      if (!color) {
+        color = STATUS_COLOR_FALLBACK_PALETTE[statusFallbackIdx % STATUS_COLOR_FALLBACK_PALETTE.length];
+        statusFallbackIdx++;
+      }
+      statusColorCache[value] = color;
+      return color;
+    }
+
     var donutMatChart, donutStatusChart, barItemChart;
     var autoTimer = null;
 
-    var STATUS_COLOR_PRESET = {
-      'เบิก': '#0B1F4B', 'เบิกด่วน': '#C4610F', 'ส่งแล้ว': '#1E8A5C',
-      'ส่งด่วนแล้ว': '#17797A', 'รอดำเนินการ': '#A56F00', 'กำลังจัดส่ง': '#2F5D9E', 'ยกเลิก': '#C62828'
-    };
-    function getStatusColor(val) {
-      return STATUS_COLOR_PRESET[val] || '#8A93A5';
+    // ---------- เลือกโครงการ ----------
+    // เปิดตรงได้ด้วย ?project=0DX  (บน Netlify: transport.html?project=0DX)
+    var CURRENT_PROJECT = '';
+    var IN_APPS_SCRIPT = !!(window.google && google.script && google.script.url);
+
+    function getProjectParam(cb) {
+      if (IN_APPS_SCRIPT) {
+        google.script.url.getLocation(function (loc) { cb(((loc && loc.parameter) || {}).project || ''); });
+      } else {
+        cb(new URLSearchParams(location.search).get('project') || '');
+      }
     }
 
-    async function loadData() {
-      document.getElementById('rowCountLabel').textContent = 'กำลังโหลดจาก PostgreSQL...';
+    function setProjectParam(code) {
       try {
-        const res = await API.get('/api/transport/logs');
-        if (res.ok) {
-          ALL_ROWS = res.result.rows;
-          ALL_HEADERS = res.result.headers;
-          document.getElementById('rowCountLabel').textContent = 'ข้อมูลทั้งหมด ' + ALL_ROWS.length.toLocaleString() + ' รายการ';
-          document.getElementById('updatedAtLabel').textContent = 'อัปเดตล่าสุด: ' + new Date(res.result.updatedAt).toLocaleString('th-TH');
-          populateFilterOptions();
-          renderDataTableHeader();
-          applyFilters();
+        if (IN_APPS_SCRIPT && google.script.history) {
+          google.script.history.replace(null, { page: 'transport', project: code });
+        } else {
+          var u = new URL(location.href);
+          if (code) u.searchParams.set('project', code); else u.searchParams.delete('project');
+          history.replaceState(null, '', u.toString());
         }
-      } catch (err) {
-        document.getElementById('rowCountLabel').textContent = 'โหลดไม่สำเร็จ';
-        hubToast('เกิดข้อผิดพลาด: ' + err.message);
-      }
+      } catch (e) { /* ไม่สำคัญ */ }
+    }
+
+    function initProjects() {
+      google.script.run
+        .withSuccessHandler(function (list) {
+          var sel = document.getElementById('projectSelect');
+          sel.innerHTML = '';
+          (list || []).forEach(function (p) {
+            var o = document.createElement('option');
+            o.value = p.code; o.textContent = p.code ? (p.name + ' (' + p.code + ')') : p.name;
+            sel.appendChild(o);
+          });
+          if (!list || !list.length) {
+            sel.innerHTML = '<option value="">ไม่มีโครงการที่เปิดใช้</option>';
+            onLoadError(new Error('ยังไม่มีโครงการที่เปิดใช้ในแท็บ Projects'));
+            return;
+          }
+          getProjectParam(function (wanted) {
+            wanted = String(wanted || '').toUpperCase();
+            var has = list.some(function (p) { return p.code === wanted; });
+            selectProject(has ? wanted : list[0].code);
+          });
+        })
+        .withFailureHandler(onLoadError)
+        .TRANSPORT_getProjects();
+    }
+
+    function onProjectChange(code) {
+      clearFiltersSilently();
+      selectProject(code);
+    }
+
+    function selectProject(code) {
+      CURRENT_PROJECT = code;
+      document.getElementById('projectSelect').value = code;
+      setProjectParam(code);
+      loadMeta();
+      loadData();
+    }
+
+    function loadMeta() {
+      google.script.run.withSuccessHandler(function (meta) {
+        document.getElementById('companyName').textContent = meta.companyName;
+        document.getElementById('reportSubtitle').textContent = meta.subtitle;
+        document.getElementById('reportTitle').textContent = meta.title;
+        document.getElementById('logoInitial').textContent = meta.logoText || (meta.companyName || '?').trim().charAt(0);
+        document.title = meta.title + ' | ' + meta.companyName;
+      }).TRANSPORT_getReportMeta(CURRENT_PROJECT);
+    }
+
+    function loadData() {
+      document.getElementById('rowCountLabel').textContent = 'กำลังโหลด...';
+      var asked = CURRENT_PROJECT;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (asked !== CURRENT_PROJECT) return; // ผู้ใช้เปลี่ยนโครงการระหว่างโหลด
+          onDataLoaded(res);
+        })
+        .withFailureHandler(onLoadError)
+        .TRANSPORT_getLogData(CURRENT_PROJECT);
+    }
+
+    function clearFiltersSilently() {
+      ['f-ประเภทวัสดุ', 'f-อาคาร', 'f-สถานะ2', 'f-search'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+    }
+
+    function onLoadError(err) {
+      document.getElementById('rowCountLabel').textContent = 'โหลดไม่สำเร็จ';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('emptyState').textContent = 'เกิดข้อผิดพลาด: ' + err.message;
+    }
+
+    function onDataLoaded(res) {
+      ALL_ROWS = res.rows;
+      ALL_HEADERS = res.headers;
+      document.getElementById('rowCountLabel').textContent = 'ข้อมูลทั้งหมด ' + ALL_ROWS.length + ' รายการ';
+      document.getElementById('updatedAtLabel').textContent = 'อัปเดตล่าสุด: ' + new Date(res.updatedAt).toLocaleString('th-TH');
+      populateFilterOptions();
+      renderDataTableHeader();
+      applyFilters();
     }
 
     function populateFilterOptions() {
@@ -273,22 +346,22 @@
       fillSelect('f-สถานะ2', uniqueValues('สถานะ2'));
     }
 
-    function uniqueValues(f) {
-      var s = {};
-      ALL_ROWS.forEach(r => { if (r[f]) s[r[f]] = true; });
-      return Object.keys(s).sort();
+    function uniqueValues(field) {
+      var set = {};
+      ALL_ROWS.forEach(function (r) { if (r[field]) set[r[field]] = true; });
+      return Object.keys(set).sort();
     }
 
-    function fillSelect(id, vals) {
+    function fillSelect(id, values) {
       var sel = document.getElementById(id);
-      var cur = sel.value;
+      var current = sel.value;
       sel.innerHTML = '<option value="">ทั้งหมด</option>';
-      vals.forEach(v => {
+      values.forEach(function (v) {
         var opt = document.createElement('option');
         opt.value = v; opt.textContent = v;
         sel.appendChild(opt);
       });
-      sel.value = cur;
+      sel.value = current;
     }
 
     function getFilteredRows() {
@@ -297,13 +370,13 @@
       var stF = document.getElementById('f-สถานะ2').value;
       var q = document.getElementById('f-search').value.trim().toLowerCase();
 
-      return ALL_ROWS.filter(r => {
+      return ALL_ROWS.filter(function (r) {
         if (matF && r['ประเภทวัสดุ'] !== matF) return false;
         if (bldF && r['อาคาร'] !== bldF) return false;
         if (stF && r['สถานะ2'] !== stF) return false;
         if (q) {
           var hay = [r['รายการวัสดุ'], r['ผู้ขอเบิก/ผู้รับ'], r['Mat. Code']].join(' ').toLowerCase();
-          if (!hay.includes(q)) return false;
+          if (hay.indexOf(q) === -1) return false;
         }
         return true;
       });
@@ -319,105 +392,167 @@
 
     function applyFilters() {
       var rows = getFilteredRows();
-      document.getElementById('filteredCountLabel').textContent = 'แสดง ' + rows.length.toLocaleString() + ' จาก ' + ALL_ROWS.length.toLocaleString() + ' รายการ';
+      document.getElementById('filteredCountLabel').textContent = 'แสดง ' + rows.length + ' จาก ' + ALL_ROWS.length + ' รายการ';
       renderKpis(rows);
-      renderDonut('donutMat', 'legendMat', groupCount(rows, 'ประเภทวัสดุ'));
-      renderDonut('donutStatus', 'legendStatus', groupCount(rows, 'สถานะ2'), true);
+      renderDonut('donutMat', 'legendMat', groupCount(rows, 'ประเภทวัสดุ'), CHART_COLORS_MAT, false);
+      renderDonut('donutStatus', 'legendStatus', groupCount(rows, 'สถานะ2'), STATUS_COLOR_FALLBACK_PALETTE, true);
       renderBarTop(rows);
       renderSummaryTable(rows);
       renderDataTable(rows);
     }
 
-    function groupCount(rows, f) {
+    function groupCount(rows, field) {
       var m = {};
-      rows.forEach(r => { var k = r[f] || '(ไม่ระบุ)'; m[k] = (m[k] || 0) + 1; });
+      rows.forEach(function (r) {
+        var k = r[field] || '(ไม่ระบุ)';
+        m[k] = (m[k] || 0) + 1;
+      });
       return m;
+    }
+
+    var QTY_FIELD = 'จำนวนที่เบิก/ย้าย';
+    var UNIT_FIELD = 'หน่วย';
+    var ITEM_FIELD = 'รายการวัสดุ';
+
+    function uniqueValuesInRows(rows, field) {
+      var set = {};
+      rows.forEach(function (r) { if (r[field]) set[r[field]] = true; });
+      return Object.keys(set);
+    }
+
+    function groupSum(rows, groupField, sumField) {
+      var m = {};
+      rows.forEach(function (r) {
+        var k = r[groupField] || '(ไม่ระบุ)';
+        var v = parseFloat(r[sumField]);
+        if (isNaN(v)) v = 0;
+        m[k] = (m[k] || 0) + v;
+      });
+      return m;
+    }
+
+    function sumAll(rows, field) {
+      return rows.reduce(function (acc, r) {
+        var v = parseFloat(r[field]);
+        return acc + (isNaN(v) ? 0 : v);
+      }, 0);
     }
 
     function renderKpis(rows) {
       var total = rows.length;
-      var sent = rows.filter(r => r['สถานะ2'] === 'ส่งแล้ว' || r['สถานะ2'] === 'ส่งด่วนแล้ว').length;
+      var sent = rows.filter(function (r) { return r['สถานะ2'] === 'ส่งแล้ว'; }).length;
       var matTypes = Object.keys(groupCount(rows, 'ประเภทวัสดุ')).length;
       var bldTypes = Object.keys(groupCount(rows, 'อาคาร')).length;
-      var totalQty = rows.reduce((acc, r) => acc + (parseFloat(r['จำนวนที่เบิก/ย้าย']) || 0), 0);
-
+      var totalQty = sumAll(rows, QTY_FIELD);
+      var units = uniqueValuesInRows(rows, UNIT_FIELD);
+      var qtyLabel = totalQty.toLocaleString('th-TH') + (units.length === 1 ? ' ' + units[0] : '');
       var kpis = [
-        { label: 'รายการทั้งหมด', value: total.toLocaleString(), cls: 's1' },
-        { label: 'ส่งแล้ว', value: sent.toLocaleString() + ' (' + (total ? Math.round(sent / total * 100) : 0) + '%)', cls: 's2' },
+        { label: 'รายการทั้งหมด', value: total, cls: 's1' },
+        { label: 'ส่งแล้ว', value: sent + ' (' + (total ? Math.round(sent / total * 100) : 0) + '%)', cls: 's2' },
         { label: 'ประเภทวัสดุ', value: matTypes + ' ชนิด', cls: 's3' },
         { label: 'อาคาร', value: bldTypes + ' อาคาร', cls: 's4' },
-        { label: 'จำนวนรวมที่เบิก', value: totalQty.toLocaleString(), cls: 's5' }
+        { label: 'จำนวนรวมที่เบิก', value: qtyLabel, cls: 's5' }
       ];
-      document.getElementById('kpiRow').innerHTML = kpis.map(k =>
-        '<div class="stat-item ' + k.cls + '"><div class="label">' + k.label + '</div><div class="value">' + k.value + '</div></div>'
-      ).join('');
+      var html = kpis.map(function (k) {
+        return '<div class="stat-item ' + k.cls + '"><div class="label">' + k.label + '</div><div class="value">' + k.value + '</div></div>';
+      }).join('');
+      document.getElementById('kpiRow').innerHTML = html;
     }
 
-    function renderDonut(canvasId, legendId, dataMap, isStatus) {
+    function renderDonut(canvasId, legendId, dataMap, palette, useStatusColors) {
       var labels = Object.keys(dataMap);
-      var values = labels.map(l => dataMap[l]);
-      var total = values.reduce((a, b) => a + b, 0);
-      var palette = ['#0B1F4B', '#1E9E6A', '#F2B705', '#2F5D9E', '#F4A879', '#8A93A5', '#7C3AED'];
-      var colors = labels.map((l, i) => isStatus ? getStatusColor(l) : palette[i % palette.length]);
+      var values = labels.map(function (l) { return dataMap[l]; });
+      var total = values.reduce(function (a, b) { return a + b; }, 0);
+
+      var fallbackIdx = 0;
+      var colors = labels.map(function (l) {
+        if (useStatusColors) return getStatusColor(l);
+        var c = palette[fallbackIdx % palette.length];
+        fallbackIdx++;
+        return c;
+      });
 
       var existing = canvasId === 'donutMat' ? donutMatChart : donutStatusChart;
       if (existing) existing.destroy();
 
       var chart = new Chart(document.getElementById(canvasId), {
         type: 'doughnut',
-        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 3, borderColor: '#FFFFFF' }] },
         options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
       });
       if (canvasId === 'donutMat') donutMatChart = chart; else donutStatusChart = chart;
 
-      document.getElementById(legendId).innerHTML = labels.map((l, i) => {
+      var legendHtml = labels.map(function (l, i) {
         var pct = total ? Math.round(values[i] / total * 100) : 0;
         return '<span><span class="dot" style="background:' + colors[i] + ';"></span>' + l + ' ' + pct + '%</span>';
-      }).join('') || '<span>ไม่มีข้อมูล</span>';
+      }).join('');
+      document.getElementById(legendId).innerHTML = legendHtml || '<span>ไม่มีข้อมูล</span>';
     }
 
     function renderBarTop(rows) {
-      var source = groupCount(rows, 'ประเภทวัสดุ');
-      var entries = Object.keys(source).map(k => [k, source[k]]).sort((a, b) => b[1] - a[1]).slice(0, 7);
+      var qtySums = groupSum(rows, 'ประเภทวัสดุ', QTY_FIELD);
+      var hasQty = Object.keys(qtySums).some(function (k) { return qtySums[k] > 0; });
+      var source = hasQty ? qtySums : groupCount(rows, 'ประเภทวัสดุ');
+      var entries = Object.keys(source).map(function (k) { return [k, source[k]]; })
+        .sort(function (a, b) { return b[1] - a[1]; });
+
+      var barColors = entries.map(function (_, i) { return CHART_COLORS_BAR[i % CHART_COLORS_BAR.length]; });
+
       if (barItemChart) barItemChart.destroy();
       barItemChart = new Chart(document.getElementById('barItem'), {
         type: 'bar',
         data: {
-          labels: entries.map(e => e[0]),
-          datasets: [{ data: entries.map(e => e[1]), backgroundColor: '#1E3A7A', borderRadius: 6 }]
+          labels: entries.map(function (e) { return e[0]; }),
+          datasets: [{ data: entries.map(function (e) { return e[1]; }), backgroundColor: barColors, borderRadius: 6, maxBarThickness: 26 }]
         },
         options: {
           responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: function (ctx) { return ctx.parsed.x.toLocaleString('th-TH') + (hasQty ? '' : ' ครั้ง'); } } }
+          },
+          scales: {
+            x: { grid: { color: '#E6E8EE' }, ticks: { color: '#5A6478', font: { family: "'Prompt', sans-serif", size: 10 } } },
+            y: { grid: { display: false }, ticks: { color: '#0B1F4B', font: { family: "'Prompt', sans-serif", size: 11 } } }
+          }
         }
       });
     }
 
     function renderSummaryTable(rows) {
-      var counts = groupCount(rows, 'รายการวัสดุ');
-      var entries = Object.keys(counts).map(k => [k, counts[k]]).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      var total = rows.length;
-      document.querySelector('#summaryTable tbody').innerHTML = entries.map(e =>
-        '<tr><td>' + e[0] + '</td><td class="num">' + e[1].toLocaleString() + '</td><td class="num">-</td><td class="num">' + (total ? Math.round(e[1] / total * 100) : 0) + '%</td></tr>'
-      ).join('') || '<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';
+      var counts = groupCount(rows, ITEM_FIELD);
+      var qtySums = groupSum(rows, ITEM_FIELD, QTY_FIELD);
+      var totalQty = sumAll(rows, QTY_FIELD);
+      var entries = Object.keys(counts).map(function (k) { return [k, counts[k], qtySums[k] || 0]; })
+        .sort(function (a, b) { return b[2] - a[2]; });
+      var tbody = entries.map(function (e) {
+        var pct = totalQty ? Math.round(e[2] / totalQty * 100) : 0;
+        return '<tr><td>' + e[0] + '</td><td class="num">' + e[1] + '</td><td class="num">' + e[2].toLocaleString('th-TH') + '</td><td class="num">' + pct + '%</td></tr>';
+      }).join('');
+      document.querySelector('#summaryTable tbody').innerHTML = tbody || '<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';
     }
 
     function renderDataTableHeader() {
-      document.getElementById('dataTableHead').innerHTML = ALL_HEADERS.map(h => '<th>' + h + '</th>').join('');
+      var head = ALL_HEADERS.map(function (h) { return '<th>' + h + '</th>'; }).join('');
+      document.getElementById('dataTableHead').innerHTML = head;
     }
 
     function renderDataTable(rows) {
-      document.getElementById('dataTableBody').innerHTML = rows.slice(0, 300).map(r => {
-        return '<tr>' + ALL_HEADERS.map(h => {
-          var val = r[h] ?? '';
+      var monoFields = { 'Mat. Code': 1, 'จำนวนที่เบิก/ย้าย': 1 };
+      var body = rows.map(function (r) {
+        return '<tr>' + ALL_HEADERS.map(function (h) {
+          var val = r[h] === undefined || r[h] === null ? '' : r[h];
           if (h === 'สถานะ2' || h === 'สถานะ') {
-            var c = getStatusColor(val);
-            return '<td><span class="badge" style="background:' + c + '22;color:' + c + ';">' + val + '</span></td>';
+            var color = getStatusColor(val);
+            return '<td><span class="badge" style="background-color:' + color + '22;color:' + color + ';">' + val + '</span></td>';
           }
-          return '<td>' + val + '</td>';
+          var cellCls = monoFields[h] ? ' class="mono-cell"' : '';
+          return '<td' + cellCls + '>' + val + '</td>';
         }).join('') + '</tr>';
       }).join('');
+      document.getElementById('dataTableBody').innerHTML = body;
       document.getElementById('emptyState').style.display = rows.length ? 'none' : 'block';
+      document.getElementById('emptyState').textContent = 'ไม่พบข้อมูลตามเงื่อนไขที่กรอง';
     }
 
     function toggleAuto() {
@@ -426,49 +561,12 @@
         clearInterval(autoTimer); autoTimer = null;
         btn.textContent = 'Auto-refresh: OFF';
       } else {
-        autoTimer = setInterval(loadData, 30000);
-        btn.textContent = 'Auto-refresh: ON (30s)';
+        autoTimer = setInterval(loadData, 60000);
+        btn.textContent = 'Auto-refresh: ON (60s)';
       }
     }
 
-    function openAddModal() {
-      document.getElementById('m_request_date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('addModal').classList.add('open');
-    }
-    function closeAddModal() {
-      document.getElementById('addModal').classList.remove('open');
-    }
-
-    async function submitAddForm(e) {
-      e.preventDefault();
-      try {
-        const payload = {
-          request_date: document.getElementById('m_request_date').value,
-          mat_code: document.getElementById('m_mat_code').value,
-          mat_item: document.getElementById('m_mat_item').value,
-          mat_type: document.getElementById('m_mat_type').value,
-          building: document.getElementById('m_building').value,
-          floor: document.getElementById('m_floor').value,
-          quantity: document.getElementById('m_quantity').value,
-          unit: document.getElementById('m_unit').value,
-          status2: document.getElementById('m_status2').value,
-          requester_receiver: document.getElementById('m_requester').value,
-          note: document.getElementById('m_note').value
-        };
-
-        const res = await API.post('/api/transport/add', payload);
-        if (res.ok) {
-          hubToast('บันทึกข้อมูลลง PostgreSQL สำเร็จแล้ว!');
-          closeAddModal();
-          document.getElementById('addForm').reset();
-          loadData();
-        }
-      } catch (err) {
-        hubToast('บันทึกไม่สำเร็จ: ' + err.message);
-      }
-    }
-
-    loadData();
+    initProjects();
   </script>
 </body>
 </html>

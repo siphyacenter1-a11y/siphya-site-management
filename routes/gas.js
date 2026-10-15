@@ -13,8 +13,9 @@ const { UserError } = require('../services/common');
 const checklist = require('../services/checklist');
 const waste = require('../services/waste');
 const route = require('../services/route');
+const transport = require('../services/transport');
 
-const ALLOWED = Object.assign({}, checklist.functions, waste.functions, route.functions);
+const ALLOWED = Object.assign({}, checklist.functions, waste.functions, route.functions, transport.functions);
 
 // รับทั้ง application/json และ text/plain (gas-shim ส่งเป็น text/plain เหมือนตอนใช้ Apps Script)
 router.use(express.text({ type: 'text/plain', limit: '30mb' }));
