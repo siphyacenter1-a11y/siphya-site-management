@@ -73,3 +73,17 @@ ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS npo_id INT REFERENCES npo_rep
 ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS waste_records_pending_idx
   ON waste_records (project_id, truck_type, record_date, time_in, id) WHERE npo_id IS NULL;
+
+-- แก้ไข/ลบรายการ: เก็บว่าใครแก้ล่าสุด + ประวัติค่าเดิมก่อนแก้/ลบ
+ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS updated_by TEXT;
+CREATE TABLE IF NOT EXISTS waste_record_history (
+  id         SERIAL PRIMARY KEY,
+  record_id  INT  NOT NULL,                  -- ไม่ผูก FK เพื่อให้ประวัติอยู่ต่อหลังลบ
+  action     TEXT NOT NULL CHECK (action IN ('update','delete')),
+  old_data   JSONB NOT NULL,
+  changed_by TEXT,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS waste_record_history_rec_idx ON waste_record_history (record_id);

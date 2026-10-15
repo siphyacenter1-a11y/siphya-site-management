@@ -24,6 +24,16 @@
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    .edit-banner { display: none; background: #fff8e1; border: 1.5px solid #f6ad55; color: #7b341e; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; font-weight: 600; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .edit-banner button { border: 1px solid #c05621; background: #fff; color: #c05621; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+    .rec-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .rec-main { flex: 1; min-width: 220px; font-size: 13px; color: #4a5568; line-height: 1.6; }
+    .rec-main b { color: #1a202c; font-size: 14px; }
+    .rec-btns { display: flex; gap: 8px; }
+    .rec-btns button { border: 1.5px solid #2d6a4f; background: #fff; color: #2d6a4f; border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .rec-btns button.del { border-color: #e53e3e; color: #e53e3e; }
+    .rec-btns button:disabled { opacity: .4; cursor: not-allowed; }
+    .lock-tag { display: inline-block; background: #edf2f7; color: #4a5568; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 700; }
 
     .card { background: #f7f8f5; border: 1px solid #dce1d8; border-radius: 12px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
     .card-title { font-size: 14px; font-weight: 700; color: #1e3a29; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
@@ -128,6 +138,7 @@
 
   <div class="nav-tabs">
     <button class="tab-btn active" id="tabFormBtn" onclick="switchTab('form')">📝 บันทึกข้อมูลไซต์งาน</button>
+    <button class="tab-btn" id="tabEditBtn" onclick="switchTab('edit')">✎ แก้ไข/ลบรายการ</button>
     <button class="tab-btn" id="tabDashBtn" onclick="switchTab('dash')">📊 Dashboard สรุปผล</button>
   </div>
 
@@ -137,6 +148,11 @@
     <div class="draft-banner" id="draftBanner">
       <span>💾 พบข้อมูลที่กรอกค้างไว้ (อาจเน็ตหลุดตอนก่อนหน้า) ต้องการกู้คืนหรือไม่?</span>
       <button type="button" onclick="clearDraft(); $('draftBanner').style.display='none';">ทิ้งไป</button>
+    </div>
+
+    <div class="edit-banner" id="editBanner">
+      <span id="editBannerText">✎ กำลังแก้ไขรายการ</span>
+      <button type="button" onclick="cancelEdit()">ยกเลิกการแก้ไข</button>
     </div>
 
     <form id="form">
@@ -305,6 +321,24 @@
     </form>
   </div>
 
+  <!-- TAB: แก้ไข/ลบรายการ -->
+  <div id="tabEdit" class="tab-content">
+    <div class="card">
+      <div class="row">
+        <div class="col form-group" style="margin:0;">
+          <label>โครงการ</label>
+          <select id="editProject" onchange="loadRecordList()"><option value="">-- ทุกโครงการ --</option></select>
+        </div>
+        <div class="col form-group" style="margin:0;">
+          <label>ค้นหา (เลขบิล / ทะเบียน / ผู้บันทึก)</label>
+          <input type="text" id="editSearch" placeholder="พิมพ์แล้วกด Enter" onkeydown="if(event.key==='Enter'){loadRecordList()}">
+        </div>
+      </div>
+      <div style="font-size:12px;color:#718096;margin-top:8px;">แสดง 200 รายการล่าสุด · เที่ยวที่ออกใบ NPO แล้วแก้/ลบไม่ได้ ต้องยกเลิกใบ NPO ก่อน</div>
+    </div>
+    <div id="recordList"><div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div></div>
+  </div>
+
   <!-- TAB 2: DASHBOARD -->
   <div id="tabDash" class="tab-content">
     <div class="card">
@@ -403,6 +437,7 @@ function formatTimeString(val) {
 }
 
 function saveDraft() {
+  if (editId) return;  // กำลังแก้รายการเดิม ไม่เก็บเป็นร่าง
   try {
     const draft = {};
     DRAFT_FIELDS.forEach(id => {
@@ -542,18 +577,107 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function switchTab(tab) {
-  if (tab === 'form') {
-    $('tabForm').classList.add('active');
-    $('tabDash').classList.remove('active');
-    $('tabFormBtn').classList.add('active');
-    $('tabDashBtn').classList.remove('active');
-  } else {
-    $('tabDash').classList.add('active');
-    $('tabForm').classList.remove('active');
-    $('tabDashBtn').classList.add('active');
-    $('tabFormBtn').classList.remove('active');
-    loadDashboardData();
-  }
+  ['form', 'edit', 'dash'].forEach(t => {
+    const key = t.charAt(0).toUpperCase() + t.slice(1);
+    $('tab' + key).classList.toggle('active', t === tab);
+    $('tab' + key + 'Btn').classList.toggle('active', t === tab);
+  });
+  if (tab === 'dash') loadDashboardData();
+  if (tab === 'edit') { fillEditProjects(); loadRecordList(); }
+}
+
+// ================= แก้ไข / ลบรายการ =================
+let editId = null;
+let editPhotos = [null, null, null];   // URL รูปเดิมของรายการที่กำลังแก้
+
+function fillEditProjects() {
+  const src = $('project'), dst = $('editProject');
+  const cur = dst.value;
+  dst.innerHTML = '<option value="">-- ทุกโครงการ --</option>';
+  Array.from(src.options).forEach(o => { if (o.value) dst.add(new Option(o.value, o.value)); });
+  dst.value = cur;
+}
+
+function loadRecordList() {
+  const box = $('recordList');
+  box.innerHTML = '<div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div>';
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      if (!rows || !rows.length) { box.innerHTML = '<div class="card" style="text-align:center;color:#718096;">ไม่พบรายการ</div>'; return; }
+      box.innerHTML = rows.map(r => {
+        const locked = !!r.npoNo;
+        return '<div class="rec-item"><div class="rec-main">' +
+          '<b>' + escapeHtml(r.date) + ' · บิล ' + escapeHtml(r.billNo) + ' · ' + escapeHtml(r.plateNo) + '</b>' +
+          (locked ? ' <span class="lock-tag">🔒 NPO ' + escapeHtml(r.npoNo) + '</span>' : '') + '<br>' +
+          escapeHtml(r.project) + ' · ' + escapeHtml(r.truck) + ' · ชั้น/โซน ' + escapeHtml(r.location) +
+          ' · เวลา ' + escapeHtml(r.timeIn) + '–' + escapeHtml(r.time) + ' · ผู้บันทึก ' + escapeHtml(r.recorder) +
+          (r.updatedAt ? '<br><span style="color:#a0aec0">แก้ไขล่าสุด ' + escapeHtml(r.updatedAt) + ' โดย ' + escapeHtml(r.updatedBy) + '</span>' : '') +
+          '</div><div class="rec-btns">' +
+          '<button type="button" onclick="startEdit(' + r.id + ')"' + (locked ? ' disabled title="ออกใบ NPO แล้ว"' : '') + '>✎ แก้ไข</button>' +
+          '<button type="button" class="del" onclick="deleteRecord(' + r.id + ', \'' + escapeHtml(r.billNo).replace(/'/g, '') + '\')"' + (locked ? ' disabled title="ออกใบ NPO แล้ว"' : '') + '>ลบ</button>' +
+          '</div></div>';
+      }).join('');
+    })
+    .withFailureHandler(function(err) { box.innerHTML = '<div class="card" style="color:#e53e3e;">โหลดไม่สำเร็จ: ' + escapeHtml(err.message) + '</div>'; })
+    .WASTE_listRecords({ project: $('editProject').value, q: $('editSearch').value });
+}
+
+function setPhotoPreview(i, url) {
+  const img = $('p' + i), icon = $('icon' + i);
+  if (url) { img.src = url; img.style.display = 'block'; icon.style.display = 'none'; }
+  else { img.removeAttribute('src'); img.style.display = 'none'; icon.style.display = 'block'; }
+}
+
+function resetFormUI() {
+  $('form').reset();
+  showMissing = false; applyMissingMarks();
+  [1, 2, 3].forEach(i => setPhotoPreview(i, null));
+  updateProgressBar();
+  $('date').value = '';
+}
+
+function startEdit(id) {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      resetFormUI();
+      editId = r.id;
+      editPhotos = [r.photo1Url, r.photo2Url, r.photo3Url];
+      if (!Array.from($('project').options).some(o => o.value === r.project)) $('project').add(new Option(r.project, r.project));
+      $('project').value = r.project;
+      const m = String(r.date || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      $('date').value = m ? m[3] + '-' + m[2] + '-' + m[1] : '';
+      ['location', 'timeIn', 'time', 'recorder', 'billNo', 'plateNo', 'note'].forEach(k => { $(k).value = r[k] || ''; });
+      $('truckSelect').value = r.truck;
+      $('wasteConcrete').value = r.wasteConcrete; $('wasteConstruction').value = r.wasteConstruction;
+      $('wastePacking').value = r.wastePacking; $('wasteSystem').value = r.wasteSystem;
+      updateProgressBar();
+      [1, 2, 3].forEach(i => setPhotoPreview(i, editPhotos[i - 1]));
+      $('editBannerText').textContent = '✎ กำลังแก้ไข: บิล ' + r.billNo + ' · ' + r.plateNo + ' (' + r.date + ') — รูปที่ไม่ได้ถ่ายใหม่จะใช้รูปเดิม';
+      $('editBanner').style.display = 'flex';
+      $('draftBanner').style.display = 'none';
+      $('saveBtn').textContent = '💾 บันทึกการแก้ไข';
+      switchTab('form');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })
+    .withFailureHandler(function(err) { alert('⚠️ ' + err.message); loadRecordList(); })
+    .WASTE_getRecord(id);
+}
+
+function cancelEdit(silent) {
+  editId = null;
+  editPhotos = [null, null, null];
+  $('editBanner').style.display = 'none';
+  $('saveBtn').textContent = '💾 บันทึกข้อมูล';
+  resetFormUI();
+  if (!silent) switchTab('edit');
+}
+
+function deleteRecord(id, bill) {
+  if (!confirm('ลบรายการบิล ' + bill + ' ใช่ไหม?\n(ระบบเก็บประวัติไว้ แต่รายการจะหายจากรายงานและ Dashboard)')) return;
+  google.script.run
+    .withSuccessHandler(function() { alert('ลบเรียบร้อย'); if (editId === id) cancelEdit(true); loadRecordList(); })
+    .withFailureHandler(function(err) { alert('⚠️ ' + err.message); loadRecordList(); })
+    .WASTE_deleteRecord(id);
 }
 
 function setup24hTimePicker(inputId) {
@@ -730,8 +854,9 @@ function getMissingFields() {
     if (!bad && f.id === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(el.value)) bad = true;
     if (bad) missing.push({ el, label: f.label });
   });
-  REQUIRED_PHOTOS.forEach(p => {
+  REQUIRED_PHOTOS.forEach((p, i) => {
     const input = $(p.id);
+    if (editId && editPhotos[i]) return;   // แก้ไข: มีรูปเดิมอยู่แล้ว
     if (!input || !input.files || !input.files[0]) {
       missing.push({ el: input ? input.closest('.photo-upload-box') : null, label: p.label });
     }
@@ -785,7 +910,7 @@ function handleFormSubmit(e) {
     if (!btn) return;
     btn.disabled = false;
     btn.style.backgroundColor = "#2d6a4f";
-    btn.textContent = '💾 บันทึกข้อมูล';
+    btn.textContent = editId ? '💾 บันทึกการแก้ไข' : '💾 บันทึกข้อมูล';
   }
   if (btn) {
     btn.disabled = true;
@@ -820,6 +945,22 @@ function handleFormSubmit(e) {
     formData.photo2 = images[1];
     formData.photo3 = images[2];
     if (btn) btn.textContent = '⏳ กำลังบันทึกข้อมูล...';
+
+    if (editId) {
+      google.script.run
+        .withSuccessHandler(function() {
+          isSubmitting = false;
+          alert('✅ บันทึกการแก้ไขเรียบร้อย');
+          cancelEdit();
+        })
+        .withFailureHandler(function(err) {
+          isSubmitting = false;
+          alert('⚠️ ' + (err && err.message ? err.message : 'บันทึกไม่สำเร็จ'));
+          resetBtn();
+        })
+        .WASTE_updateRecord(editId, formData);
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(res) {
