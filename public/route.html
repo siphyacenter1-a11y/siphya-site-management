@@ -1,228 +1,820 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <title>ระบบแผนการเดินรถ - PostgreSQL</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/hub.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบริหารจัดการงานขนส่งภายนอกไซต์งาน</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/site-hub.css">
+  <script src="/js/gas-shim.js"></script>
   <style>
-    body { padding: 68px 22px 60px; }
-    .wrap { max-width: 1180px; margin: 0 auto; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
-    .topbar .actions { display: flex; gap: 8px; }
-    .topbar button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 16px; border: none; border-radius: 10px; background: var(--field); color: var(--ink); cursor: pointer; }
-    .topbar button.primary { background: #2F5D9E; color: #fff; }
+    :root{
+      --ink:#16223A;        /* deep navy - primary */
+      --ink-2:#223454;      /* lighter navy panel */
+      --paper:#E7EBEC;      /* cool paper background */
+      --card:#FCFCFB;       /* manifest card white */
+      --amber:#C77C1F;      /* urgent / hazard accent */
+      --amber-bg:#FBF2E3;
+      --brick:#A8462F;      /* cancel / danger accent */
+      --brick-bg:#FBEAE5;
+      --teal:#2F6F62;       /* live / normal-active accent */
+      --teal-bg:#E7F1EE;
+      --line:#D8DCDD;
+      --muted:#5B6472;
+    }
+    body { font-family: 'Prompt', sans-serif; background-color: var(--paper); color: var(--ink); }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
 
-    .filters { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
-    .filters .field { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
-    .filters label { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .filters select, .filters input { font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); }
+    .ticket{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      position: relative;
+      box-shadow: 0 1px 2px rgba(22,34,58,0.04);
+    }
+    .ticket::before{
+      content:"";
+      position:absolute; left:0; right:0; top:0; height:3px;
+      background: repeating-linear-gradient(90deg, var(--ink) 0 10px, transparent 10px 18px);
+      opacity:.35;
+    }
+    .ticket::after{
+      content:"";
+      position:absolute; left:-7px; top:22px; width:14px; height:14px;
+      background: var(--paper); border:1px solid var(--line); border-radius:50%;
+    }
 
-    .data-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
-    .table-scroll { overflow-x: auto; border-radius: 10px; max-height: 520px; }
-    table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
-    table.data th { position: sticky; top: 0; background: #2F5D9E; text-align: left; color: #fff; font-weight: 500; font-size: 12.5px; padding: 11px 14px; }
-    table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
-    table.data tbody tr:nth-child(even) { background: var(--paper); }
+    .field-input{
+      width:100%; background:#F3F4F3; border:1px solid var(--line); border-radius:8px;
+      padding:.6rem .75rem; outline:none; transition:border-color .15s, background .15s;
+    }
+    .field-input:focus{ border-color: var(--ink); background:#fff; }
+
+    .step-tag{
+      font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.06em;
+      color:#fff; background:var(--ink); border-radius:4px; padding:2px 7px;
+    }
+
+    .mode-card{ border:1px solid var(--line); border-radius:8px; background:#fff; transition:.15s; }
+    .mode-card.is-active{ box-shadow:0 0 0 2px var(--accent,var(--ink)) inset; background:var(--accent-bg,#fff); }
+
+    .route-track{ position:relative; height:2px; background:repeating-linear-gradient(90deg, var(--muted) 0 6px, transparent 6px 12px); margin:0 6px; }
+    .route-dot{ width:9px; height:9px; border-radius:50%; background:var(--ink); flex:none; }
+    .route-truck{ font-size:14px; transform:translateY(-9px); }
+
+    .stamp-btn{ position:relative; overflow:hidden; }
+    .stamp-btn::after{
+      content:''; position:absolute; top:-50%; left:-60%; width:60%; height:200%;
+      background:linear-gradient(60deg, transparent, rgba(255,255,255,.18), transparent);
+      transform:rotate(20deg); transition:left .6s ease;
+    }
+    .stamp-btn:hover::after{ left:130%; }
+
+    @media (prefers-reduced-motion: reduce){
+      .stamp-btn::after{ transition:none; }
+    }
+
   </style>
 </head>
-<body>
-  <a class="hub-home-fab" href="/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+<body class="text-slate-800 antialiased min-h-screen pb-16">
 
-  <div class="wrap">
-    <div class="topbar">
-      <div class="actions">
-        <button onclick="loadRouteData()">↻ Refresh</button>
-        <button class="primary" onclick="openAddRouteModal()">+ ขอจองรถ / แผนเดินรถ</button>
-      </div>
-      <div style="display:flex; align-items:center; gap:16px;">
-        <div id="routeStatusLabel" style="font-size:13px; font-weight:600; color:#2F5D9E;">กำลังโหลดข้อมูล...</div>
-        <div id="userNavBlock"></div>
-      </div>
-    </div>
+  <a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
 
-    <div class="tag-header" style="background: linear-gradient(135deg, #1B3563 0%, #2F5D9E 100%); border-bottom-color: #79A7F0;">
-      <div class="header">
-        <div class="left">
-          <div class="logo">TR</div>
-          <div>
-            <div class="eyebrow" style="color: #A9CAFF;">VEHICLE TRANSPORT SCHEDULE — LIVE (POSTGRESQL)</div>
-            <div class="title">ระบบแผนการเดินรถและการขนส่ง</div>
-          </div>
+  <!-- HEADER BAR -->
+  <header class="text-white border-b-2 sticky top-0 z-50" style="background:var(--ink); border-color:var(--amber);">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-lg border" style="background:rgba(199,124,31,0.15); border-color:rgba(199,124,31,0.4);">
+          <svg class="w-7 h-7" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1m-6 0a1 1 0 001-1"></path></svg>
         </div>
-        <div class="right">
-          <div class="brand-name">SIPHYA CONSTRUCTION</div>
-          <div class="brand-sub" style="color: #A9CAFF;">FLEET &amp; LOGISTICS PLANNING</div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl font-bold tracking-tight text-white">ระบบบริหารจัดการและติดตามงานขนส่ง</h1>
+            <span class="mono inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style="background:rgba(47,111,98,0.18); color:#7FD9C4; border-color:rgba(127,217,196,0.35);">
+              <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:#7FD9C4;"></span> พร้อมใช้งาน
+            </span>
+          </div>
+          <p class="mono text-[11px] text-indigo-100/70 font-light mt-1 tracking-wide">DISPATCH CONSOLE · ศูนย์สระบุรี / โรงงานปู่เจ้า</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 text-[11px] mono px-3 py-1.5 rounded-md border" style="color:#B9C2CE; border-color:rgba(255,255,255,0.12); background:rgba(255,255,255,0.04);">
+          <svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          <span>ISO 9001:2015</span>
         </div>
       </div>
     </div>
+  </header>
 
-    <div class="filters">
-      <div class="field">
-        <label>ประเภทคำขอ</label>
-        <select id="r_type" onchange="loadRouteData()">
-          <option value="">ทั้งหมด</option>
-          <option value="ขอจองรถ">ขอจองรถ</option>
-          <option value="ขอด่วน">ขอด่วน</option>
-          <option value="ยกเลิก">ยกเลิก</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1;">
-        <label>ค้นหา (ต้นทาง / ปลายทาง / ผู้ขอ / รายการ)</label>
-        <input type="text" id="r_search" placeholder="พิมพ์เพื่อค้นหา..." oninput="loadRouteData()">
-      </div>
+  <main class="max-w-5xl mx-auto px-4 mt-8">
+
+    <!-- NAVIGATION TABS -->
+    <div class="p-1.5 rounded-xl flex gap-2 mb-8 border" style="background:#DEE3E4; border-color:var(--line);">
+      <button id="btn-tab-form" onclick="switchTab('form')" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2" style="background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(22,34,58,0.12);">
+        <svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        <span>นำส่งแบบฟอร์มคำขอขนส่ง</span>
+      </button>
+      <button id="btn-tab-dash" onclick="switchTab('dash')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2" style="color:var(--muted);">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        <span>ศูนย์ภาพรวมข้อมูล (Dashboard)</span>
+      </button>
     </div>
 
-    <div class="data-card">
-      <div class="table-scroll">
-        <table class="data">
-          <thead>
-            <tr>
-              <th>ประเภท</th>
-              <th>ต้นทาง</th>
-              <th>ปลายทาง</th>
-              <th>ประเภทรถ</th>
-              <th>เวลารับของ</th>
-              <th>เวลาส่งของ</th>
-              <th>รายการสิ่งของ</th>
-              <th>แผนกผู้ส่ง</th>
-              <th>ผู้ขอจอง</th>
-              <th>หมายเหตุ</th>
-            </tr>
-          </thead>
-          <tbody id="routeTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    <!-- TAB 1: FORM VIEW -->
+    <div id="tab-form" class="space-y-6">
 
-  <!-- Modal ขอจองรถ -->
-  <div class="modal-overlay" id="addRouteModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>แบบฟอร์มขอจองรถขนส่ง</h3>
-        <button class="modal-close" onclick="closeAddRouteModal()">&times;</button>
+      <!-- SELECTOR: DOCUMENT TYPE -->
+      <div class="ticket p-6 pl-7">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="step-tag">SELECT</span>
+          <h2 class="text-base font-bold" style="color:var(--ink);">เลือกประเภทรายการที่ต้องการดำเนินการ</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          <button type="button" onclick="setDocMode('NORMAL')" id="btn-mode-normal" class="mode-card is-active p-4 flex flex-col justify-between gap-3 text-left" style="--accent:var(--teal); --accent-bg:var(--teal-bg);">
+            <div class="flex justify-between items-start">
+              <span id="icon-container-normal" class="p-2 text-white rounded-md" style="background:var(--teal);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </span>
+              <span class="mono text-[11px] font-semibold px-2 py-0.5 rounded" style="background:var(--teal-bg); color:var(--teal);">FM-GM-01-08</span>
+            </div>
+            <div>
+              <div class="font-bold text-sm" style="color:var(--ink);">จองรถขนส่งล่วงหน้า</div>
+              <div class="text-xs mt-0.5 font-light" style="color:var(--muted);">สำหรับรายการแผนงานปกติ</div>
+            </div>
+          </button>
+
+          <button type="button" onclick="setDocMode('URGENT')" id="btn-mode-urgent" class="mode-card p-4 flex flex-col justify-between gap-3 text-left" style="--accent:var(--amber); --accent-bg:var(--amber-bg);">
+            <div class="flex justify-between items-start">
+              <span id="icon-container-urgent" class="p-2 rounded-md" style="background:#EEF0F0; color:#9AA3AC;">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              </span>
+              <span class="mono text-[11px] font-semibold px-2 py-0.5 rounded" style="background:#EEF0F0; color:#5B6472;">FM-TS-01-02</span>
+            </div>
+            <div>
+              <div class="font-bold text-sm" style="color:var(--ink);">แจ้งขอใช้รถเร่งด่วน</div>
+              <div class="text-xs mt-0.5 font-light" style="color:var(--muted);">กรณีจำเป็นเร่งด่วนนอกแผน</div>
+            </div>
+          </button>
+
+          <button type="button" onclick="setDocMode('CANCEL')" id="btn-mode-cancel" class="mode-card p-4 flex flex-col justify-between gap-3 text-left" style="--accent:var(--brick); --accent-bg:var(--brick-bg);">
+            <div class="flex justify-between items-start">
+              <span id="icon-container-cancel" class="p-2 rounded-md" style="background:#EEF0F0; color:#9AA3AC;">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </span>
+              <span class="mono text-[11px] font-semibold px-2 py-0.5 rounded" style="background:#EEF0F0; color:#5B6472;">FM-TS-01-03</span>
+            </div>
+            <div>
+              <div class="font-bold text-sm" style="color:var(--ink);">แจ้งขอยกเลิกรายการ</div>
+              <div class="text-xs mt-0.5 font-light" style="color:var(--muted);">ขอยกเลิกเที่ยวรถที่เคยจองไว้</div>
+            </div>
+          </button>
+
+        </div>
       </div>
-      <form onsubmit="submitRouteForm(event)">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>ประเภทคำขอ *</label>
-            <select id="mr_type">
-              <option value="ขอจองรถ">ขอจองรถ (ปกติ)</option>
-              <option value="ขอด่วน">ขอด่วน (เร่งด่วน)</option>
-            </select>
+
+      <form id="logisticsForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+
+        <!-- SECTION 1 -->
+        <div class="ticket p-6 pl-7 space-y-4">
+          <div class="flex items-center gap-2 border-b pb-3" style="border-color:var(--line);">
+            <span class="step-tag">STEP 01</span>
+            <h3 class="text-sm font-bold" style="color:var(--ink);">ข้อมูลหน่วยงานและรอบการขนส่ง</h3>
           </div>
-          <div class="form-group">
-            <label>ประเภทรถ</label>
-            <select id="mr_truck">
-              <option value="4 ล้อกระบะ">4 ล้อกระบะ</option>
-              <option value="6 ล้อ">6 ล้อ</option>
-              <option value="6 ล้อติดเครน">6 ล้อติดเครน</option>
-              <option value="10 ล้อ">10 ล้อ</option>
-              <option value="เทรลเลอร์">เทรลเลอร์</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>ต้นทาง *</label>
-            <input type="text" id="mr_origin" required placeholder="เช่น คลังหลัก, ไซต์ A">
-          </div>
-          <div class="form-group">
-            <label>ปลายทาง *</label>
-            <input type="text" id="mr_dest" required placeholder="เช่น ไซต์ Origin Thonglor">
-          </div>
-          <div class="form-group">
-            <label>เวลารับของ</label>
-            <input type="datetime-local" id="mr_pickup">
-          </div>
-          <div class="form-group">
-            <label>เวลาส่งของ</label>
-            <input type="datetime-local" id="mr_dropoff">
-          </div>
-          <div class="form-group full">
-            <label>รายการสิ่งของที่ขนส่ง *</label>
-            <textarea id="mr_items" rows="2" required placeholder="ระบุรายการและปริมาณคร่าวๆ"></textarea>
-          </div>
-          <div class="form-group">
-            <label>แผนกผู้ส่ง</label>
-            <input type="text" id="mr_dept" placeholder="เช่น ฝ่ายจัดซื้อ / สโตร์">
-          </div>
-          <div class="form-group">
-            <label>ผู้ขอจอง *</label>
-            <input type="text" id="mr_req" required placeholder="ชื่อ-นามสกุล">
-          </div>
-          <div class="form-group full">
-            <label>หมายเหตุ</label>
-            <textarea id="mr_note" rows="2"></textarea>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">หน่วยงานผู้ส่งเรื่อง <span style="color:var(--brick);">*</span></label>
+              <select id="siteName" class="field-input" required>
+                <option value="" disabled selected>-- กรุณาเลือกหน่วยงาน --</option>
+                <option value="ORG Origin Thonglor World (0DJ)">ORG Origin Thonglor World (0DJ)</option>
+                <option value="MAVISTA PHROM PHONG (0DX)">MAVISTA PHROM PHONG (0DX)</option>
+                <option value="16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)">16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)</option>
+                <option value="65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)">65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)</option>
+                <option value="มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)">มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)</option>
+                <option value="SRS เอสอาร์เอส (สารสิน) (0EB)">SRS เอสอาร์เอส (สารสิน) (0EB)</option>
+                <option value="NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)">NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)</option>
+                <option value="NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)">NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)</option>
+                <option value="ซีแอล เรสซิเดนซ์ (SCL)">ซีแอล เรสซิเดนซ์ (SCL)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">ปลายทางรับเรื่อง <span style="color:var(--brick);">*</span></label>
+              <select id="recipientHub" class="field-input" required>
+                <option value="ศูนย์สระบุรี">ศูนย์สระบุรี</option>
+                <option value="โรงงานปู่เจ้า">โรงงานปู่เจ้า</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">เดือนที่ต้องการปฏิบัติงาน <span style="color:var(--brick);">*</span></label>
+              <input type="month" id="targetMonth" class="field-input" required>
+            </div>
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">สัปดาห์ประจำเดือน <span style="color:var(--brick);">*</span></label>
+              <select id="targetWeek" class="field-input" required>
+                <option value="สัปดาห์ที่ 1">สัปดาห์ที่ 1</option>
+                <option value="สัปดาห์ที่ 2">สัปดาห์ที่ 2</option>
+                <option value="สัปดาห์ที่ 3" selected>สัปดาห์ที่ 3</option>
+                <option value="สัปดาห์ที่ 4">สัปดาห์ที่ 4</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeAddRouteModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary" style="background:#2F5D9E;">ส่งคำขอจองรถ</button>
+
+        <!-- SECTION 2 -->
+        <div class="ticket p-6 pl-7 space-y-4">
+          <div class="flex items-center gap-2 border-b pb-3" style="border-color:var(--line);">
+            <span class="step-tag">STEP 02</span>
+            <h3 class="text-sm font-bold" style="color:var(--ink);">เส้นทางและกำหนดการเคลื่อนย้าย</h3>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">หน่วยงานต้นทาง <span style="color:var(--brick);">*</span></label>
+              <select id="origin" onchange="updateRoutePreview()" class="field-input" required>
+                <option value="" disabled selected>-- เลือกหน่วยงานต้นทาง --</option>
+                <option value="ศูนย์สระบุรี">ศูนย์สระบุรี</option>
+                <option value="โรงงานปู่เจ้า">โรงงานปู่เจ้า</option>
+                <option value="ORG Origin Thonglor World (0DJ)">ORG Origin Thonglor World (0DJ)</option>
+                <option value="MAVISTA PHROM PHONG (0DX)">MAVISTA PHROM PHONG (0DX)</option>
+                <option value="16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)">16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)</option>
+                <option value="65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)">65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)</option>
+                <option value="มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)">มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)</option>
+                <option value="SRS เอสอาร์เอส (สารสิน) (0EB)">SRS เอสอาร์เอส (สารสิน) (0EB)</option>
+                <option value="NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)">NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)</option>
+                <option value="NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)">NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)</option>
+                <option value="ซีแอล เรสซิเดนซ์ (SCL)">ซีแอล เรสซิเดนซ์ (SCL)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">หน่วยงานปลายทาง <span style="color:var(--brick);">*</span></label>
+              <select id="destination" onchange="updateRoutePreview()" class="field-input" required>
+                <option value="" disabled selected>-- เลือกหน่วยงานปลายทาง --</option>
+                <option value="ศูนย์สระบุรี">ศูนย์สระบุรี</option>
+                <option value="โรงงานปู่เจ้า">โรงงานปู่เจ้า</option>
+                <option value="ORG Origin Thonglor World (0DJ)">ORG Origin Thonglor World (0DJ)</option>
+                <option value="MAVISTA PHROM PHONG (0DX)">MAVISTA PHROM PHONG (0DX)</option>
+                <option value="16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)">16 RSD ซิกซ์ทีน เรสสิเดนซ์ (0DV)</option>
+                <option value="65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)">65SKV มัลเบอร์รี่ สุขุมวิท หกสิบห้า (0CQ)</option>
+                <option value="มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)">มัลเบอร์รี่ โกรฟ บางนา แอดท์ เดอะ ฟอเรสเทีย (0CX)</option>
+                <option value="SRS เอสอาร์เอส (สารสิน) (0EB)">SRS เอสอาร์เอส (สารสิน) (0EB)</option>
+                <option value="NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)">NBCP อาคารจอดรถ โนบุ บางกอก โฮเทล (0EA)</option>
+                <option value="NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)">NBH โรงแรม เดอะ พลาซ่า แอทธินี โนบุ โฮเทล แอนด์ สปา แบงคอก (0DO)</option>
+                <option value="ซีแอล เรสซิเดนซ์ (SCL)">ซีแอล เรสซิเดนซ์ (SCL)</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+  <label class="block font-medium mb-1.5" style="color:var(--ink-2);">ประเภทรถที่ต้องการใช้งาน <span style="color:var(--brick);">*</span></label>
+  <select id="vehicleType" class="field-input" required>
+    <option value="" disabled selected>-- กรุณาเลือกประเภทรถ --</option>
+    <option value="รถ 6 ล้อติดเครน">รถ 6 ล้อติดเครน</option>
+    <option value="รถ 6 ล้อตู้">รถ 6 ล้อตู้</option>
+    <option value="รถ 10 ล้อ">รถ 10 ล้อ</option>
+    <option value="รถ 12 ล้อติดเครน">รถ 12 ล้อติดเครน</option>
+    <option value="รถ 12 ล้อพื้นเรียบ">รถ 12 ล้อพื้นเรียบ</option>
+    <option value="รถเทรลเลอร์ (หัวลาก)">รถเทรลเลอร์ (หัวลาก)</option>
+  </select>
+</div>
+
+            <!-- SIGNATURE ELEMENT: live route preview -->
+            <div class="md:col-span-2 flex items-center gap-2 px-1 py-1" id="routePreview">
+              <span class="route-dot" style="background:var(--teal);"></span>
+              <span class="mono text-[11px]" style="color:var(--muted);" id="routeOriginLabel">ต้นทาง</span>
+              <div class="flex-1 route-track"><span class="route-truck absolute" style="left:40%;">🚚</span></div>
+              <span class="mono text-[11px]" style="color:var(--muted);" id="routeDestLabel">ปลายทาง</span>
+              <span class="route-dot" style="background:var(--brick);"></span>
+            </div>
+
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">📅 วันที่กำหนดรับของ/ขึ้นของ <span style="color:var(--brick);">*</span></label>
+              <input type="date" id="loadingDate" onchange="updateUnloadingMin()" class="field-input" required>
+            </div>
+
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">🚛 วันที่กำหนดส่งมอบ/ลงของ <span style="color:var(--brick);">*</span></label>
+              <input type="date" id="unloadingDate" class="field-input" required>
+              <p id="dateWarning" class="hidden text-[11px] mt-1" style="color:var(--brick);">⚠️ วันที่ส่งมอบต้องไม่ก่อนวันที่รับของ</p>
+            </div>
+          </div>
         </div>
+
+        <!-- SECTION 3 -->
+        <div class="ticket p-6 pl-7 space-y-4">
+          <div class="flex items-center gap-2 border-b pb-3" style="border-color:var(--line);">
+            <span class="step-tag">STEP 03</span>
+            <h3 class="text-sm font-bold" style="color:var(--ink);">รายละเอียดสินค้าและจุดจัดเก็บ</h3>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div class="md:col-span-2">
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">รายการวัสดุ / อุปกรณ์ที่ต้องขนย้าย <span style="color:var(--brick);">*</span></label>
+              <input type="text" id="cargoDetail" placeholder="ระบุประเภท ขนาด หรือจำนวนโดยประมาณ" class="field-input" required>
+            </div>
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">พิกัด/ลานจัดเก็บสินค้า <span style="color:var(--brick);">*</span></label>
+              <input type="text" id="storageArea" placeholder="เช่น ลานพัก A2 / โซน B" class="field-input" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4 -->
+        <div class="ticket p-6 pl-7 space-y-4">
+          <div class="flex items-center gap-2 border-b pb-3" style="border-color:var(--line);">
+            <span class="step-tag">STEP 04</span>
+            <h3 class="text-sm font-bold" style="color:var(--ink);">เหตุผลความจำเป็นและข้อมูลผู้ติดต่อ</h3>
+          </div>
+
+          <div id="reason-container" class="hidden text-xs">
+            <label id="reason-label" class="block font-semibold mb-1.5" style="color:var(--brick);">ระบุเหตุผลความจำเป็น <span style="color:var(--brick);">*</span></label>
+            <textarea id="reason" placeholder="กรุณาระบุเหตุผลอย่างชัดเจนเพื่อประกอบการพิจารณา..." class="w-full rounded-lg p-3 outline-none h-20" style="background:var(--brick-bg); border:1px solid #E3B7AB;"></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-medium mb-1.5" style="color:var(--ink-2);">ชื่อผู้แจ้งเรื่อง / เบอร์โทรศัพท์ติดต่อ <span style="color:var(--brick);">*</span></label>
+              <input type="text" id="requester" placeholder="ระบุชื่อ-นามสกุล และเบอร์โทรศัพท์" class="field-input" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <button type="submit" id="submitBtn" class="stamp-btn w-full text-white font-semibold py-4 rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2" style="background:var(--ink);">
+          <svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+          <span>ยืนยันและนำส่งข้อมูลคำขอขนส่ง</span>
+        </button>
+
       </form>
     </div>
-  </div>
 
-  <script src="/js/api-client.js"></script>
+    <!-- TAB 2: DASHBOARD VIEW -->
+    <div id="tab-dash" class="hidden space-y-6">
+
+      <div id="dash-loading" class="ticket p-12 pl-7 text-center">
+        <p class="text-xs" style="color:var(--muted);">⏳ กำลังโหลดข้อมูล...</p>
+      </div>
+
+      <div id="dash-content" class="hidden space-y-6">
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="ticket p-4 pl-6 text-center">
+            <div class="text-2xl font-bold" style="color:var(--ink);" id="stat-total">0</div>
+            <div class="text-[11px] mono" style="color:var(--muted);">รายการทั้งหมด</div>
+          </div>
+          <div class="ticket p-4 pl-6 text-center">
+            <div class="text-2xl font-bold" style="color:var(--teal);" id="stat-normal">0</div>
+            <div class="text-[11px] mono" style="color:var(--muted);">จองล่วงหน้า</div>
+          </div>
+          <div class="ticket p-4 pl-6 text-center">
+            <div class="text-2xl font-bold" style="color:var(--amber);" id="stat-urgent">0</div>
+            <div class="text-[11px] mono" style="color:var(--muted);">เร่งด่วน</div>
+          </div>
+          <div class="ticket p-4 pl-6 text-center">
+            <div class="text-2xl font-bold" style="color:var(--brick);" id="stat-cancel">0</div>
+            <div class="text-[11px] mono" style="color:var(--muted);">ยกเลิก</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ticket p-6 pl-7">
+            <h3 class="text-sm font-bold mb-3" style="color:var(--ink);">สัดส่วนประเภทคำขอ</h3>
+            <div style="height:220px;"><canvas id="chartDocType"></canvas></div>
+          </div>
+          <div class="ticket p-6 pl-7">
+            <h3 class="text-sm font-bold mb-3" style="color:var(--ink);">จำนวนคำขอตามประเภทรถ</h3>
+            <div style="height:260px;"><canvas id="chartVehicle"></canvas></div>
+          </div>
+        </div>
+
+        <div class="ticket p-6 pl-7">
+          <h3 class="text-sm font-bold mb-3" style="color:var(--ink);">จำนวนคำขอตามเดือน</h3>
+          <div style="height:220px;"><canvas id="chartMonth"></canvas></div>
+        </div>
+
+        <div class="ticket p-6 pl-7">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-sm font-bold" style="color:var(--ink);">สัดส่วนความแม่นยำของแผนงานต่อเดือน</h3>
+          </div>
+          <p class="text-[11px] mb-3" style="color:var(--muted);">เปรียบเทียบสัดส่วนคำขอที่จองล่วงหน้าตามแผน กับที่เข้ามาแบบเร่งด่วนหรือถูกยกเลิก — ยิ่งสัดส่วน "ตามแผน" สูง แสดงว่าแผนงานหน้างานแม่นยำ</p>
+          <div style="height:220px;"><canvas id="chartAccuracy"></canvas></div>
+        </div>
+
+        <div class="ticket p-6 pl-7">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold" style="color:var(--ink);">รายการล่าสุด</h3>
+            <button onclick="loadDashboard()" class="text-[11px] mono px-2.5 py-1 rounded-md border" style="color:var(--muted); border-color:var(--line);">
+              🔄 รีเฟรช
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr style="color:var(--muted);" class="text-left border-b" >
+                  <th class="pb-2 pr-3">วันที่</th>
+                  <th class="pb-2 pr-3">ประเภท</th>
+                  <th class="pb-2 pr-3">หน่วยงาน</th>
+                  <th class="pb-2 pr-3">ต้นทาง → ปลายทาง</th>
+                  <th class="pb-2 pr-3">ประเภทรถ</th>
+                  <th class="pb-2">ผู้แจ้ง</th>
+                </tr>
+              </thead>
+              <tbody id="dash-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="dash-error" class="hidden ticket p-6 pl-7 text-center text-xs" style="color:var(--brick);"></div>
+
+    </div>
+
+  </main>
+
   <script>
-    async function loadRouteData() {
-      try {
-        const type = document.getElementById('r_type').value;
-        const search = document.getElementById('r_search').value;
-        const res = await API.get('/api/route/logs', { doc_type: type, search: search });
-        if (res.ok) {
-          document.getElementById('routeStatusLabel').textContent = `ทั้งหมด ${res.result.rows.length} รายการ`;
-          document.getElementById('routeTableBody').innerHTML = res.result.rows.map(r => `
-            <tr>
-              <td><span class="badge" style="background:${r.doc_type === 'ขอด่วน' ? '#C6282822' : '#2F5D9E22'};color:${r.doc_type === 'ขอด่วน' ? '#C62828' : '#2F5D9E'};">${r.doc_type}</span></td>
-              <td><strong>${r.origin || '-'}</strong></td>
-              <td><strong>${r.destination || '-'}</strong></td>
-              <td>${r.truck_type || '-'}</td>
-              <td>${r.pickup_schedule || '-'}</td>
-              <td>${r.dropoff_schedule || '-'}</td>
-              <td>${r.item_list || '-'}</td>
-              <td>${r.sender_dept || '-'}</td>
-              <td>${r.requester || '-'}</td>
-              <td>${r.note || '-'}</td>
-            </tr>
-          `).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;">ไม่มีข้อมูล</td></tr>';
+    let currentDocMode = 'NORMAL';
+    let chartDocType, chartVehicle, chartMonth, chartAccuracy;
+
+    const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    function formatThaiMonth(yyyyMM) {
+      if (!yyyyMM || yyyyMM.indexOf('-') === -1) return yyyyMM;
+      const parts = yyyyMM.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (!y || !m || m < 1 || m > 12) return yyyyMM;
+      return THAI_MONTHS[m - 1] + ' ' + (y + 543);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const now = new Date();
+      const yyyyMM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('targetMonth').value = yyyyMM;
+    });
+
+    function updateUnloadingMin() {
+      const loadVal = document.getElementById('loadingDate').value;
+      const unloadInput = document.getElementById('unloadingDate');
+      if (loadVal) {
+        unloadInput.min = loadVal;
+        if (unloadInput.value && unloadInput.value < loadVal) {
+          unloadInput.value = '';
         }
-      } catch (err) {
-        hubToast('เกิดข้อผิดพลาด: ' + err.message);
       }
     }
 
-    function openAddRouteModal() { document.getElementById('addRouteModal').classList.add('open'); }
-    function closeAddRouteModal() { document.getElementById('addRouteModal').classList.remove('open'); }
+    function switchTab(tab) {
+      const formTab = document.getElementById('tab-form');
+      const dashTab = document.getElementById('tab-dash');
+      const btnForm = document.getElementById('btn-tab-form');
+      const btnDash = document.getElementById('btn-tab-dash');
 
-    async function submitRouteForm(e) {
+      const activeStyle = "background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(22,34,58,0.12);";
+      const inactiveStyle = "color:var(--muted);";
+
+      if (tab === 'form') {
+        formTab.classList.remove('hidden');
+        dashTab.classList.add('hidden');
+        btnForm.className = "flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2";
+        btnForm.style = activeStyle;
+        btnDash.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2";
+        btnDash.style = inactiveStyle;
+      } else {
+        dashTab.classList.remove('hidden');
+        formTab.classList.add('hidden');
+        btnDash.className = "flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2";
+        btnDash.style = activeStyle;
+        btnForm.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2";
+        btnForm.style = inactiveStyle;
+        loadDashboard();
+      }
+    }
+
+    function loadDashboard() {
+      document.getElementById('dash-loading').classList.remove('hidden');
+      document.getElementById('dash-content').classList.add('hidden');
+      document.getElementById('dash-error').classList.add('hidden');
+
+      google.script.run
+        .withSuccessHandler(renderDashboard)
+        .withFailureHandler(function (err) {
+          document.getElementById('dash-loading').classList.add('hidden');
+          document.getElementById('dash-error').classList.remove('hidden');
+          document.getElementById('dash-error').innerText = 'เกิดข้อผิดพลาด: ' + err.message;
+        })
+        .ROUTE_getDashboardData();
+    }
+
+    function renderDashboard(data) {
+      document.getElementById('dash-loading').classList.add('hidden');
+
+      if (data.error) {
+        document.getElementById('dash-error').classList.remove('hidden');
+        document.getElementById('dash-error').innerText = data.error;
+        return;
+      }
+
+      document.getElementById('dash-content').classList.remove('hidden');
+      document.getElementById('stat-total').innerText = data.summary.total;
+      document.getElementById('stat-normal').innerText = data.summary.NORMAL;
+      document.getElementById('stat-urgent').innerText = data.summary.URGENT;
+      document.getElementById('stat-cancel').innerText = data.summary.CANCEL;
+
+      const tbody = document.getElementById('dash-table-body');
+      if (data.recent.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center" style="color:var(--muted);">ยังไม่มีรายการ</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.recent.map(r => `
+        <tr class="border-b" style="border-color:var(--line);">
+          <td class="py-2 pr-3 mono">${r.timestamp}</td>
+          <td class="py-2 pr-3">${r.docType}</td>
+          <td class="py-2 pr-3">${r.siteName}</td>
+          <td class="py-2 pr-3">${r.origin} → ${r.destination}</td>
+          <td class="py-2 pr-3">${r.vehicleType}</td>
+          <td class="py-2">${r.requester}</td>
+        </tr>
+      `).join('');
+
+      renderCharts(data);
+    }
+
+    function renderCharts(data) {
+      const inkColor = '#16223A';
+      const gridColor = '#D8DCDD';
+
+      const docTypeCtx = document.getElementById('chartDocType').getContext('2d');
+      if (chartDocType) chartDocType.destroy();
+      chartDocType = new Chart(docTypeCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['จองล่วงหน้า', 'เร่งด่วน', 'ยกเลิก'],
+          datasets: [{
+            data: [data.summary.NORMAL, data.summary.URGENT, data.summary.CANCEL],
+            backgroundColor: ['#2F6F62', '#C77C1F', '#A8462F'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: inkColor, font: { family: 'Prompt' } } } }
+        }
+      });
+
+      const vehicleEntries = Object.entries(data.byVehicle).sort((a, b) => b[1] - a[1]);
+      const vehicleLabels = vehicleEntries.map(e => e[0]);
+      const vehicleValues = vehicleEntries.map(e => e[1]);
+      const vehicleCtx = document.getElementById('chartVehicle').getContext('2d');
+      if (chartVehicle) chartVehicle.destroy();
+      chartVehicle = new Chart(vehicleCtx, {
+        type: 'bar',
+        data: {
+          labels: vehicleLabels,
+          datasets: [{
+            data: vehicleValues,
+            backgroundColor: '#223454',
+            borderRadius: 0,
+            barPercentage: 0.55,
+            categoryPercentage: 0.7
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          layout: { padding: { right: 24 } },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'right',
+              color: inkColor,
+              font: { family: 'IBM Plex Mono', size: 11, weight: '600' },
+              formatter: v => v
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { color: '#5B6472', precision: 0, font: { family: 'IBM Plex Mono', size: 10 } },
+              grid: { color: gridColor },
+              border: { display: false }
+            },
+            y: {
+              ticks: { color: inkColor, font: { family: 'Prompt', size: 11 } },
+              grid: { display: false },
+              border: { color: inkColor }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      const monthKeys = Object.keys(data.byMonth).sort();
+      const monthLabels = monthKeys.map(formatThaiMonth);
+      const monthValues = monthKeys.map(k => data.byMonth[k].total);
+      const monthCtx = document.getElementById('chartMonth').getContext('2d');
+      if (chartMonth) chartMonth.destroy();
+      chartMonth = new Chart(monthCtx, {
+        type: 'bar',
+        data: {
+          labels: monthLabels,
+          datasets: [{
+            data: monthValues,
+            backgroundColor: '#3B6E91',
+            borderRadius: 0,
+            barPercentage: 0.45,
+            categoryPercentage: 0.6
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          layout: { padding: { top: 24 } },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: inkColor,
+              font: { family: 'IBM Plex Mono', size: 11, weight: '600' },
+              formatter: v => v
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: inkColor, font: { family: 'Prompt', size: 10 } },
+              grid: { display: false },
+              border: { color: inkColor }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#5B6472', precision: 0, font: { family: 'IBM Plex Mono', size: 10 } },
+              grid: { color: gridColor },
+              border: { display: false }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      const accNormalPct = monthKeys.map(k => {
+        const m = data.byMonth[k];
+        return m.total ? Math.round((m.NORMAL / m.total) * 1000) / 10 : 0;
+      });
+      const accUrgentPct = monthKeys.map(k => {
+        const m = data.byMonth[k];
+        return m.total ? Math.round((m.URGENT / m.total) * 1000) / 10 : 0;
+      });
+      const accCancelPct = monthKeys.map(k => {
+        const m = data.byMonth[k];
+        return m.total ? Math.round((m.CANCEL / m.total) * 1000) / 10 : 0;
+      });
+      const accCtx = document.getElementById('chartAccuracy').getContext('2d');
+      if (chartAccuracy) chartAccuracy.destroy();
+      chartAccuracy = new Chart(accCtx, {
+        type: 'bar',
+        data: {
+          labels: monthLabels,
+          datasets: [
+            { label: 'ตามแผน (ปกติ)', data: accNormalPct, backgroundColor: '#2F6F62', borderRadius: 0 },
+            { label: 'เร่งด่วน', data: accUrgentPct, backgroundColor: '#C77C1F', borderRadius: 0 },
+            { label: 'ยกเลิก', data: accCancelPct, backgroundColor: '#A8462F', borderRadius: 0 }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: inkColor, font: { family: 'Prompt', size: 11 }, boxWidth: 12 } },
+            datalabels: {
+              color: '#fff',
+              font: { family: 'IBM Plex Mono', size: 10, weight: '600' },
+              formatter: v => v >= 8 ? v + '%' : ''
+            },
+            tooltip: {
+              callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: inkColor, font: { family: 'Prompt', size: 10 } },
+              grid: { display: false },
+              border: { color: inkColor }
+            },
+            y: {
+              stacked: true,
+              min: 0,
+              max: 100,
+              ticks: { color: '#5B6472', font: { family: 'IBM Plex Mono', size: 10 }, callback: v => v + '%' },
+              grid: { color: gridColor },
+              border: { display: false }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function updateRoutePreview(){
+      const originVal = document.getElementById('origin').value;
+      const destVal = document.getElementById('destination').value;
+      document.getElementById('routeOriginLabel').innerText = originVal || 'ต้นทาง';
+      document.getElementById('routeDestLabel').innerText = destVal || 'ปลายทาง';
+    }
+
+    function setDocMode(mode) {
+      currentDocMode = mode;
+      const btnNormal = document.getElementById('btn-mode-normal');
+      const btnUrgent = document.getElementById('btn-mode-urgent');
+      const btnCancel = document.getElementById('btn-mode-cancel');
+
+      const iconNormal = document.getElementById('icon-container-normal');
+      const iconUrgent = document.getElementById('icon-container-urgent');
+      const iconCancel = document.getElementById('icon-container-cancel');
+
+      const reasonContainer = document.getElementById('reason-container');
+      const reasonLabel = document.getElementById('reason-label');
+
+      [btnNormal, btnUrgent, btnCancel].forEach(b => b.classList.remove('is-active'));
+      [iconNormal, iconUrgent, iconCancel].forEach(i => { i.style.background = '#EEF0F0'; i.style.color = '#9AA3AC'; });
+
+      const reasonField = document.getElementById('reason');
+
+      if (mode === 'NORMAL') {
+        btnNormal.classList.add('is-active');
+        iconNormal.style.background = 'var(--teal)'; iconNormal.style.color = '#fff';
+        reasonContainer.classList.add('hidden');
+        reasonField.removeAttribute('required');
+      } else if (mode === 'URGENT') {
+        btnUrgent.classList.add('is-active');
+        iconUrgent.style.background = 'var(--amber)'; iconUrgent.style.color = '#fff';
+        reasonContainer.classList.remove('hidden');
+        reasonLabel.innerText = "ระบุเหตุผลความจำเป็นในการขอใช้รถเร่งด่วน *";
+        reasonField.setAttribute('required', 'required');
+      } else if (mode === 'CANCEL') {
+        btnCancel.classList.add('is-active');
+        iconCancel.style.background = 'var(--brick)'; iconCancel.style.color = '#fff';
+        reasonContainer.classList.remove('hidden');
+        reasonLabel.innerText = "ระบุเหตุผลความจำเป็นในการขอยกเลิกรายการ *";
+        reasonField.setAttribute('required', 'required');
+      }
+    }
+
+    function handleFormSubmit(e) {
       e.preventDefault();
-      try {
-        const payload = {
-          doc_type: document.getElementById('mr_type').value,
-          truck_type: document.getElementById('mr_truck').value,
-          origin: document.getElementById('mr_origin').value,
-          destination: document.getElementById('mr_dest').value,
-          pickup_schedule: document.getElementById('mr_pickup').value || null,
-          dropoff_schedule: document.getElementById('mr_dropoff').value || null,
-          item_list: document.getElementById('mr_items').value,
-          sender_dept: document.getElementById('mr_dept').value,
-          requester: document.getElementById('mr_req').value,
-          note: document.getElementById('mr_note').value
-        };
-        const res = await API.post('/api/route/add', payload);
-        if (res.ok) {
-          hubToast('บันทึกคำขอจองรถสำเร็จ!');
-          closeAddRouteModal();
-          loadRouteData();
-        }
-      } catch (err) {
-        hubToast('บันทึกไม่สำเร็จ: ' + err.message);
-      }
-    }
 
-    loadRouteData();
+      const loadVal = document.getElementById('loadingDate').value;
+      const unloadVal = document.getElementById('unloadingDate').value;
+      const dateWarning = document.getElementById('dateWarning');
+      if (loadVal && unloadVal && unloadVal < loadVal) {
+        dateWarning.classList.remove('hidden');
+        document.getElementById('unloadingDate').focus();
+        return;
+      }
+      dateWarning.classList.add('hidden');
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin mr-2">⏳</span> กำลังนำส่งข้อมูลเข้าระบบ...`;
+
+      const formData = {
+        docType: currentDocMode,
+        siteName: document.getElementById('siteName').value,
+        recipientHub: document.getElementById('recipientHub').value,
+        targetMonth: document.getElementById('targetMonth').value,
+        targetWeek: document.getElementById('targetWeek').value,
+        origin: document.getElementById('origin').value,
+        destination: document.getElementById('destination').value,
+        vehicleType: document.getElementById('vehicleType').value,
+        loadingTime: document.getElementById('loadingDate').value,
+        unloadingTime: document.getElementById('unloadingDate').value,
+        cargoDetail: document.getElementById('cargoDetail').value,
+        storageArea: document.getElementById('storageArea').value,
+        reason: document.getElementById('reason').value || '-',
+        requester: document.getElementById('requester').value
+      };
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.result === 'error') {
+            alert('เกิดข้อผิดพลาด: ' + (res.message || 'ไม่สามารถบันทึกข้อมูลได้'));
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg><span>ยืนยันและนำส่งข้อมูลคำขอขนส่ง</span>`;
+            return;
+          }
+          alert('บันทึกคำขอขนส่งเรียบร้อยแล้ว!');
+          document.getElementById('logisticsForm').reset();
+          updateRoutePreview();
+          btn.disabled = false;
+          btn.innerHTML = `<svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg><span>ยืนยันและนำส่งข้อมูลคำขอขนส่ง</span>`;
+        })
+        .withFailureHandler(function (error) {
+          alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ กรุณาลองใหม่อีกครั้ง');
+          console.error('Error:', error);
+          btn.disabled = false;
+          btn.innerHTML = `<svg class="w-4 h-4" style="color:var(--amber);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg><span>ยืนยันและนำส่งข้อมูลคำขอขนส่ง</span>`;
+        })
+        .ROUTE_saveRequest(formData);
+    }
   </script>
 </body>
 </html>
