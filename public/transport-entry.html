@@ -27,7 +27,7 @@
     .msg.ok { display: block; background: #E3F5EC; color: #135E40; }
 
     .wrap { padding: 10px 16px 60px; overflow-x: auto; }
-    table { border-collapse: collapse; background: #fff; min-width: 1500px; width: 100%; }
+    table { border-collapse: collapse; background: #fff; min-width: 1750px; width: 100%; }
     th { position: sticky; top: 0; background: #EEF1F7; font-size: 12px; font-weight: 600; padding: 6px 4px; border: 1px solid var(--line); white-space: nowrap; }
     td { border: 1px solid var(--line); padding: 0; height: 32px; }
     td.ro { background: #FAFAFB; color: var(--soft); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
@@ -41,7 +41,8 @@
     tr.err td { background: var(--err) !important; }
     .nf { color: #C62828; font-weight: 600; }
     .w-date { min-width: 130px; } .w-mat { min-width: 140px; } .w-sel { min-width: 110px; } .w-qty { min-width: 80px; }
-    .w-req { min-width: 170px; } .w-note { min-width: 140px; } .w-wh { min-width: 90px; }
+    .w-req { min-width: 210px; } .w-st { min-width: 185px; }
+    td.item { white-space: normal; min-width: 230px; max-width: none; line-height: 1.3; padding: 4px 6px; } .w-note { min-width: 140px; } .w-wh { min-width: 90px; }
     .more { margin: 10px 0; text-align: center; }
 
     .modal-bg { position: fixed; inset: 0; background: rgba(11,31,75,.35); display: none; align-items: flex-start; justify-content: center; z-index: 50; overflow: auto; padding: 30px 12px; }
@@ -176,16 +177,16 @@
       '<td class="no">' + (r.no || '') + '</td>' +
       '<td class="w-date"><input type="date" data-k="requestDate" value="' + esc(r.requestDate) + '"></td>' +
       '<td class="w-date"><input type="date" data-k="receiveDate" value="' + esc(r.receiveDate) + '"></td>' +
-      '<td class="w-sel"><select data-k="status">' + optList(STATUS_MANUAL, r.statusManual, stLabel) + '</select></td>' +
+      '<td class="w-st"><select data-k="status">' + optList(STATUS_MANUAL, r.statusManual, stLabel) + '</select></td>' +
       '<td class="w-mat"><input data-k="matCode" list="dlMat" value="' + esc(r.matCode) + '" autocomplete="off"></td>' +
       '<td class="ro' + nf + '" title="' + esc(r.type) + '">' + esc(r.type) + '</td>' +
-      '<td class="ro' + nf + '" title="' + esc(r.item) + '">' + esc(r.item) + '</td>' +
+      '<td class="ro item' + nf + '" title="' + esc(r.item) + '">' + esc(r.item) + '</td>' +
       '<td class="w-sel"><select data-k="building">' + optList((S.data.buildings || []).map(function (b) { return b.name; }), r.building) + '</select></td>' +
       '<td class="w-sel"><select data-k="floor">' + optList(floorsOf(r.building), r.floor) + '</select></td>' +
       '<td class="w-qty"><input type="number" step="any" min="0" data-k="qty" value="' + esc(r.qty) + '"></td>' +
       '<td class="ro">' + esc(r.unit) + '</td>' +
       '<td class="w-wh"><input data-k="warehouse" value="' + esc(r.warehouse) + '" placeholder="' + (r.building ? esc(S.data.defaultWarehouse) : '') + '"></td>' +
-      '<td class="w-sel"><select data-k="status2">' + optList(S.data.statuses2, r.status2, 'อัตโนมัติ' + (s2auto ? ': ' + s2auto : '')) + '</select></td>' +
+      '<td class="w-st"><select data-k="status2">' + optList(S.data.statuses2, r.status2, 'อัตโนมัติ' + (s2auto ? ': ' + s2auto : '')) + '</select></td>' +
       '<td class="w-req"><input data-k="requester" list="dlReq" value="' + esc(r.requester) + '"></td>' +
       '<td class="w-note"><input data-k="note" value="' + esc(r.note) + '"></td></tr>';
   }
