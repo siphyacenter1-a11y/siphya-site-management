@@ -3,11 +3,14 @@
 //
 //   node scripts/import_transport_xlsx.js <ไฟล์.xlsx>            นำเข้าทุกอย่าง
 //   node scripts/import_transport_xlsx.js <ไฟล์.xlsx> --dry-run  ดูว่าจะนำเข้าอะไรบ้าง ไม่บันทึก
+//   node scripts/import_transport_xlsx.js <ไฟล์.xlsx> --replace-buildings
+//        ใช้อาคาร/ชั้นจากแท็บ Build_ ทับของเดิมทุกโครงการ (ปกติจะไม่ทับโครงการที่ตั้งอาคารไว้แล้ว)
 //
 // อ่านแท็บ:  Projects, MasterData, Build_<รหัส>, Log_<รหัส>
 // รันซ้ำได้: รายการที่เคยนำเข้าจากชีต (source = 'sheet') ของโครงการนั้นจะถูกแทนที่ด้วยชุดใหม่
 //            รายการที่กรอกบนเว็บ (source = 'web') ไม่ถูกแตะ
-//            อาคาร/ชั้น ของโครงการที่มีแท็บ Build_ ในไฟล์ จะถูกแทนที่ตามไฟล์
+//            อาคาร/ชั้น: นำเข้าเฉพาะโครงการที่ยังไม่มีอาคารในระบบ (ที่ตั้งไว้บนเว็บจะไม่ถูกทับ)
+//            ถ้าต้องการทับให้ใส่ --replace-buildings
 // ใช้ค่าที่คำนวณไว้แล้วในชีต (ไม่ใช่สูตร) ไม่ต้องแก้ไฟล์ก่อน และไม่ต้องเปิด/Save ใน Excel
 // ============================================================
 const path = require('path');
@@ -49,6 +52,7 @@ function rowsOf(ws) {
 async function main() {
   const file = process.argv[2];
   const dry = process.argv.includes('--dry-run');
+  const replaceBuildings = process.argv.includes('--replace-buildings');
   if (!file) { console.log('วิธีใช้: node scripts/import_transport_xlsx.js <ไฟล์.xlsx> [--dry-run]'); process.exitCode = 1; return; }
 
   const wb = new ExcelJS.Workbook();
@@ -122,6 +126,11 @@ async function main() {
   Object.keys(floors).forEach(c => console.log(`  Build_${c}: ${floors[c].map(b => `${b.name} (${b.floors.length} ชั้น)`).join(', ')}`));
   Object.keys(logs).forEach(c => console.log(`  Log_${c}: ${logs[c].length} แถว`));
   problems.forEach(p => console.log('  ⚠️ ', p));
+  // โครงการที่มีอาคารในระบบอยู่แล้ว → ไม่ทับ (เว้นแต่สั่ง --replace-buildings)
+  const existing = new Set((await sitePool.query('SELECT DISTINCT project_code FROM transport_floors').catch(() => ({ rows: [] }))).rows.map(r => r.project_code));
+  const keep = replaceBuildings ? [] : Object.keys(floors).filter(c => existing.has(c));
+  if (keep.length) console.log(`  อาคาร/ชั้น ที่มีในระบบแล้ว ไม่ทับ: ${keep.join(', ')} (ถ้าต้องการทับให้ใส่ --replace-buildings)`);
+  keep.forEach(c => delete floors[c]);
   if (dry) { console.log('\n(--dry-run ไม่ได้บันทึกอะไร)'); return; }
 
   const client = await sitePool.connect();
