@@ -15,7 +15,7 @@
 //   WASTE_npoOptions()                         โครงการ + ประเภทรถ
 //   WASTE_npoPending(projectId, truckType)     เที่ยวที่ยังไม่เคยออก NPO
 //   WASTE_npoPreview(projectId, truckType, n)  ดูก่อนออก (ไม่บันทึก)
-//   WASTE_npoCreate({projectId, truckType, npoNo, trips})  ออก NPO + PDF
+//   WASTE_npoCreate({projectId, truckType, npoNo, trips, receiverName, approverName})  ออก NPO + PDF
 //   WASTE_npoList(projectId)                   NPO ที่เคยออก
 //   WASTE_npoCancel({npoId, reason})           ยกเลิก NPO (เที่ยวกลับเป็นยังไม่ออก)
 //   WASTE_npoPdf(npoId)                        ลิงก์ PDF (สร้างใหม่ถ้าไฟล์หาย)
@@ -294,9 +294,12 @@ async function WASTE_getDashboardData() {
 
 async function WASTE_npoOptions() {
   const p = await sitePool.query(`
-    SELECT p.id, p.name, COUNT(w.id) FILTER (WHERE w.npo_id IS NULL)::int AS pending
+    SELECT p.id, p.name, COUNT(w.id) FILTER (WHERE w.npo_id IS NULL)::int AS pending,
+           COALESCE(l.receiver_name, '') AS "lastReceiver", COALESCE(l.approver_name, '') AS "lastApprover"
       FROM projects p LEFT JOIN waste_records w ON w.project_id = p.id
-     GROUP BY p.id ORDER BY p.id`);
+      LEFT JOIN LATERAL (SELECT receiver_name, approver_name FROM npo_reports n
+                          WHERE n.project_id = p.id ORDER BY n.id DESC LIMIT 1) l ON TRUE
+     GROUP BY p.id, l.receiver_name, l.approver_name ORDER BY p.id`);
   const t = await sitePool.query('SELECT name FROM truck_types WHERE active ORDER BY sort_order, name');
   return { projects: p.rows, trucks: t.rows.map(x => x.name) };
 }
@@ -357,6 +360,7 @@ async function WASTE_npoCreate(req) {
   const npoNo = str(req.npoNo, 30);
   if (!npoNo) throw new UserError('กรุณากรอกเลข NPO');
   const n = Math.max(1, Math.min(500, parseInt(req.trips, 10) || 50));
+  const receiverName = str(req.receiverName, 100), approverName = str(req.approverName, 100);
   const user = (this && this.user && (this.user.username || this.user.full_name)) || '';
 
   try {
@@ -369,10 +373,12 @@ async function WASTE_npoCreate(req) {
       if (!rows.length) throw new UserError('ไม่มีเที่ยวที่ยังไม่ได้ออก NPO สำหรับโครงการและประเภทรถนี้');
       const seq = await nextSeq(client, projectId, truckType);
       const r = await client.query(
-        `INSERT INTO npo_reports (project_id, truck_type, npo_no, date_from, date_to, trip_count, total_cost, seq_start, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+        `INSERT INTO npo_reports (project_id, truck_type, npo_no, date_from, date_to, trip_count, total_cost, seq_start, created_by,
+                                  receiver_name, approver_name)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
         [projectId, truckType, npoNo, rows[0].d, rows[rows.length - 1].d,
-          rows.reduce((s, x) => s + (x.trips || 1), 0), rows.reduce((s, x) => s + x.cost, 0), seq, user]);
+          rows.reduce((s, x) => s + (x.trips || 1), 0), rows.reduce((s, x) => s + x.cost, 0), seq, user,
+          receiverName || null, approverName || null]);
       const npoId = r.rows[0].id;
       await client.query('UPDATE waste_records SET npo_id = $1 WHERE id = ANY($2)', [npoId, rows.map(x => x.id)]);
 
@@ -475,7 +481,7 @@ function getFontCss() {
 
 // ความกว้างคอลัมน์ (มม.) คำนวณจากความกว้างคอลัมน์ของชีตรายงานเดิม (พิมพ์แบบ fit-to-width บน A4 แนวนอน)
 const COLS_MM = [6.7, 12.5, 9.5, 9.5, 9.5, 13.8, 8.6, 10.4, 69.7, 69.7, 69.7]; // B กว้างขึ้นให้วันที่ไม่ถูกตัด
-const ROW_MM = 52.3;
+const ROW_MM = 50;   // 3 เที่ยว/หน้า + เหลือที่ให้ช่องลงนามท้ายหน้าสุดท้าย
 
 async function buildNpoPdf(client, npoId) {
   const h = (await client.query(
@@ -504,6 +510,8 @@ async function buildNpoPdf(client, npoId) {
     </tr>`).join('');
   const totalCost = rows.reduce((s, r) => s + r.cost, 0);
   const totalTrips = rows.reduce((s, r) => s + (r.trips || 1), 0);
+  const dots = '.'.repeat(60);
+  const signName = n => n ? esc(n) : '.'.repeat(45);   // ไม่ใส่ชื่อ = เว้นให้เขียนมือ
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     ${getFontCss()}
@@ -521,7 +529,12 @@ async function buildNpoPdf(client, npoId) {
     td.ph img { display: block; width: 100%; height: ${ROW_MM}mm; object-fit: cover; }
     .noimg { color: #999; }
     tr.sum td { height: 6mm; background: #D3D3D3; font-weight: bold; }
+    tr.sum td.num { padding: 0; font-size: ${totalCost >= 10000 ? 5.5 : 7}pt; white-space: nowrap; }
     thead { display: table-header-group; }
+    .sign { width: ${COLS_MM.reduce((a, b) => a + b, 0)}mm; display: flex; justify-content: space-around;
+            margin-top: 1.5mm; font-size: 7.5pt; break-inside: avoid; page-break-inside: avoid; }
+    .sign div { width: 70mm; text-align: center; line-height: 1.3; }
+    .sign .line { margin-top: 5.5mm; letter-spacing: 0.5pt; }
   </style></head><body>
   <table>
     <colgroup>${COLS_MM.map(w => `<col style="width:${w}mm">`).join('')}</colgroup>
@@ -533,9 +546,13 @@ async function buildNpoPdf(client, npoId) {
           <th>ราคา</th><th>จำนวนเที่ยว</th><th>รูปหน้ารถ (เห็นป้ายทะเบียน)</th><th>รูปขยะในรถ</th><th>รูปหลังคลุมผ้าใบ</th></tr>
     </thead>
     <tbody>${body}
-      <tr class="sum"><td colspan="5"></td><td style="text-align:right">รวม</td><td>${fmt(totalCost)}</td><td>${totalTrips}</td><td colspan="3"></td></tr>
+      <tr class="sum"><td colspan="5"></td><td style="text-align:right">รวม</td><td class="num">${fmt(totalCost)}</td><td class="num">${totalTrips}</td><td colspan="3"></td></tr>
     </tbody>
-  </table></body></html>`;
+  </table>
+  <div class="sign">
+    <div>รับวางบิล<div class="line">${dots}</div>(${signName(h.receiver_name)})</div>
+    <div>อนุมัติ<div class="line">${dots}</div>(${signName(h.approver_name)})</div>
+  </div></body></html>`;
 
   const pdf = await htmlToPdf(html, { landscape: true, format: 'A4' });
 

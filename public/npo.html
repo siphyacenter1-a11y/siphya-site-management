@@ -84,6 +84,11 @@
       <div class="col"><label>เลข NPO</label><input id="npoNo" inputmode="numeric" placeholder="เช่น 6206284"></div>
       <div class="col"><label>จำนวนเที่ยว</label><input id="trips" type="number" min="1" max="500" value="50"></div>
     </div>
+    <div class="row">
+      <div class="col"><label>ชื่อผู้รับวางบิล (ท้ายใบ)</label><input id="receiverName" placeholder="เว้นว่าง = เขียนมือ"></div>
+      <div class="col"><label>ชื่อผู้อนุมัติ (ท้ายใบ)</label><input id="approverName" placeholder="เว้นว่าง = เขียนมือ"></div>
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:4px">ระบบจำชื่อที่ใช้ครั้งล่าสุดของแต่ละโครงการไว้ให้</div>
     <div class="actions">
       <button class="btn btn-line" id="btnPreview">ดูตัวอย่างก่อนออก</button>
       <button class="btn btn-main" id="btnCreate" disabled>ยืนยันออก NPO และสร้าง PDF</button>
@@ -106,6 +111,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var run = function () { return google.script.run; };
   var lastPreview = null;
+  var projectOpts = [];
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(n) { return Number(n || 0).toLocaleString('th-TH'); }
   function showMsg(t, ok) { var m = $('msg'); m.textContent = t || ''; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
@@ -113,6 +119,7 @@
 
   function loadOptions() {
     run().withSuccessHandler(function (o) {
+      projectOpts = o.projects;
       var p = $('project'), keep = p.value;
       p.innerHTML = '<option value="">-- เลือกโครงการ --</option>' + o.projects.map(function (x) {
         return '<option value="' + x.id + '">' + esc(x.name) + (x.pending ? ' (ค้าง ' + x.pending + ' เที่ยว)' : '') + '</option>';
@@ -178,7 +185,8 @@
       if (win && !win.closed) win.close();
       $('btnCreate').disabled = false;
       showMsg(e.message);
-    }).WASTE_npoCreate({ projectId: lastPreview.projectId, truckType: lastPreview.truckType, npoNo: npoNo, trips: lastPreview.trips });
+    }).WASTE_npoCreate({ projectId: lastPreview.projectId, truckType: lastPreview.truckType, npoNo: npoNo, trips: lastPreview.trips,
+      receiverName: $('receiverName').value.trim(), approverName: $('approverName').value.trim() });
   };
 
   function loadList() {
@@ -213,7 +221,13 @@
       .withFailureHandler(function (e) { hubToast(e.message, 5000); }).WASTE_npoCancel({ npoId: id, reason: reason.trim() });
   }
 
-  $('project').onchange = function () { loadPending(); loadList(); };
+  function fillNames() {   // ชื่อท้ายใบ: ใช้ชื่อครั้งล่าสุดของโครงการนี้
+    var id = Number($('project').value);
+    var po = projectOpts.filter(function (x) { return x.id === id; })[0] || {};
+    $('receiverName').value = po.lastReceiver || '';
+    $('approverName').value = po.lastApprover || '';
+  }
+  $('project').onchange = function () { fillNames(); loadPending(); loadList(); };
   $('truck').onchange = loadPending;
   $('trips').oninput = resetPreview;
   loadOptions();

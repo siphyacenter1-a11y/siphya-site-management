@@ -87,3 +87,7 @@ CREATE TABLE IF NOT EXISTS waste_record_history (
   changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS waste_record_history_rec_idx ON waste_record_history (record_id);
+
+-- ช่องลงนามท้ายใบ NPO (ชื่อพิมพ์ตอนออกใบ ว่าง = เส้นจุดให้เขียนมือ)
+ALTER TABLE npo_reports ADD COLUMN IF NOT EXISTS receiver_name TEXT;
+ALTER TABLE npo_reports ADD COLUMN IF NOT EXISTS approver_name TEXT;
