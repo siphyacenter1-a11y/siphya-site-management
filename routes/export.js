@@ -4,7 +4,25 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 const { querySite } = require('../db');
+const { JWT_SECRET } = require('../middleware/auth');
+
+// ทุกลิงก์ Export ต้อง login เป็น admin (ลิงก์เปิดจากเบราว์เซอร์ตรงๆ จึงตอบเป็นหน้าเว็บ ไม่ใช่ JSON)
+router.use((req, res, next) => {
+  const auth = req.headers['authorization'];
+  const token = (auth && auth.split(' ')[1]) || (req.cookies && req.cookies.token);
+  const page = (msg) => res.status(403).type('html').send(
+    `<!doctype html><meta charset="utf-8"><body style="font-family:Tahoma,sans-serif;padding:40px;text-align:center">` +
+    `<h3>${msg}</h3><p><a href="/admin">กลับหน้าผู้ดูแลระบบ</a></p></body>`);
+  if (!token) return res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
+    if (!user || user.role !== 'admin') return page('ต้องใช้บัญชีผู้ดูแลระบบ (admin) จึงจะ Export รายงานได้');
+    req.user = user;
+    next();
+  });
+});
 
 // Font paths for Thai support
 const fontRegularPath = path.join(__dirname, '..', 'fonts', 'tahoma.ttf');

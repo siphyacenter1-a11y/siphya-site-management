@@ -14,6 +14,7 @@
 - migration ทุกตัวเป็น SQL แบบรันซ้ำได้ (`IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`) **ไม่ลบข้อมูลเดิม**
 - ตารางเดิมของ IT ที่ถูกใช้/เพิ่มคอลัมน์: `projects`, `waste_records`, `vehicle_transport_requests`, `material_transport_logs`
 - API เดิม (`/api/transport/logs`, `/api/route/logs` ฯลฯ) ยังใช้ได้เหมือนเดิม
+- ลิงก์ Export ในหน้า /admin (`/api/export/*`) เดิมเปิดได้โดยไม่ต้อง login — แก้ให้ต้อง login เป็น admin (ไม่ login → ไปหน้า login, staff → แจ้งว่าไม่มีสิทธิ์)
 
 ## ติดตั้งบน server (ตามลำดับ)
 ```
