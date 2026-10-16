@@ -10,6 +10,8 @@
 //   WASTE_getRecord(id)            ข้อมูล 1 รายการสำหรับเปิดในฟอร์ม
 //   WASTE_updateRecord(id, data)   แก้ไข (รูปที่ไม่ได้เปลี่ยนใช้รูปเดิม) — เที่ยวที่ออก NPO แล้วแก้ไม่ได้
 //   WASTE_deleteRecord(id)         ลบ — เที่ยวที่ออก NPO แล้วลบไม่ได้
+//   WASTE_listDeleted({project})   รายการที่ลบแล้ว (ยังไม่กู้คืน)
+//   WASTE_restoreRecord(historyId) กู้คืนรายการที่ลบ (ข้อมูล+รูปเดิมครบ)
 //
 // ส่วนธุรการออก NPO (ใหม่ ใช้กับ public/npo.html)
 //   WASTE_npoOptions()                         โครงการ + ประเภทรถ
@@ -210,6 +212,22 @@ async function lockEditable(client, id, verb) {
   return row;
 }
 
+// เก็บค่าเดิมทั้งแถว (to_jsonb ให้วันที่เป็น YYYY-MM-DD ไม่เลื่อนตามเขตเวลา)
+async function snapshot(client, rid, action, by) {
+  await client.query(
+    `INSERT INTO waste_record_history (record_id, action, old_data, changed_by)
+     SELECT id, $2, to_jsonb(w), $3 FROM waste_records w WHERE id = $1`, [rid, action, by]);
+}
+
+// วันที่ในสำเนา: YYYY-MM-DD หรือ ISO แบบเก่า (แปลงเป็นวันที่ตามเขตเวลาเครื่อง)
+function snapDate(v) {
+  const s = String(v || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 async function WASTE_updateRecord(id, data) {
   const rid = Number(id) || 0;
   const by = userName(this);
@@ -233,9 +251,7 @@ async function WASTE_updateRecord(id, data) {
       try { return savePhotoFile(d, ['front', 'waste', 'canvas'][i - 1]); }
       catch (e) { throw new UserError('รูปที่ ' + i + ' ไม่ถูกต้อง'); }
     });
-    await client.query(
-      'INSERT INTO waste_record_history (record_id, action, old_data, changed_by) VALUES ($1, $2, $3, $4)',
-      [rid, 'update', JSON.stringify(old), by]);
+    await snapshot(client, rid, 'update', by);
     await client.query(
       `UPDATE waste_records SET project_id=$1, record_date=$2, floor_zone=$3, time_in=$4, time_out=$5, bill_no=$6,
          plate_no=$7, recorder=$8, truck_type=$9, waste_concrete=$10, waste_construction=$11, waste_packing=$12,
@@ -254,11 +270,57 @@ async function WASTE_deleteRecord(id) {
   const rid = Number(id) || 0;
   const by = userName(this);
   return withTx(async client => {
-    const old = await lockEditable(client, rid, 'ลบ');
-    await client.query(
-      'INSERT INTO waste_record_history (record_id, action, old_data, changed_by) VALUES ($1, $2, $3, $4)',
-      [rid, 'delete', JSON.stringify(old), by]);
+    await lockEditable(client, rid, 'ลบ');
+    await snapshot(client, rid, 'delete', by);
     await client.query('DELETE FROM waste_records WHERE id = $1', [rid]);
+    return { success: true };
+  });
+}
+
+async function WASTE_listDeleted(opts) {
+  const o = opts || {};
+  const params = [];
+  let where = "h.action = 'delete' AND h.restored_at IS NULL";
+  if (str(o.project)) { params.push(str(o.project, 200)); where += ` AND p.name = $${params.length}`; }
+  const r = await sitePool.query(
+    `SELECT h.id AS "historyId", h.record_id AS id, p.name AS project,
+            h.old_data->>'record_date' AS "rawDate",
+            h.old_data->>'bill_no' AS "billNo", h.old_data->>'plate_no' AS "plateNo",
+            h.old_data->>'truck_type' AS truck, h.old_data->>'floor_zone' AS location,
+            h.old_data->>'time_in' AS "timeIn", h.old_data->>'time_out' AS time, h.old_data->>'recorder' AS recorder,
+            COALESCE(h.changed_by, '') AS "deletedBy",
+            TO_CHAR(h.changed_at AT TIME ZONE 'Asia/Bangkok', 'DD/MM/YYYY HH24:MI') AS "deletedAt"
+       FROM waste_record_history h
+       LEFT JOIN projects p ON p.id = (h.old_data->>'project_id')::int
+      WHERE ${where}
+      ORDER BY h.changed_at DESC LIMIT 200`, params);
+  return r.rows.map(x => {
+    const d = snapDate(x.rawDate);
+    delete x.rawDate;
+    return Object.assign(x, { date: d ? d.split('-').reverse().join('/') : '' });
+  });
+}
+
+async function WASTE_restoreRecord(historyId) {
+  const hid = Number(historyId) || 0;
+  const by = userName(this);
+  return withTx(async client => {
+    const h = (await client.query(
+      "SELECT * FROM waste_record_history WHERE id = $1 AND action = 'delete' FOR UPDATE", [hid])).rows[0];
+    if (!h) throw new UserError('ไม่พบรายการที่ลบนี้');
+    if (h.restored_at) throw new UserError('รายการนี้กู้คืนไปแล้ว');
+    const d = h.old_data;
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['waste_' + d.project_id]);
+    const dup = await client.query(
+      'SELECT 1 FROM waste_records WHERE project_id = $1 AND bill_no = $2 AND plate_no = $3 LIMIT 1',
+      [d.project_id, d.bill_no, d.plate_no]);
+    if (dup.rows.length) throw new UserError(`กู้คืนไม่ได้: มีรายการบิล ${d.bill_no} ทะเบียน ${d.plate_no} อยู่ในโครงการนี้แล้ว`);
+    // ใส่กลับด้วยค่าเดิมทุกคอลัมน์ (id เดิม) ยังไม่ผูก NPO
+    await client.query(
+      `INSERT INTO waste_records SELECT * FROM jsonb_populate_record(NULL::waste_records, $1::jsonb)`,
+      [JSON.stringify(Object.assign({}, d, { record_date: snapDate(d.record_date), npo_id: null,
+        updated_at: new Date().toISOString(), updated_by: by }))]);
+    await client.query('UPDATE waste_record_history SET restored_at = NOW(), restored_by = $2 WHERE id = $1', [hid, by]);
     return { success: true };
   });
 }
@@ -572,6 +634,7 @@ module.exports = {
   functions: {
     WASTE_getProjects, WASTE_saveNewProject, WASTE_saveData, WASTE_getDashboardData,
     WASTE_listRecords, WASTE_getRecord, WASTE_updateRecord, WASTE_deleteRecord,
+    WASTE_listDeleted, WASTE_restoreRecord,
     WASTE_npoOptions, WASTE_npoPending, WASTE_npoPreview, WASTE_npoCreate,
     WASTE_npoList, WASTE_npoCancel, WASTE_npoPdf
   }

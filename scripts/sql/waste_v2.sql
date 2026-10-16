@@ -91,3 +91,7 @@ CREATE INDEX IF NOT EXISTS waste_record_history_rec_idx ON waste_record_history 
 -- ช่องลงนามท้ายใบ NPO (ชื่อพิมพ์ตอนออกใบ ว่าง = เส้นจุดให้เขียนมือ)
 ALTER TABLE npo_reports ADD COLUMN IF NOT EXISTS receiver_name TEXT;
 ALTER TABLE npo_reports ADD COLUMN IF NOT EXISTS approver_name TEXT;
+
+-- กู้คืนรายการที่ลบ
+ALTER TABLE waste_record_history ADD COLUMN IF NOT EXISTS restored_at TIMESTAMPTZ;
+ALTER TABLE waste_record_history ADD COLUMN IF NOT EXISTS restored_by TEXT;

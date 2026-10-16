@@ -330,6 +330,13 @@
           <select id="editProject" onchange="loadRecordList()"><option value="">-- ทุกโครงการ --</option></select>
         </div>
         <div class="col form-group" style="margin:0;">
+          <label>แสดง</label>
+          <select id="editView" onchange="loadRecordList()">
+            <option value="current">รายการปัจจุบัน</option>
+            <option value="deleted">🗑 รายการที่ลบแล้ว (กู้คืนได้)</option>
+          </select>
+        </div>
+        <div class="col form-group" style="margin:0;">
           <label>ค้นหา (เลขบิล / ทะเบียน / ผู้บันทึก)</label>
           <input type="text" id="editSearch" placeholder="พิมพ์แล้วกด Enter" onkeydown="if(event.key==='Enter'){loadRecordList()}">
         </div>
@@ -599,6 +606,7 @@ function fillEditProjects() {
 }
 
 function loadRecordList() {
+  if ($('editView').value === 'deleted') return loadDeletedList();
   const box = $('recordList');
   box.innerHTML = '<div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div>';
   google.script.run
@@ -620,6 +628,33 @@ function loadRecordList() {
     })
     .withFailureHandler(function(err) { box.innerHTML = '<div class="card" style="color:#e53e3e;">โหลดไม่สำเร็จ: ' + escapeHtml(err.message) + '</div>'; })
     .WASTE_listRecords({ project: $('editProject').value, q: $('editSearch').value });
+}
+
+function loadDeletedList() {
+  const box = $('recordList');
+  box.innerHTML = '<div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div>';
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      if (!rows || !rows.length) { box.innerHTML = '<div class="card" style="text-align:center;color:#718096;">ไม่มีรายการที่ลบ</div>'; return; }
+      box.innerHTML = rows.map(r =>
+        '<div class="rec-item"><div class="rec-main">' +
+        '<b>' + escapeHtml(r.date) + ' · บิล ' + escapeHtml(r.billNo) + ' · ' + escapeHtml(r.plateNo) + '</b><br>' +
+        escapeHtml(r.project) + ' · ' + escapeHtml(r.truck) + ' · ชั้น/โซน ' + escapeHtml(r.location) +
+        ' · เวลา ' + escapeHtml(r.timeIn) + '–' + escapeHtml(r.time) + ' · ผู้บันทึก ' + escapeHtml(r.recorder) +
+        '<br><span style="color:#e53e3e">ลบเมื่อ ' + escapeHtml(r.deletedAt) + ' โดย ' + escapeHtml(r.deletedBy) + '</span>' +
+        '</div><div class="rec-btns"><button type="button" onclick="restoreRecord(' + r.historyId + ', \'' + escapeHtml(r.billNo).replace(/'/g, '') + '\')">↩ กู้คืน</button></div></div>'
+      ).join('');
+    })
+    .withFailureHandler(function(err) { box.innerHTML = '<div class="card" style="color:#e53e3e;">โหลดไม่สำเร็จ: ' + escapeHtml(err.message) + '</div>'; })
+    .WASTE_listDeleted({ project: $('editProject').value });
+}
+
+function restoreRecord(historyId, bill) {
+  if (!confirm('กู้คืนรายการบิล ' + bill + ' ใช่ไหม?\n(ข้อมูลและรูปจะกลับมาเหมือนก่อนลบ)')) return;
+  google.script.run
+    .withSuccessHandler(function() { alert('✅ กู้คืนเรียบร้อย'); loadDeletedList(); })
+    .withFailureHandler(function(err) { alert('⚠️ ' + err.message); loadDeletedList(); })
+    .WASTE_restoreRecord(historyId);
 }
 
 function setPhotoPreview(i, url) {
