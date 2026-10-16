@@ -21,6 +21,11 @@
 //   WASTE_npoList(projectId)                   NPO ที่เคยออก
 //   WASTE_npoCancel({npoId, reason})           ยกเลิก NPO (เที่ยวกลับเป็นยังไม่ออก)
 //   WASTE_npoPdf(npoId)                        ลิงก์ PDF (สร้างใหม่ถ้าไฟล์หาย)
+//
+// ประเภทรถ/ราคา:
+//   WASTE_truckTypes()             ประเภทรถที่เปิดใช้ + คิว + ราคา (ใช้ทำตัวเลือกในฟอร์ม)
+//   WASTE_adminTruckTypes()        ทั้งหมด รวมที่ปิดแล้ว (admin)
+//   WASTE_saveTruckType(t)         เพิ่ม/แก้ราคา/เปิด-ปิด (admin) — ราคาใหม่มีผลกับเที่ยวที่บันทึกหลังจากนั้น
 // ============================================================
 const fs = require('fs');
 const path = require('path');
@@ -362,8 +367,54 @@ async function WASTE_npoOptions() {
       LEFT JOIN LATERAL (SELECT receiver_name, approver_name FROM npo_reports n
                           WHERE n.project_id = p.id ORDER BY n.id DESC LIMIT 1) l ON TRUE
      GROUP BY p.id, l.receiver_name, l.approver_name ORDER BY p.id`);
-  const t = await sitePool.query('SELECT name FROM truck_types WHERE active ORDER BY sort_order, name');
-  return { projects: p.rows, trucks: t.rows.map(x => x.name) };
+  // ประเภทรถที่เปิดใช้ + ที่ปิดแล้วแต่ยังมีเที่ยวค้างออก NPO
+  const t = await sitePool.query(
+    `SELECT name FROM truck_types t WHERE active
+        OR EXISTS (SELECT 1 FROM waste_records w WHERE w.truck_type = t.name AND w.npo_id IS NULL)
+      ORDER BY sort_order, name`);
+  return { projects: p.rows, trucks: t.rows.map(x => x.name), isAdmin: !!(this && this.user && this.user.role === 'admin') };
+}
+
+// ---------- ประเภทรถ / ราคา ----------
+function requireAdminCtx(ctx) {
+  if (!(ctx && ctx.user && ctx.user.role === 'admin')) throw new UserError('ต้องใช้บัญชีผู้ดูแลระบบ (admin)');
+}
+
+async function WASTE_truckTypes() {
+  const r = await sitePool.query(
+    'SELECT name, volume_m3::float AS volume, cost_per_trip::float AS cost FROM truck_types WHERE active ORDER BY sort_order, name');
+  return r.rows;
+}
+
+async function WASTE_adminTruckTypes() {
+  requireAdminCtx(this);
+  const r = await sitePool.query(
+    `SELECT t.name, t.volume_m3::float AS volume, t.cost_per_trip::float AS cost, t.sort_order AS "sortOrder", t.active,
+            (SELECT COUNT(*)::int FROM waste_records w WHERE w.truck_type = t.name) AS used
+       FROM truck_types t ORDER BY t.sort_order, t.name`);
+  return r.rows;
+}
+
+async function WASTE_saveTruckType(t) {
+  requireAdminCtx(this);
+  t = t || {};
+  const name = str(t.name, 30);
+  const volume = Number(t.volume), cost = Number(t.cost), sortOrder = parseInt(t.sortOrder, 10) || 0;
+  if (!name) throw new UserError('กรุณาระบุชื่อประเภทรถ');
+  if (!(volume > 0) || volume > 1000) throw new UserError('ปริมาณ (คิว) ต้องมากกว่า 0');
+  if (!(cost >= 0) || cost > 1000000) throw new UserError('ราคาต่อเที่ยวไม่ถูกต้อง');
+  if (t.isNew) {
+    const r = await sitePool.query(
+      `INSERT INTO truck_types (name, volume_m3, cost_per_trip, sort_order, active) VALUES ($1,$2,$3,$4,TRUE)
+       ON CONFLICT (name) DO NOTHING RETURNING name`, [name, volume, cost, sortOrder]);
+    if (!r.rows.length) throw new UserError('มีประเภทรถชื่อ "' + name + '" อยู่แล้ว');
+  } else {
+    const r = await sitePool.query(
+      'UPDATE truck_types SET volume_m3 = $2, cost_per_trip = $3, sort_order = $4, active = $5 WHERE name = $1 RETURNING name',
+      [name, volume, cost, sortOrder, t.active !== false]);
+    if (!r.rows.length) throw new UserError('ไม่พบประเภทรถ "' + name + '"');
+  }
+  return { success: true };
 }
 
 async function pendingRows(client, projectId, truckType, limit, forUpdate) {
@@ -635,6 +686,7 @@ module.exports = {
     WASTE_getProjects, WASTE_saveNewProject, WASTE_saveData, WASTE_getDashboardData,
     WASTE_listRecords, WASTE_getRecord, WASTE_updateRecord, WASTE_deleteRecord,
     WASTE_listDeleted, WASTE_restoreRecord,
+    WASTE_truckTypes, WASTE_adminTruckTypes, WASTE_saveTruckType,
     WASTE_npoOptions, WASTE_npoPending, WASTE_npoPreview, WASTE_npoCreate,
     WASTE_npoList, WASTE_npoCancel, WASTE_npoPdf
   }

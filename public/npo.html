@@ -104,6 +104,16 @@
       <tbody id="list"><tr><td colspan="9" class="empty">กำลังโหลด...</td></tr></tbody>
     </table></div>
   </div>
+
+  <div class="card" id="truckCard" style="display:none">
+    <div class="card-title"><span class="badge">⚙</span> ประเภทรถและราคา <span class="muted">(เฉพาะ admin)</span></div>
+    <div class="muted" style="margin-bottom:10px">ราคาใหม่มีผลกับเที่ยวที่บันทึกหลังจากกดบันทึก — เที่ยวเดิมและใบ NPO ที่ออกแล้วยังเป็นราคาเดิม ·
+      ประเภทที่ไม่ใช้แล้วให้ตั้งเป็น "ปิด" (ลบไม่ได้เพราะมีเที่ยวเก่าอ้างอิงอยู่)</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>ประเภทรถ</th><th>ปริมาณ (คิว)</th><th>ราคา/เที่ยว (บาท)</th><th>ลำดับแสดง</th><th>สถานะ</th><th>ใช้แล้ว</th><th></th></tr></thead>
+      <tbody id="truckList"></tbody>
+    </table></div>
+  </div>
 </div>
 <div class="hub-toast" id="hubToast"></div>
 
@@ -120,14 +130,15 @@
   function loadOptions() {
     run().withSuccessHandler(function (o) {
       projectOpts = o.projects;
+      if (o.isAdmin) { $('truckCard').style.display = ''; loadTrucks(); }
       var p = $('project'), keep = p.value;
       p.innerHTML = '<option value="">-- เลือกโครงการ --</option>' + o.projects.map(function (x) {
         return '<option value="' + x.id + '">' + esc(x.name) + (x.pending ? ' (ค้าง ' + x.pending + ' เที่ยว)' : '') + '</option>';
       }).join('');
       if (keep) p.value = keep;
-      if (!$('truck').options.length) {
-        $('truck').innerHTML = o.trucks.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
-      }
+      var tk = $('truck').value;
+      $('truck').innerHTML = o.trucks.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+      if (tk && o.trucks.indexOf(tk) > -1) $('truck').value = tk;
       loadList();
     }).withFailureHandler(function (e) { showMsg(e.message); }).WASTE_npoOptions();
   }
@@ -230,6 +241,39 @@
   $('project').onchange = function () { fillNames(); loadPending(); loadList(); };
   $('truck').onchange = loadPending;
   $('trips').oninput = resetPreview;
+
+  // ---------- ประเภทรถและราคา (admin) ----------
+  function loadTrucks() {
+    run().withSuccessHandler(function (rows) {
+      var cell = 'style="padding:4px;width:110px"';
+      $('truckList').innerHTML = rows.map(function (t) {
+        return '<tr data-name="' + esc(t.name) + '"><td><b>' + esc(t.name) + '</b></td>' +
+          '<td ' + cell + '><input type="number" step="0.1" min="0" class="tv" value="' + t.volume + '"></td>' +
+          '<td ' + cell + '><input type="number" step="1" min="0" class="tc" value="' + t.cost + '"></td>' +
+          '<td ' + cell + '><input type="number" step="1" class="ts" value="' + t.sortOrder + '"></td>' +
+          '<td ' + cell + '><select class="ta"><option value="1"' + (t.active ? ' selected' : '') + '>เปิด</option><option value="0"' + (t.active ? '' : ' selected') + '>ปิด</option></select></td>' +
+          '<td>' + t.used + ' เที่ยว</td>' +
+          '<td><button class="btn btn-line" style="padding:6px 12px" onclick="saveTruck(this, false)">บันทึก</button></td></tr>';
+      }).join('') +
+        '<tr data-new="1"><td style="padding:4px"><input class="tn" placeholder="ประเภทรถใหม่"></td>' +
+        '<td ' + cell + '><input type="number" step="0.1" min="0" class="tv"></td>' +
+        '<td ' + cell + '><input type="number" step="1" min="0" class="tc"></td>' +
+        '<td ' + cell + '><input type="number" step="1" class="ts" value="' + (rows.length + 1) + '"></td>' +
+        '<td></td><td></td><td><button class="btn btn-main" style="padding:6px 12px" onclick="saveTruck(this, true)">+ เพิ่ม</button></td></tr>';
+    }).withFailureHandler(function (e) { hubToast(e.message, 5000); }).WASTE_adminTruckTypes();
+  }
+  window.saveTruck = function (btn, isNew) {
+    var tr = btn.closest('tr'), q = function (c) { var el = tr.querySelector(c); return el ? el.value : ''; };
+    var t = { isNew: isNew, name: isNew ? q('.tn').trim() : tr.getAttribute('data-name'),
+      volume: q('.tv'), cost: q('.tc'), sortOrder: q('.ts'), active: isNew ? true : q('.ta') === '1' };
+    if (!isNew && !confirm('บันทึก ' + t.name + ': ' + t.volume + ' คิว / ' + Number(t.cost).toLocaleString('en-US') + ' บาท ?')) return;
+    btn.disabled = true;
+    run().withSuccessHandler(function () {
+      hubToast(isNew ? 'เพิ่มประเภทรถ ' + t.name + ' แล้ว' : 'บันทึก ' + t.name + ' แล้ว');
+      loadOptions();   // เติมรายการประเภทรถใหม่ (คงตัวที่เลือกไว้)
+    }).withFailureHandler(function (e) { btn.disabled = false; hubToast(e.message, 5000); }).WASTE_saveTruckType(t);
+  };
+
   loadOptions();
 </script>
 </body>

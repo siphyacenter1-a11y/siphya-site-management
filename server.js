@@ -47,7 +47,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`🚀 Site Management Hub is running:`);
   console.log(`   - ภายในเครื่องนี้:   http://localhost:${PORT}`);
-  console.log(`   - สำหรับคนภายในวง LAN: http://192.168.5.190:${PORT}`);
+  // เลข IP จริงของเครื่องนี้ (อ่านตอนเปิด) ให้เครื่องอื่นในวงเดียวกันเข้าได้
+  const lan = Object.values(require('os').networkInterfaces()).flat()
+    .filter(n => n && n.family === 'IPv4' && !n.internal).map(n => n.address);
+  if (lan.length) lan.forEach(ip => console.log(`   - สำหรับเครื่องอื่นในวง LAN: http://${ip}:${PORT}`));
+  else console.log('   - ยังไม่ได้ต่อเครือข่าย (เครื่องอื่นเข้าไม่ได้)');
   console.log(`📦 Database: PostgreSQL on ${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || 5432}`);
   console.log(`🔐 Auth & Admin Overview: Enabled`);
   console.log(`=======================================================`);

@@ -555,6 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setup24hTimePicker('time');
   updateProgressBar();
   loadProjectList();
+  loadTruckTypes();
 
   if (hasDraft()) {
     $('draftBanner').style.display = 'flex';
@@ -682,6 +683,7 @@ function startEdit(id) {
       const m = String(r.date || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       $('date').value = m ? m[3] + '-' + m[2] + '-' + m[1] : '';
       ['location', 'timeIn', 'time', 'recorder', 'billNo', 'plateNo', 'note'].forEach(k => { $(k).value = r[k] || ''; });
+      ensureTruckOption(r.truck);
       $('truckSelect').value = r.truck;
       $('wasteConcrete').value = r.wasteConcrete; $('wasteConstruction').value = r.wasteConstruction;
       $('wastePacking').value = r.wastePacking; $('wasteSystem').value = r.wasteSystem;
@@ -807,6 +809,29 @@ function previewImg(input, imgId, iconId) {
     }
     reader.readAsDataURL(input.files[0]);
   }
+}
+
+// ประเภทรถ + คิว + ราคา ดึงจากฐานข้อมูล (admin แก้ได้ที่หน้า NPO) — ตัวเลือกใน HTML เป็นค่าสำรองถ้าโหลดไม่ได้
+function truckLabel(t) {
+  const icon = t.volume >= 6 ? '🚛' : '🚚';
+  return icon + ' ' + t.name + ' (' + t.volume + ' คิว / ' + Number(t.cost).toLocaleString('en-US') + ' บาท)';
+}
+function ensureTruckOption(name) {
+  const sel = $('truckSelect');
+  if (name && !Array.from(sel.options).some(o => o.value === name)) sel.add(new Option(name + ' (ปิดใช้แล้ว)', name));
+}
+function loadTruckTypes() {
+  google.script.run
+    .withSuccessHandler(function(list) {
+      if (!list || !list.length) return;
+      const sel = $('truckSelect');
+      const cur = sel.value;
+      sel.innerHTML = '';
+      list.forEach(t => sel.add(new Option(truckLabel(t), t.name)));
+      if (cur) { ensureTruckOption(cur); sel.value = cur; }
+    })
+    .withFailureHandler(function(err) { console.warn('โหลดประเภทรถไม่สำเร็จ ใช้ค่าเดิมในหน้า', err); })
+    .WASTE_truckTypes();
 }
 
 function loadProjectList() {
