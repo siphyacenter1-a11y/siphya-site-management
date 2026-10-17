@@ -99,6 +99,9 @@
       .filters button { width: 100%; }
       .header .right { text-align: left; }
     }
+    .doc-link { color: #1B3070; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+    .doc-link:hover { color: #2F5D9E; }
+    .doc-hint { font-size: 12px; font-weight: 400; color: #718096; margin-left: 8px; }
   </style>
 </head>
 <body>
@@ -186,7 +189,7 @@
     </div>
 
     <div class="data-card">
-      <h3>ข้อมูลทั้งหมด</h3>
+      <h3>ข้อมูลทั้งหมด <span class="doc-hint">📄 = กดวันที่เบิกเพื่อเปิดใบเบิก</span></h3>
       <div class="table-scroll">
         <table class="data" id="dataTable">
           <thead><tr id="dataTableHead"></tr></thead>
@@ -547,6 +550,11 @@
             return '<td><span class="badge" style="background-color:' + color + '22;color:' + color + ';">' + val + '</span></td>';
           }
           var cellCls = monoFields[h] ? ' class="mono-cell"' : '';
+          // วันที่เบิก: ถ้ามีไฟล์ใบเบิก กดแล้วเปิด PDF ในแท็บใหม่
+          if (h === 'วันที่เบิก' && r._docUrl) {
+            return '<td><a class="doc-link" target="_blank" rel="noopener" href="' + String(r._docUrl).replace(/"/g, '%22') +
+              '" title="เปิดใบเบิก ' + String(r._docNo || '').replace(/[<>"&]/g, '') + '">📄 ' + val + '</a></td>';
+          }
           return '<td' + cellCls + '>' + val + '</td>';
         }).join('') + '</tr>';
       }).join('');

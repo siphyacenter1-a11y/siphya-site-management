@@ -27,7 +27,7 @@
     .msg.ok { display: block; background: #E3F5EC; color: #135E40; }
 
     .wrap { padding: 10px 16px 60px; overflow-x: auto; }
-    table { border-collapse: collapse; background: #fff; min-width: 1750px; width: 100%; }
+    table { border-collapse: collapse; background: #fff; min-width: 1990px; width: 100%; }
     th { position: sticky; top: 0; background: #EEF1F7; font-size: 12px; font-weight: 600; padding: 6px 4px; border: 1px solid var(--line); white-space: nowrap; }
     td { border: 1px solid var(--line); padding: 0; height: 32px; }
     td.ro { background: #FAFAFB; color: var(--soft); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
@@ -41,7 +41,12 @@
     tr.err td { background: var(--err) !important; }
     .nf { color: #C62828; font-weight: 600; }
     .w-date { min-width: 130px; } .w-mat { min-width: 140px; } .w-sel { min-width: 110px; } .w-qty { min-width: 80px; }
-    .w-req { min-width: 210px; } .w-st { min-width: 185px; }
+    .w-req { min-width: 210px; } .w-doc { min-width: 230px; white-space: nowrap; }
+    .w-doc input { width: 150px; display: inline-block; vertical-align: middle; }
+    .docbtn { display: inline-block; vertical-align: middle; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 7px; margin-left: 3px; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
+    .docbtn:disabled { opacity: .35; cursor: not-allowed; }
+    .docbtn.has { border-color: #2d6a4f; background: #e9f5ee; }
+    #docReport { white-space: pre-line; font-size: 13px; line-height: 1.6; max-height: 50vh; overflow: auto; } .w-st { min-width: 185px; }
     td.item { white-space: normal; min-width: 230px; max-width: none; line-height: 1.3; padding: 4px 6px; } .w-note { min-width: 140px; } .w-wh { min-width: 90px; }
     .more { margin: 10px 0; text-align: center; }
 
@@ -68,6 +73,9 @@
     <button class="btn" id="btnAdd">+ เพิ่ม 5 แถว</button>
     <button class="btn main" id="btnSave" disabled>💾 บันทึก</button>
     <button class="btn danger" id="btnDel">ลบแถวที่เลือก</button>
+    <button class="btn" id="btnDocs" title="เลือกไฟล์ PDF ใบเบิกได้หลายไฟล์ ระบบอ่านเลขที่/วันที่/Mat. Code แล้วจับคู่แถวให้">📎 แนบใบเบิก (หลายไฟล์)</button>
+    <input type="file" id="docFiles" accept="application/pdf,.pdf" multiple style="display:none">
+    <input type="file" id="docOne" accept="application/pdf,.pdf" style="display:none">
     <input type="search" id="q" placeholder="ค้นหา Mat code / รายการ / ผู้ขอ">
     <span class="spacer"></span>
     <button class="btn" id="btnReload">↻ โหลดใหม่</button>
@@ -75,7 +83,8 @@
     <button class="btn" id="btnSettings" style="display:none">⚙ ตั้งค่าโครงการ</button>
   </div>
   <div class="hint">พิมพ์ Mat. Code แล้วประเภท/รายการ/หน่วยขึ้นเอง · สถานะคำนวณจากวันที่ (เลือกเองได้เฉพาะ ย้าย/ยกเลิก) ·
-    วางข้อมูลที่ก๊อปจาก Excel/Google Sheet ได้หลายแถว (คลิกช่องแรกที่จะวางแล้วกด Ctrl+V) · <b>แถวสีเหลือง/ฟ้า = ยังไม่บันทึก</b></div>
+    วางข้อมูลที่ก๊อปจาก Excel/Google Sheet ได้หลายแถว (คลิกช่องแรกที่จะวางแล้วกด Ctrl+V) · <b>แถวสีเหลือง/ฟ้า = ยังไม่บันทึก</b> ·
+    ใบเบิก: กด 📎 แนบใบเบิก (หลายไฟล์) ระบบอ่าน PDF แล้วจับคู่แถวให้ หรือพิมพ์เลขที่ใบเบิก (เช่น M-2023006-06285) แล้วกด 📎 ท้ายแถว</div>
 </div>
 <div class="msg" id="msg"></div>
 
@@ -84,7 +93,7 @@
     <thead><tr>
       <th><input type="checkbox" id="chkAll"></th><th>ลำดับ</th><th>วันที่เบิก</th><th>วันที่รับวัสดุ</th><th>สถานะ</th>
       <th>Mat. Code</th><th>ประเภทวัสดุ</th><th>รายการวัสดุ</th><th>อาคาร</th><th>ชั้น</th><th>จำนวนที่เบิก/ย้าย</th>
-      <th>หน่วย</th><th>คลัง</th><th>สถานะ2</th><th>ผู้ขอเบิก/ผู้รับ</th><th>หมายเหตุ</th>
+      <th>หน่วย</th><th>คลัง</th><th>สถานะ2</th><th>ผู้ขอเบิก/ผู้รับ</th><th>หมายเหตุ</th><th>เลขที่ใบเบิก</th>
     </tr></thead>
     <tbody id="tb"></tbody>
   </table>
@@ -112,6 +121,13 @@
     <div class="row-actions"><button class="btn" id="setClose">ปิด</button></div>
   </div>
 </div>
+<div class="modal-bg" id="docBg">
+  <div class="modal">
+    <h2>📎 ผลการแนบใบเบิก</h2>
+    <div id="docReport"></div>
+    <div class="row-actions"><button class="btn main" id="docClose">ปิด</button></div>
+  </div>
+</div>
 <div class="hub-toast" id="hubToast"></div>
 
 <script>
@@ -121,8 +137,8 @@
   var STATUS_MANUAL = ['ย้าย', 'ยกเลิก'];
   var S = { code: '', data: null, master: {}, rows: [], showAll: false, isAdmin: false };
   var LIMIT = 200;
-  var COLS = ['chk', 'no', 'requestDate', 'receiveDate', 'status', 'matCode', 'type', 'item', 'building', 'floor', 'qty', 'unit', 'warehouse', 'status2', 'requester', 'note'];
-  var EDITABLE = { requestDate: 1, receiveDate: 1, status: 1, matCode: 1, building: 1, floor: 1, qty: 1, warehouse: 1, status2: 1, requester: 1, note: 1 };
+  var COLS = ['chk', 'no', 'requestDate', 'receiveDate', 'status', 'matCode', 'type', 'item', 'building', 'floor', 'qty', 'unit', 'warehouse', 'status2', 'requester', 'note', 'docNo'];
+  var EDITABLE = { requestDate: 1, receiveDate: 1, status: 1, matCode: 1, building: 1, floor: 1, qty: 1, warehouse: 1, status2: 1, requester: 1, note: 1, docNo: 1 };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function msg(t, ok) { var m = $('msg'); m.textContent = t || ''; m.className = 'msg' + (t ? (ok ? ' ok' : ' err') : ''); }
@@ -154,9 +170,10 @@
     var auto2 = !r.status2 || r.status2 === status2Of(r.status);
     return { id: r.id, no: r.no, requestDate: r.requestDate, receiveDate: r.receiveDate, statusManual: manual,
       matCode: r.matCode, type: r.type, item: r.item, building: r.building, floor: r.floor, qty: r.qty,
-      unit: r.unit, warehouse: r.warehouse, status2: auto2 ? '' : r.status2, requester: r.requester, note: r.note, dirty: false };
+      unit: r.unit, warehouse: r.warehouse, status2: auto2 ? '' : r.status2, requester: r.requester, note: r.note,
+      docNo: r.docNo || '', hasDoc: !!r.hasDoc, dirty: false };
   }
-  function blank() { return { id: null, no: '', requestDate: '', receiveDate: '', statusManual: '', matCode: '', type: '', item: '', building: '', floor: '', qty: '', unit: '', warehouse: '', status2: '', requester: '', note: '', dirty: false, isNew: true }; }
+  function blank() { return { id: null, no: '', requestDate: '', receiveDate: '', statusManual: '', matCode: '', type: '', item: '', building: '', floor: '', qty: '', unit: '', warehouse: '', status2: '', requester: '', note: '', docNo: '', hasDoc: false, dirty: false, isNew: true }; }
   function isEmpty(r) { return !r.id && !['requestDate', 'receiveDate', 'matCode', 'building', 'qty', 'requester', 'note'].some(function (k) { return String(r[k] || '').trim(); }); }
 
   // ---------- render ----------
@@ -188,12 +205,15 @@
       '<td class="w-wh"><input data-k="warehouse" value="' + esc(r.warehouse) + '" placeholder="' + (r.building ? esc(S.data.defaultWarehouse) : '') + '"></td>' +
       '<td class="w-st"><select data-k="status2">' + optList(S.data.statuses2, r.status2, 'อัตโนมัติ' + (s2auto ? ': ' + s2auto : '')) + '</select></td>' +
       '<td class="w-req"><input data-k="requester" list="dlReq" value="' + esc(r.requester) + '"></td>' +
-      '<td class="w-note"><input data-k="note" value="' + esc(r.note) + '"></td></tr>';
+      '<td class="w-note"><input data-k="note" value="' + esc(r.note) + '"></td>' +
+      '<td class="w-doc"><input data-k="docNo" value="' + esc(r.docNo) + '">' +
+        (r.hasDoc && !r.dirty ? '<a class="docbtn has" target="_blank" title="เปิดใบเบิก" href="/api/transport-doc/' + encodeURIComponent(S.code) + '/' + encodeURIComponent(r.docNo) + '">📄</a>' : '') +
+        '<button type="button" class="docbtn" data-attach="' + idx + '"' + (r.id && !r.dirty ? ' title="แนบ/เปลี่ยนไฟล์ PDF ใบเบิกของแถวนี้"' : ' disabled title="บันทึกแถวก่อน แล้วจึงแนบไฟล์"') + '>📎</button></td></tr>';
   }
   function visibleRows() {
     var q = $('q').value.trim().toLowerCase();
     var list = S.rows.map(function (r, i) { return { r: r, i: i }; });
-    if (q) list = list.filter(function (x) { var r = x.r; return x.r.dirty || [r.matCode, r.item, r.type, r.requester, r.note, r.building].join(' ').toLowerCase().indexOf(q) > -1; });
+    if (q) list = list.filter(function (x) { var r = x.r; return x.r.dirty || [r.matCode, r.item, r.type, r.requester, r.note, r.building, r.docNo].join(' ').toLowerCase().indexOf(q) > -1; });
     var saved = list.filter(function (x) { return x.r.id && !x.r.dirty; });
     var hidden = 0;
     if (!S.showAll && !q && saved.length > LIMIT) {
@@ -226,6 +246,7 @@
     else if (k === 'matCode') { r.matCode = String(v).trim().toUpperCase(); lookup(r); }
     else if (k === 'building') { r.building = v; if (floorsOf(v).indexOf(r.floor) < 0) r.floor = ''; }
     else if (k === 'requestDate' || k === 'receiveDate') r[k] = toISO(v);
+    else if (k === 'docNo') { r.docNo = String(v).trim().toUpperCase().replace(/\s+/g, ''); r.hasDoc = false; }
     else r[k] = v;
   }
   $('tb').addEventListener('change', function (e) {
@@ -275,7 +296,7 @@
     var payload = list.map(function (r) {
       return { id: r.id, no: r.no || null, requestDate: r.requestDate, receiveDate: r.receiveDate, status: r.statusManual,
         matCode: r.matCode, building: r.building, floor: r.floor, qty: r.qty, warehouse: r.warehouse,
-        status2: r.status2, status2Auto: !r.status2, requester: r.requester, note: r.note };
+        status2: r.status2, status2Auto: !r.status2, requester: r.requester, note: r.note, docNo: r.docNo };
     });
     $('btnSave').disabled = true; $('btnSave').textContent = 'กำลังบันทึก...';
     run().withSuccessHandler(function (res) {
@@ -297,6 +318,77 @@
     if (!ids.length) { render(); return; }
     run().withSuccessHandler(function (res) { load(S.code, 'ลบ ' + res.deleted + ' แถวแล้ว'); })
       .withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_deleteRows(S.code, ids);
+  };
+
+  // ---------- ใบเบิก (PDF) ----------
+  function readFile(f) {
+    return new Promise(function (ok, bad) { var fr = new FileReader(); fr.onload = function () { ok(fr.result); }; fr.onerror = bad; fr.readAsDataURL(f); });
+  }
+  function upload(f, extra) {
+    return readFile(f).then(function (dataUrl) {
+      return new Promise(function (ok) {
+        run().withSuccessHandler(function (r) { ok({ ok: true, r: r }); })
+          .withFailureHandler(function (e) { ok({ ok: false, error: e.message }); })
+          .TRANSPORT_uploadDoc(S.code, Object.assign({ fileName: f.name, dataUrl: dataUrl }, extra || {}));
+      });
+    });
+  }
+  function dmy(iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '-'); }
+  function report(lines) { $('docReport').textContent = lines.join('\n'); $('docBg').style.display = 'flex'; }
+  $('docClose').onclick = function () { $('docBg').style.display = 'none'; };
+
+  // แนบรายแถว
+  var attachRow = null;
+  $('tb').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-attach]'); if (!b || b.disabled) return;
+    attachRow = S.rows[+b.getAttribute('data-attach')];
+    $('docOne').value = ''; $('docOne').click();
+  });
+  $('docOne').onchange = function () {
+    var f = this.files[0], r = attachRow; if (!f || !r) return;
+    msg('กำลังแนบ ' + f.name + ' ...', true);
+    upload(f, { rowId: r.id, docNo: r.docNo }).then(function (x) {
+      if (!x.ok) { msg(x.error); return; }
+      hubToast('แนบใบเบิก ' + x.r.docNo + ' แล้ว');
+      if (dirtyCount()) { r.docNo = x.r.docNo; r.hasDoc = true; render(); msg('แนบ ' + x.r.docNo + ' แล้ว', true); }
+      else load(S.code, 'แนบใบเบิก ' + x.r.docNo + ' ให้แถว ' + r.no + ' แล้ว');
+    });
+  };
+
+  // แนบหลายไฟล์: ระบบอ่าน PDF แล้วจับคู่แถวให้
+  $('btnDocs').onclick = function () {
+    if (dirtyCount()) { msg('มีแถวที่ยังไม่บันทึก กด 💾 บันทึก ก่อนแนบใบเบิก'); return; }
+    $('docFiles').value = ''; $('docFiles').click();
+  };
+  $('docFiles').onchange = function () {
+    var files = Array.prototype.slice.call(this.files); if (!files.length) return;
+    var lines = [], nOk = 0, nRows = 0, k = 0;
+    $('btnDocs').disabled = true;
+    (function next() {
+      if (k >= files.length) {
+        $('btnDocs').disabled = false;
+        lines.unshift('แนบสำเร็จ ' + nOk + '/' + files.length + ' ไฟล์ · ผูกกับแถวใหม่ ' + nRows + ' แถว', '');
+        report(lines); load(S.code, 'แนบใบเบิกแล้ว ' + nOk + ' ไฟล์');
+        return;
+      }
+      var f = files[k++];
+      msg('กำลังแนบ ' + k + '/' + files.length + ': ' + f.name, true);
+      upload(f).then(function (x) {
+        if (!x.ok) { lines.push('❌ ' + f.name + ' — ' + x.error); return next(); }
+        var r = x.r; nOk++; nRows += r.linked.length;
+        var head = (r.linked.length || !r.unmatched.length ? '✅ ' : '⚠️ ') + r.docNo + ' (' + dmy(r.date) + ')';
+        var parts = [];
+        if (r.linked.length) parts.push('ผูก ' + r.linked.length + ' แถว');
+        if (r.rowsWithDoc > r.linked.length) parts.push('มีแถวผูกไว้แล้ว ' + (r.rowsWithDoc - r.linked.length) + ' แถว');
+        if (!r.readable || !r.items.length) parts.push('อ่านรายการใน PDF ไม่ได้ — พิมพ์เลขที่ในแถวเอง');
+        lines.push(head + ' — ' + (parts.join(', ') || 'ไม่พบแถวที่ตรง'));
+        r.unmatched.forEach(function (it) {
+          lines.push('     ไม่พบแถว: ' + dmy(r.date) + ' ' + it.matCode + (it.qty != null ? ' จำนวน ' + it.qty : '') +
+            (it.building ? ' ' + it.building + (it.floor ? ' ชั้น ' + it.floor : '') : '') + ' — พิมพ์เลขที่ ' + r.docNo + ' ในแถวนั้นเอง');
+        });
+        next();
+      });
+    })();
   };
 
   // ---------- load ----------

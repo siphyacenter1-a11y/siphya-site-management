@@ -25,7 +25,8 @@ app.use('/api/waste', require('./routes/waste'));
 app.use('/api/route', require('./routes/route'));
 app.use('/api/checklist', require('./routes/checklist'));
 app.use('/api/export', require('./routes/export'));
-app.use('/api/gas', require('./routes/gas')); // หน้าเว็บที่ย้ายมาจาก Apps Script (เช็คลิสต์ฉบับเต็ม)
+app.use('/api/gas', require('./routes/gas'));
+app.use('/api/transport-doc', require('./routes/transport_doc')); // เปิดไฟล์ใบเบิก (ต้อง login) // หน้าเว็บที่ย้ายมาจาก Apps Script (เช็คลิสต์ฉบับเต็ม)
 
 // HTML Page Rewrites for clean URLs
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));

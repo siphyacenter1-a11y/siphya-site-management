@@ -114,11 +114,18 @@ async function TRANSPORT_getLogData(projectCode) {
            COALESCE(building, '') AS "อาคาร", COALESCE(floor, '') AS "ชั้น",
            quantity::float AS "จำนวนที่เบิก/ย้าย", COALESCE(unit, '') AS "หน่วย",
            COALESCE(warehouse, '') AS "คลัง", COALESCE(status2, '') AS "สถานะ2",
-           COALESCE(requester_receiver, '') AS "ผู้ขอเบิก/ผู้รับ", COALESCE(note, '') AS "หมายเหตุ"
-      FROM material_transport_logs
-     WHERE project_code = $1
+           COALESCE(requester_receiver, '') AS "ผู้ขอเบิก/ผู้รับ", COALESCE(note, '') AS "หมายเหตุ",
+           CASE WHEN d.doc_no IS NOT NULL THEN l.doc_no END AS "_docNo"
+      FROM material_transport_logs l
+      LEFT JOIN transport_docs d ON d.project_code = l.project_code AND d.doc_no = l.doc_no
+     WHERE l.project_code = $1
      ORDER BY request_date NULLS LAST, id`, [code]);
-  r.rows.forEach(x => { ['วันที่เบิก', 'วันที่รับวัสดุ'].forEach(k => { if (x[k] == null) x[k] = ''; }); if (x['จำนวนที่เบิก/ย้าย'] == null) x['จำนวนที่เบิก/ย้าย'] = ''; });
+  r.rows.forEach(x => {
+    ['วันที่เบิก', 'วันที่รับวัสดุ'].forEach(k => { if (x[k] == null) x[k] = ''; });
+    if (x['จำนวนที่เบิก/ย้าย'] == null) x['จำนวนที่เบิก/ย้าย'] = '';
+    // ลิงก์ใบเบิก (คอลัมน์ซ่อน ไม่อยู่ใน headers)
+    x._docUrl = x._docNo ? `/api/transport-doc/${code}/${encodeURIComponent(x._docNo)}` : '';
+  });
   return { headers: HEADERS, rows: r.rows, project: code, updatedAt: new Date().toISOString() };
 }
 
@@ -137,8 +144,11 @@ async function TRANSPORT_entryData(projectCode) {
            COALESCE(mat_item,'') AS item, COALESCE(building,'') AS building, COALESCE(floor,'') AS floor,
            quantity::float AS qty, COALESCE(unit,'') AS unit, COALESCE(warehouse,'') AS warehouse,
            COALESCE(status2,'') AS status2, COALESCE(requester_receiver,'') AS requester, COALESCE(note,'') AS note,
-           COALESCE(updated_by, '') AS "updatedBy"
-      FROM material_transport_logs WHERE project_code = $1
+           COALESCE(updated_by, '') AS "updatedBy", COALESCE(l.doc_no, '') AS "docNo",
+           (d.doc_no IS NOT NULL) AS "hasDoc"
+      FROM material_transport_logs l
+      LEFT JOIN transport_docs d ON d.project_code = l.project_code AND d.doc_no = l.doc_no
+     WHERE l.project_code = $1
      ORDER BY request_date NULLS LAST, id`, [code]);
   r.rows.forEach(x => { x.requestDate = x.requestDate || ''; x.receiveDate = x.receiveDate || ''; if (x.qty == null) x.qty = ''; });
   return {
@@ -181,6 +191,8 @@ function prepareRow(raw, floors, master) {
   if (status && !STATUS1.includes(status)) errs.push('สถานะไม่ถูกต้อง');
   let status2 = str(raw.status2);
   if (status2 && !STATUS2.includes(status2)) errs.push('สถานะ2 ไม่ถูกต้อง');
+  const docNo = str(raw.docNo, 40).toUpperCase().replace(/\s+/g, '');
+  if (docNo && !/^[A-Z0-9][A-Z0-9\-_.]{2,39}$/.test(docNo)) errs.push('เลขที่ใบเบิกใช้ได้เฉพาะ A-Z 0-9 - _ .');
   if (errs.length) return { error: errs.join(', ') };
 
   const m = master.get(matCode.slice(0, 7));
@@ -193,13 +205,14 @@ function prepareRow(raw, floors, master) {
       mat_code: matCode, mat_type: m ? m.group_name : NOT_FOUND, mat_item: m ? m.description : NOT_FOUND, unit: m ? m.unit : '',
       building, floor, quantity: qty,
       warehouse: str(raw.warehouse, 100) || DEFAULT_WAREHOUSE,
-      status2, requester_receiver: str(raw.requester, 200), note: str(raw.note, 1000)
+      status2, requester_receiver: str(raw.requester, 200), note: str(raw.note, 1000),
+      doc_no: docNo || null
     }
   };
 }
 
 const COLS = ['request_date', 'receive_date', 'status', 'mat_code', 'mat_type', 'mat_item', 'building', 'floor',
-  'quantity', 'unit', 'warehouse', 'status2', 'requester_receiver', 'note'];
+  'quantity', 'unit', 'warehouse', 'status2', 'requester_receiver', 'note', 'doc_no'];
 
 async function TRANSPORT_saveRows(projectCode, rows) {
   const code = codeOf(projectCode);

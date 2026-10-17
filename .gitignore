@@ -8,3 +8,4 @@ Thumbs.db
 
 # ไฟล์ที่ผู้ใช้อัปโหลด (รูป/PDF) ไม่เก็บใน git
 public/uploads/
+storage/

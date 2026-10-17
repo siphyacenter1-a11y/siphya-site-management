@@ -59,3 +59,17 @@ CREATE TABLE IF NOT EXISTS material_master (
   description TEXT,                      -- รายการวัสดุ
   unit        TEXT
 );
+
+-- ใบเบิกวัสดุ (PDF) — หลายแถวอ้างใบเดียวกันได้ผ่านเลขที่ใบเบิก
+ALTER TABLE material_transport_logs ADD COLUMN IF NOT EXISTS doc_no TEXT;
+CREATE INDEX IF NOT EXISTS material_transport_logs_doc_idx ON material_transport_logs (project_code, doc_no);
+CREATE TABLE IF NOT EXISTS transport_docs (
+  project_code  VARCHAR(10) NOT NULL,
+  doc_no        TEXT NOT NULL,
+  file_name     TEXT NOT NULL,             -- ชื่อไฟล์ที่เก็บในโฟลเดอร์ storage/transport-docs/<โครงการ>/
+  original_name TEXT,
+  doc_date      DATE,                      -- วันที่ในใบเบิก (อ่านจาก PDF ถ้าได้)
+  uploaded_by   TEXT,
+  uploaded_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (project_code, doc_no)
+);

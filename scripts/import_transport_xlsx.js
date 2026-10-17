@@ -9,6 +9,7 @@
 // อ่านแท็บ:  Projects, MasterData, Build_<รหัส>, Log_<รหัส>
 // รันซ้ำได้: รายการที่เคยนำเข้าจากชีต (source = 'sheet') ของโครงการนั้นจะถูกแทนที่ด้วยชุดใหม่
 //            รายการที่กรอกบนเว็บ (source = 'web') ไม่ถูกแตะ
+//            เลขที่ใบเบิกที่แนบไว้กับแถวจากชีต จะถูกผูกกลับให้แถวเดิมหลังนำเข้า (เทียบ ลำดับ+วันที่+Mat. Code+จำนวน)
 //            อาคาร/ชั้น: นำเข้าเฉพาะโครงการที่ยังไม่มีอาคารในระบบ (ที่ตั้งไว้บนเว็บจะไม่ถูกทับ)
 //            ถ้าต้องการทับให้ใส่ --replace-buildings
 // ใช้ค่าที่คำนวณไว้แล้วในชีต (ไม่ใช่สูตร) ไม่ต้องแก้ไฟล์ก่อน และไม่ต้องเปิด/Save ใน Excel
@@ -166,7 +167,12 @@ async function main() {
         }
       }
     }
+    let relinked = 0, lostDocs = [];
     for (const [code, list] of Object.entries(logs)) {
+      // เก็บเลขที่ใบเบิกของแถวจากชีตไว้ก่อนลบ แล้วผูกกลับหลังนำเข้า
+      const keep = (await client.query(
+        `SELECT log_order, TO_CHAR(request_date, 'YYYY-MM-DD') AS d, UPPER(mat_code) AS m, quantity::float AS q, doc_no
+           FROM material_transport_logs WHERE project_code = $1 AND source = 'sheet' AND COALESCE(doc_no, '') <> ''`, [code])).rows;
       await client.query("DELETE FROM material_transport_logs WHERE project_code = $1 AND source = 'sheet'", [code]);
       for (const r of list) {
         await client.query(
@@ -176,8 +182,26 @@ async function main() {
           [r.log_order, r.request_date, r.receive_date, r.status, r.mat_code, r.mat_type, r.mat_item, r.building, r.floor,
             r.quantity, r.unit, r.warehouse, r.status2, r.requester_receiver, r.note, code]);
       }
+      for (const k of keep) {
+        // ตรงทุกอย่างก่อน (รวมลำดับ) ถ้าไม่เจอค่อยเทียบ วันที่+Mat. Code+จำนวน
+        let u = await client.query(
+          `UPDATE material_transport_logs SET doc_no = $1 WHERE id = (
+             SELECT id FROM material_transport_logs WHERE project_code = $2 AND source = 'sheet' AND COALESCE(doc_no, '') = ''
+               AND log_order IS NOT DISTINCT FROM $3 AND request_date = $4 AND UPPER(mat_code) = $5 AND quantity::float = $6
+             ORDER BY id LIMIT 1)`, [k.doc_no, code, k.log_order, k.d, k.m, k.q]);
+        if (!u.rowCount) {
+          u = await client.query(
+            `UPDATE material_transport_logs SET doc_no = $1 WHERE id = (
+               SELECT id FROM material_transport_logs WHERE project_code = $2 AND source = 'sheet' AND COALESCE(doc_no, '') = ''
+                 AND request_date = $3 AND UPPER(mat_code) = $4 AND quantity::float = $5
+               ORDER BY id LIMIT 1)`, [k.doc_no, code, k.d, k.m, k.q]);
+        }
+        if (u.rowCount) relinked++; else lostDocs.push(`${code} ${k.doc_no} (${k.d} ${k.m})`);
+      }
     }
     await client.query('COMMIT');
+    if (relinked) console.log(`  ผูกเลขที่ใบเบิกกลับให้แถวเดิม ${relinked} แถว`);
+    lostDocs.forEach(x => console.log('  ⚠️  แถวในชีตเปลี่ยนไป ผูกใบเบิกกลับไม่ได้:', x, '— แนบใหม่ในหน้ากรอก'));
     console.log('\n✅ นำเข้าเรียบร้อย');
   } catch (err) {
     await client.query('ROLLBACK');
