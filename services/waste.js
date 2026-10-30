@@ -4,7 +4,7 @@
 // ส่วนหน้างาน (ชื่อ/อินพุต/คำตอบ เหมือน Code.gs ของ hub เดิม เพื่อให้ public/waste.html ใช้ได้ทันที)
 //   WASTE_getProjects()            รายชื่อโครงการ
 //   WASTE_saveNewProject(name)     เพิ่มโครงการ
-//   WASTE_saveData(data)           บันทึก 1 เที่ยว (รูป 3 รูป)
+//   WASTE_saveData(data)           บันทึก 1 เที่ยว (รูป 4 รูป: หน้ารถ / ขยะ / คลุมผ้า / บิล — รูปบิลไม่ขึ้นในใบ NPO)
 //   WASTE_getDashboardData()       ข้อมูลแดชบอร์ด (key เป็นหัวคอลัมน์ภาษาไทยเดิม)
 //   WASTE_listRecords({project, q})  รายการสำหรับแก้ไข (ล่าสุด 200 รายการ)
 //   WASTE_getRecord(id)            ข้อมูล 1 รายการสำหรับเปิดในฟอร์ม
@@ -36,6 +36,7 @@ const { UserError, withTx, htmlToPdf } = require('./common');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PHOTO_DIR = path.join(PUBLIC_DIR, 'uploads', 'waste');
 const NPO_DIR = path.join(PUBLIC_DIR, 'uploads', 'npo');
+const PHOTO_TAGS = ['front', 'waste', 'canvas', 'bill'];
 const MIME_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -127,6 +128,7 @@ function validateForm(data, photos) {
   if (!has(1)) missing.push('รูปหน้ารถ (ตอนเข้าไซต์ให้เห็นป้ายทะเบียน)');
   if (!has(2)) missing.push('รูปขยะบนรถ (ภาพมุมสูง)');
   if (!has(3)) missing.push('รูปก่อนคลุมผ้า (ให้เห็นปริมาณขยะก่อนคลุมผ้า)');
+  if (!has(4)) missing.push('รูปบิล');
   if (missing.length) return 'กรุณากรอกให้ครบ: ' + missing.join(', ');
   const sum = num(data.wasteConcrete) + num(data.wasteConstruction) + num(data.wastePacking) + num(data.wasteSystem);
   if (sum !== 100) return 'สัดส่วนขยะต้องรวมเป็น 100% (ปัจจุบัน ' + sum + '%)';
@@ -153,8 +155,8 @@ async function WASTE_saveData(data) {
       [projectId, str(data.billNo, 50), str(data.plateNo, 50)]);
     if (dup.rows.length) return { success: true, duplicatePrevented: true };
 
-    const urls = [data.photo1, data.photo2, data.photo3].map((d, i) => {
-      try { return savePhotoFile(d, ['front', 'waste', 'canvas'][i]); }
+    const urls = [data.photo1, data.photo2, data.photo3, data.photo4].map((d, i) => {
+      try { return savePhotoFile(d, PHOTO_TAGS[i]); }
       catch (e) { console.warn('[waste] บันทึกรูปไม่สำเร็จ:', e.message); return null; }
     });
 
@@ -162,12 +164,12 @@ async function WASTE_saveData(data) {
       `INSERT INTO waste_records (
          project_id, record_date, floor_zone, time_in, time_out, bill_no, plate_no, recorder,
          trips, truck_type, waste_concrete, waste_construction, waste_packing, waste_system,
-         volume_m3, cost, photo_front_url, photo_waste_url, photo_canvas_url, note, created_at, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW(),$20)`,
+         volume_m3, cost, photo_front_url, photo_waste_url, photo_canvas_url, note, created_at, created_by, photo_bill_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW(),$20,$21)`,
       [projectId, date, str(data.location, 100), str(data.timeIn, 10), str(data.time, 10),
         str(data.billNo, 50), str(data.plateNo, 50), str(data.recorder, 100), str(data.truck),
         num(data.wasteConcrete), num(data.wasteConstruction), num(data.wastePacking), num(data.wasteSystem),
-        truck.volume_m3, truck.cost_per_trip, urls[0], urls[1], urls[2], str(data.note, 1000), by]);
+        truck.volume_m3, truck.cost_per_trip, urls[0], urls[1], urls[2], str(data.note, 1000), by, urls[3]]);
     return { success: true };
   });
 }
@@ -180,6 +182,7 @@ const RECORD_SELECT = `
          w.waste_construction::float AS "wasteConstruction", w.waste_packing::float AS "wastePacking",
          w.waste_system::float AS "wasteSystem", w.note, w.cost::float AS cost,
          w.photo_front_url AS "photo1Url", w.photo_waste_url AS "photo2Url", w.photo_canvas_url AS "photo3Url",
+         w.photo_bill_url AS "photo4Url",
          n.npo_no AS "npoNo", COALESCE(w.updated_by, '') AS "updatedBy",
          COALESCE(TO_CHAR(w.updated_at AT TIME ZONE 'Asia/Bangkok', 'DD/MM/YYYY HH24:MI'), '') AS "updatedAt"
     FROM waste_records w
@@ -238,7 +241,7 @@ async function WASTE_updateRecord(id, data) {
   const by = userName(this);
   return withTx(async client => {
     const old = await lockEditable(client, rid, 'แก้ไข');
-    const keep = [old.photo_front_url, old.photo_waste_url, old.photo_canvas_url];
+    const keep = [old.photo_front_url, old.photo_waste_url, old.photo_canvas_url, old.photo_bill_url];
     const bad = validateForm(data, keep);
     if (bad) throw new UserError(bad);
     const truck = await truckInfo(client, str(data.truck));
@@ -250,10 +253,10 @@ async function WASTE_updateRecord(id, data) {
       [projectId, str(data.billNo, 50), str(data.plateNo, 50), rid]);
     if (dup.rows.length) throw new UserError('เลขที่บิล + ทะเบียนรถ นี้มีอยู่แล้วในโครงการนี้');
 
-    const urls = [1, 2, 3].map(i => {
+    const urls = [1, 2, 3, 4].map(i => {
       const d = data['photo' + i];
       if (!d) return keep[i - 1];
-      try { return savePhotoFile(d, ['front', 'waste', 'canvas'][i - 1]); }
+      try { return savePhotoFile(d, PHOTO_TAGS[i - 1]); }
       catch (e) { throw new UserError('รูปที่ ' + i + ' ไม่ถูกต้อง'); }
     });
     await snapshot(client, rid, 'update', by);
@@ -261,12 +264,12 @@ async function WASTE_updateRecord(id, data) {
       `UPDATE waste_records SET project_id=$1, record_date=$2, floor_zone=$3, time_in=$4, time_out=$5, bill_no=$6,
          plate_no=$7, recorder=$8, truck_type=$9, waste_concrete=$10, waste_construction=$11, waste_packing=$12,
          waste_system=$13, volume_m3=$14, cost=$15, photo_front_url=$16, photo_waste_url=$17, photo_canvas_url=$18,
-         note=$19, updated_at=NOW(), updated_by=$20
+         note=$19, updated_at=NOW(), updated_by=$20, photo_bill_url=$22
        WHERE id = $21`,
       [projectId, parseDate(data.date), str(data.location, 100), str(data.timeIn, 10), str(data.time, 10),
         str(data.billNo, 50), str(data.plateNo, 50), str(data.recorder, 100), str(data.truck),
         num(data.wasteConcrete), num(data.wasteConstruction), num(data.wastePacking), num(data.wasteSystem),
-        truck.volume_m3, truck.cost_per_trip, urls[0], urls[1], urls[2], str(data.note, 1000), by, rid]);
+        truck.volume_m3, truck.cost_per_trip, urls[0], urls[1], urls[2], str(data.note, 1000), by, rid, urls[3]]);
     return { success: true };
   });
 }

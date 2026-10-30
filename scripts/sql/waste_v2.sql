@@ -95,3 +95,6 @@ ALTER TABLE npo_reports ADD COLUMN IF NOT EXISTS approver_name TEXT;
 -- กู้คืนรายการที่ลบ
 ALTER TABLE waste_record_history ADD COLUMN IF NOT EXISTS restored_at TIMESTAMPTZ;
 ALTER TABLE waste_record_history ADD COLUMN IF NOT EXISTS restored_by TEXT;
+
+-- รูปบิล (รูปที่ 4) — ไม่ขึ้นในใบ NPO
+ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS photo_bill_url TEXT;
