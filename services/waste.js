@@ -351,7 +351,8 @@ async function WASTE_getDashboardData() {
            w.waste_system::float AS "% เศษวัสดุงานระบบ",
            w.volume_m3::float AS "ปริมาณขยะ (คิว)",
            w.note AS "หมายเหตุ",
-           w.cost::float AS "ค่าใช้จ่ายรวม (บาท)"
+           w.cost::float AS "ค่าใช้จ่ายรวม (บาท)",
+           COALESCE(w.photo_bill_url, '') AS "_billPhoto"
       FROM waste_records w
       LEFT JOIN projects p ON p.id = w.project_id
      ORDER BY w.record_date, w.time_in, w.id`);

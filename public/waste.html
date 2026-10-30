@@ -388,6 +388,7 @@
       </div>
     </div>
 
+    <div style="font-size:12px;color:#718096;margin:0 0 8px 4px">🧾 = กดเลขที่บิลเพื่อดูรูปบิล</div>
     <div id="dashListContainer">
       <div class="card" style="text-align:center; color:#718096;">กำลังโหลดข้อมูล...</div>
     </div>
@@ -1241,6 +1242,7 @@ function filterDashboard() {
           ${pTrips} เที่ยว | ${pVol} คิว | ${pCost.toLocaleString()} บาท
         </div>
       </div>
+      <div style="overflow-x:auto">
       <table>
         <thead>
           <tr>
@@ -1249,6 +1251,8 @@ function filterDashboard() {
             <th>เวลาเข้า</th>
             <th>รถออก</th>
             <th>ประเภทรถ</th>
+            <th>ทะเบียนรถ</th>
+            <th>เลขที่บิล</th>
             <th>เที่ยว</th>
             <th>ค่าใช้จ่าย</th>
           </tr>
@@ -1261,12 +1265,17 @@ function filterDashboard() {
               <td>${formatTimeString(i['เวลาเข้า'])}</td>
               <td>${formatTimeString(i['เวลารถออก'])}</td>
               <td><span style="background:#edf2f7; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(i['ประเภทรถ']) || '-'}</span></td>
+              <td style="white-space:nowrap">${escapeHtml(i['เลขทะเบียนรถ']) || '-'}</td>
+              <td style="white-space:nowrap">${i._billPhoto
+                ? `<a href="${escapeHtml(i._billPhoto)}" target="_blank" title="ดูรูปบิล" style="color:#2d6a4f;font-weight:700">🧾 ${escapeHtml(i['เลขที่บิล']) || 'ดูรูปบิล'}</a>`
+                : (escapeHtml(i['เลขที่บิล']) || '-')}</td>
               <td>${escapeHtml(i['จำนวนเที่ยว']) || '0'}</td>
               <td><b>${Number(i['ค่าใช้จ่ายรวม (บาท)'] || 0).toLocaleString()}</b></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
+      </div>
     `;
     container.appendChild(box);
   }
