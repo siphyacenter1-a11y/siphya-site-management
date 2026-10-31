@@ -1298,6 +1298,7 @@ function filterDashboard() {
             <th>ประเภทรถ</th>
             <th>ทะเบียนรถ</th>
             <th>เลขที่บิล</th>
+            <th>ผู้บันทึก</th>
             <th>เที่ยว</th>
             <th>ค่าใช้จ่าย</th>
           </tr>
@@ -1314,6 +1315,7 @@ function filterDashboard() {
               <td style="white-space:nowrap">${i._billPhoto
                 ? `<a href="${escapeHtml(i._billPhoto)}" target="_blank" title="ดูรูปบิล" style="color:#2d6a4f;font-weight:700">🧾 ${escapeHtml(i['เลขที่บิล']) || 'ดูรูปบิล'}</a>`
                 : (escapeHtml(i['เลขที่บิล']) || '-')}</td>
+              <td>${escapeHtml(i['ผู้บันทึก']) || '-'}</td>
               <td>${escapeHtml(i['จำนวนเที่ยว']) || '0'}</td>
               <td><b>${Number(i['ค่าใช้จ่ายรวม (บาท)'] || 0).toLocaleString()}</b></td>
             </tr>
