@@ -98,3 +98,7 @@ ALTER TABLE waste_record_history ADD COLUMN IF NOT EXISTS restored_by TEXT;
 
 -- รูปบิล (รูปที่ 4) — ไม่ขึ้นในใบ NPO
 ALTER TABLE waste_records ADD COLUMN IF NOT EXISTS photo_bill_url TEXT;
+
+-- ตรวจรถทะเบียนเดียวกันเวลาทับกัน (เทียบทะเบียนแบบตัดช่องว่าง/ขีด)
+CREATE INDEX IF NOT EXISTS waste_records_plate_day_idx
+  ON waste_records (record_date, (regexp_replace(upper(plate_no), '[^0-9A-Zก-๙]', '', 'g')));

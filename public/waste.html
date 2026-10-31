@@ -142,6 +142,7 @@
     <button class="tab-btn active" id="tabFormBtn" onclick="switchTab('form')">📝 บันทึกข้อมูลไซต์งาน</button>
     <button class="tab-btn" id="tabEditBtn" onclick="switchTab('edit')">✎ แก้ไข/ลบรายการ</button>
     <button class="tab-btn" id="tabDashBtn" onclick="switchTab('dash')">📊 Dashboard สรุปผล</button>
+    <button class="tab-btn" id="tabClashBtn" onclick="switchTab('clash')" style="display:none">⚠️ รถซ้ำเวลา</button>
   </div>
 
   <!-- TAB 1: FORM -->
@@ -354,6 +355,16 @@
       <div style="font-size:12px;color:#718096;margin-top:8px;">แสดง 200 รายการล่าสุด · เที่ยวที่ออกใบ NPO แล้วแก้/ลบไม่ได้ ต้องยกเลิกใบ NPO ก่อน</div>
     </div>
     <div id="recordList"><div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div></div>
+  </div>
+
+  <!-- TAB: รถซ้ำเวลา (admin) -->
+  <div id="tabClash" class="tab-content">
+    <div class="card" style="font-size:13px;color:#4a5568;line-height:1.6">
+      รถทะเบียนเดียวกัน วันเดียวกัน ช่วงเวลาเข้า–ออกทับกัน (รถคันเดียวอยู่ 2 ที่พร้อมกันไม่ได้) ·
+      ทะเบียนเทียบแบบไม่สนช่องว่าง/ขีด · "บัญชีที่กรอก" = ชื่อที่ login ตอนกดบันทึก ·
+      ตั้งแต่นี้ไประบบไม่ให้บันทึกรายการที่เวลาทับกันแล้ว รายการในหน้านี้คือของที่บันทึกไว้ก่อนหน้า
+    </div>
+    <div id="clashList"><div class="card" style="text-align:center;color:#718096;">กำลังโหลด...</div></div>
   </div>
 
   <!-- TAB 2: DASHBOARD -->
@@ -594,6 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateProgressBar();
   loadProjectList();
   loadTruckTypes();
+  loadClashes(true);
 
   if (hasDraft()) {
     $('draftBanner').style.display = 'flex';
@@ -623,13 +635,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function switchTab(tab) {
-  ['form', 'edit', 'dash'].forEach(t => {
+  ['form', 'edit', 'dash', 'clash'].forEach(t => {
     const key = t.charAt(0).toUpperCase() + t.slice(1);
     $('tab' + key).classList.toggle('active', t === tab);
     $('tab' + key + 'Btn').classList.toggle('active', t === tab);
   });
   if (tab === 'dash') loadDashboardData();
   if (tab === 'edit') { fillEditProjects(); loadRecordList(); }
+  if (tab === 'clash') loadClashes();
 }
 
 // ================= แก้ไข / ลบรายการ =================
@@ -695,6 +708,38 @@ function restoreRecord(historyId, bill) {
     .withSuccessHandler(function() { alert('✅ กู้คืนเรียบร้อย'); loadDeletedList(); })
     .withFailureHandler(function(err) { alert('⚠️ ' + err.message); loadDeletedList(); })
     .WASTE_restoreRecord(historyId);
+}
+
+// ================= รถซ้ำเวลา (admin) =================
+function loadClashes(quiet) {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      const btn = $('tabClashBtn');
+      btn.style.display = '';               // เห็นปุ่มเฉพาะ admin (staff เรียกไม่ผ่าน)
+      btn.textContent = '⚠️ รถซ้ำเวลา' + (rows.length ? ' (' + rows.length + ')' : '');
+      btn.style.borderColor = rows.length ? '#e53e3e' : '';
+      if (quiet) return;
+      const box = $('clashList');
+      if (!rows.length) { box.innerHTML = '<div class="card" style="text-align:center;color:#2d6a4f;">✅ ไม่พบรถทะเบียนเดียวกันที่เวลาทับกัน</div>'; return; }
+      const side = (x, tag) => '<tr><td style="font-weight:700;color:#c53030">' + tag + '</td>' +
+        '<td>' + escapeHtml(x.project || '-') + '<br><span style="color:#718096">' + escapeHtml(x.zone || '-') + '</span></td>' +
+        '<td style="white-space:nowrap"><b>' + escapeHtml(x.timeIn) + '–' + escapeHtml(x.timeOut) + '</b></td>' +
+        '<td style="white-space:nowrap">' + (x.billPhoto ? '<a href="' + escapeHtml(x.billPhoto) + '" target="_blank" style="color:#2d6a4f;font-weight:700">🧾 ' + escapeHtml(x.billNo) + '</a>' : escapeHtml(x.billNo || '-')) +
+          '<br><span style="color:#718096">' + escapeHtml(x.plateNo || '') + '</span></td>' +
+        '<td>' + escapeHtml(x.recorder || '-') + '</td>' +
+        '<td><b>' + escapeHtml(x.createdBy || '(ไม่ทราบ)') + '</b>' + (x.updatedBy && x.updatedBy !== x.createdBy ? '<br><span style="color:#718096">แก้ล่าสุด: ' + escapeHtml(x.updatedBy) + '</span>' : '') + '</td>' +
+        '<td style="white-space:nowrap;color:#718096">' + escapeHtml(x.createdAt || '-') + '</td>' +
+        '<td>' + (x.npo ? '<span class="lock-tag">🔒 NPO ' + escapeHtml(x.npo) + '</span>' :
+          '<button type="button" class="btn-action" onclick="startEdit(' + x.id + ')">✎ แก้ไข</button>') + '</td></tr>';
+      box.innerHTML = rows.map(r =>
+        '<div class="dash-group-box"><div class="dash-group-header"><div>🚛 ทะเบียน ' + escapeHtml(r.a.plateNo || r.plate) +
+        ' · ' + escapeHtml(r.date) + '</div><div style="font-size:11px;background:#fed7d7;color:#c53030;padding:3px 8px;border-radius:12px;">เวลาทับกัน</div></div>' +
+        '<div style="overflow-x:auto"><table><thead><tr><th></th><th>โครงการ / โซน</th><th>เวลา</th><th>บิล / ทะเบียน</th>' +
+        '<th>ผู้บันทึก (พิมพ์)</th><th>บัญชีที่กรอก</th><th>กรอกเมื่อ</th><th></th></tr></thead><tbody>' +
+        side(r.a, 'A') + side(r.b, 'B') + '</tbody></table></div></div>').join('');
+    })
+    .withFailureHandler(function() { $('tabClashBtn').style.display = 'none'; })
+    .WASTE_timeConflicts();
 }
 
 function setPhotoPreview(i, url) {
