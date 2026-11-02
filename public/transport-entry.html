@@ -10,7 +10,7 @@
     :root { --ink:#0B1F4B; --line:#E1E3E9; --soft:#5A6478; --bg:#F7F6F2; --card:#fff; --dirty:#FFF6DB; --err:#FDECEC; --new:#EAF4FF; --ok:#1E9E6A; }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Prompt', 'Segoe UI', sans-serif; font-size: 13px; }
-    .top { position: sticky; top: 0; z-index: 20; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px 10px 130px; }
+    .top { position: sticky; top: 0; z-index: 20; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px 10px 150px; }
     .top h1 { margin: 0 0 6px; font-size: 17px; }
     .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .bar select, .bar input[type=search] { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
@@ -64,7 +64,7 @@
   </style>
 </head>
 <body>
-<a href="/" class="hub-home-fab"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>หน้าแรก</span></a>
+<a href="/transport" id="backDash" class="hub-home-fab" title="กลับหน้า Dashboard ขนส่ง"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span>Dashboard</span></a>
 
 <div class="top">
   <h1>บันทึกการเบิก-จ่ายวัสดุ</h1>
@@ -399,6 +399,7 @@
   function load(code, okMsg) {
     S.code = code;
     try { history.replaceState(null, '', '?project=' + encodeURIComponent(code)); } catch (e) {}
+    $('backDash').href = '/transport?project=' + encodeURIComponent(code);   // ย้อนกลับไป Dashboard ของโครงการเดิม
     msg(okMsg || '', true);
     run().withSuccessHandler(function (d) {
       S.data = d; S.isAdmin = d.isAdmin; S.showAll = false;
