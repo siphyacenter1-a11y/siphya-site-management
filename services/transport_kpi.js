@@ -67,8 +67,9 @@ async function TRANSPORT_kpi(projectCode) {
     } else {
       state = 'pending';
     }
-    // กรอกทันเวลา: เฉพาะรายการที่กรอกบนเว็บ (นำเข้าจากชีตไม่รู้วันที่กรอกจริง)
-    const timely = x.source === 'web' && x.rec ? (x.entered <= addDays(x.rec, 1)) : null;
+    // กรอกทันเวลา: กรอกในระบบภายในกำหนดเดียวกับการส่ง (2 วันทำการหลังวันที่ออกใบเบิก)
+    // นับเฉพาะรายการที่กรอกบนเว็บ (นำเข้าจากชีตไม่รู้วันที่กรอกจริง)
+    const timely = x.source === 'web' ? (x.entered <= due) : null;
     return { id: x.id, month: x.req.slice(0, 7), req: x.req, rec: x.rec || '', due, state, lateDays,
       item: x.item, building: x.building, floor: x.floor, qty: x.qty, unit: x.unit, requester: x.requester,
       hasDoc: x.hasDoc, timely };

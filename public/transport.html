@@ -408,7 +408,7 @@
         '<div class="sla-tile"><div class="label">ส่งช้า</div><div class="value ' + (late.length ? 'sla-bad' : 'sla-good') + '">' + late.length + '</div><div class="sub">รายการที่ส่งเกินกำหนด</div></div>' +
         '<div class="sla-tile"><div class="label">ค้างเกินกำหนด</div><div class="value ' + (over.length ? 'sla-bad' : 'sla-good') + '">' + over.length + '</div><div class="sub">ยังไม่ได้รับ และเลยกำหนดแล้ว · รอส่ง (ยังไม่ถึงกำหนด) ' + pend + '</div></div>' +
         tile('มีใบเบิกแนบ', pct(withDoc, rows.length), withDoc + ' / ' + rows.length + ' รายการ', pct(withDoc, rows.length) === 100) +
-        tile('กรอกทันเวลา', pct(timely, webRows.length), webRows.length ? 'กรอกภายใน 1 วันหลังรับ ' + timely + ' / ' + webRows.length : 'นับเฉพาะรายการที่กรอกบนเว็บ (ยังไม่มี)', pct(timely, webRows.length) >= 95);
+        tile('กรอกทันเวลา', pct(timely, webRows.length), webRows.length ? 'กรอกภายใน 2 วันทำการหลังใบเบิก ' + timely + ' / ' + webRows.length : 'นับเฉพาะรายการที่กรอกบนเว็บ (ยังไม่มี)', pct(timely, webRows.length) >= 95);
       var bad = over.concat(late).sort(function (a, b) { return b.lateDays - a.lateDays; });
       document.getElementById('slaLate').innerHTML = bad.length ?
         '<div class="table-scroll"><table class="summary sla-late"><thead><tr><th>วันที่เบิก</th><th>กำหนดส่ง</th><th>วันที่รับ</th><th style="text-align:right">ช้า (วันทำการ)</th><th>รายการ</th><th>อาคาร/ชั้น</th><th>ผู้ขอเบิก</th></tr></thead><tbody>' +
