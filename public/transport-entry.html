@@ -117,6 +117,10 @@
     <div class="hint" style="margin:0 0 8px">ชั้นพิมพ์คั่นด้วยเครื่องหมายจุลภาคหรือขึ้นบรรทัดใหม่ เรียงตามที่ต้องการให้แสดงใน dropdown</div>
     <div id="bList"></div>
     <div class="row-actions"><button class="btn" id="bAdd">+ เพิ่มอาคาร</button><button class="btn main" id="bSave">บันทึกอาคาร/ชั้น</button></div>
+    <h3>วันหยุด (ใช้กับทุกโครงการ)</h3>
+    <div class="hint" style="margin:0 0 8px">ใช้คำนวณ KPI ส่งภายใน 2 วันทำการ (นับจันทร์–เสาร์ ข้ามวันอาทิตย์อยู่แล้ว) · บรรทัดละวัน: <b>วว/ดด/ปปปป ชื่อวันหยุด</b> เช่น 31/12/2026 วันสิ้นปี</div>
+    <textarea id="hList" rows="6" style="width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="05/12/2026 วันพ่อแห่งชาติ&#10;31/12/2026 วันสิ้นปี"></textarea>
+    <div class="row-actions"><button class="btn main" id="hSave">บันทึกวันหยุด</button></div>
     <div class="msg" id="setMsg" style="margin:10px 0 0"></div>
     <div class="row-actions"><button class="btn" id="setClose">ปิด</button></div>
   </div>
@@ -445,9 +449,16 @@
       $('bProj').textContent = S.code;
       $('bList').innerHTML = ''; (S.data.buildings || []).forEach(function (b) { $('bList').appendChild(bRow(b)); });
       $('setBg').style.display = 'flex';
+      run().withSuccessHandler(function (hs) {
+        $('hList').value = hs.map(function (h) { return h.date + (h.name ? ' ' + h.name : ''); }).join('\n');
+      }).TRANSPORT_listHolidays();
     }).withFailureHandler(function (e) { msg(e.message); }).TRANSPORT_listProjects();
   };
   $('setClose').onclick = function () { $('setBg').style.display = 'none'; };
+  $('hSave').onclick = function () {
+    run().withSuccessHandler(function (r) { setMsg('บันทึกวันหยุด ' + r.saved + ' วันแล้ว', true); })
+      .withFailureHandler(function (e) { setMsg(e.message); }).TRANSPORT_saveHolidays($('hList').value);
+  };
   $('pNew').onclick = function () { fillProjectForm({}); $('pCode').focus(); };
   $('pSave').onclick = function () {
     var p = { code: $('pCode').value.trim().toUpperCase(), name: $('pName').value.trim(), logo: $('pLogo').value.trim(), active: $('pActive').value === '1' };

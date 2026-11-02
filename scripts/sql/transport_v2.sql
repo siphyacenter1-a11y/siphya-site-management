@@ -73,3 +73,9 @@ CREATE TABLE IF NOT EXISTS transport_docs (
   uploaded_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (project_code, doc_no)
 );
+
+-- วันหยุด (ใช้คำนวณ KPI ส่งภายใน 2 วันทำการ: จันทร์–เสาร์ ข้ามวันอาทิตย์และวันในตารางนี้)
+CREATE TABLE IF NOT EXISTS transport_holidays (
+  holiday_date DATE PRIMARY KEY,
+  name         TEXT DEFAULT ''
+);

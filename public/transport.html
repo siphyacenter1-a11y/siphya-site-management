@@ -99,6 +99,18 @@
       .filters button { width: 100%; }
       .header .right { text-align: left; }
     }
+    .sla-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .sla-head h3 { margin: 0 !important; }
+    .sla-head small { display: block; font-weight: 400; color: var(--soft); font-size: 12px; margin-top: 3px; }
+    .sla-head select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; }
+    .sla-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .sla-tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .sla-tile .label { font-size: 12.5px; color: var(--soft); }
+    .sla-tile .value { font-size: 24px; font-weight: 700; margin-top: 2px; }
+    .sla-tile .sub { font-size: 12px; color: var(--soft); margin-top: 2px; }
+    .sla-tile.main { border-width: 2px; }
+    .sla-good { color: #1E8A5C; } .sla-bad { color: #C62828; }
+    .sla-late td.late { color: #C62828; font-weight: 600; }
     .doc-link { color: #1B3070; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
     .doc-link:hover { color: #2F5D9E; }
     .doc-hint { font-size: 12px; font-weight: 400; color: #718096; margin-left: 8px; }
@@ -162,6 +174,16 @@
     </div>
 
     <div class="stat-strip" id="kpiRow"></div>
+
+    <div class="summary-panel" id="slaPanel" style="margin-bottom:20px">
+      <div class="sla-head">
+        <h3>KPI การส่งวัสดุ
+          <small>ส่งภายใน 2 วันทำการ หลังวันที่ออกใบเบิก (ไม่นับวันที่เบิก · จันทร์–เสาร์ · ข้ามวันหยุด) · ไม่นับรายการ ย้าย/ยกเลิก</small></h3>
+        <select id="slaMonth" onchange="renderSla()"><option value="">ทุกเดือน</option></select>
+      </div>
+      <div class="sla-tiles" id="slaTiles"></div>
+      <div id="slaLate"></div>
+    </div>
 
     <div class="charts-row">
       <div class="chart-card">
@@ -341,6 +363,61 @@
       populateFilterOptions();
       renderDataTableHeader();
       applyFilters();
+      loadSla();
+    }
+
+    // ---------- KPI ส่งภายใน 2 วันทำการ ----------
+    var SLA = null;
+    function slaEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function slaDmy(iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : '-'; }
+    var TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    function monthLabel(ym) { var p = ym.split('-'); return TH_MON[+p[1] - 1] + ' ' + (+p[0] + 543); }
+    function loadSla() {
+      google.script.run.withSuccessHandler(function (res) {
+        SLA = res;
+        var sel = document.getElementById('slaMonth'), keep = sel.value;
+        var months = Array.from(new Set(res.rows.map(function (r) { return r.month; }))).sort().reverse();
+        sel.innerHTML = '<option value="">ทุกเดือน</option>' + months.map(function (m) { return '<option value="' + m + '">' + monthLabel(m) + '</option>'; }).join('');
+        if (keep && months.indexOf(keep) > -1) sel.value = keep;
+        renderSla();
+      }).withFailureHandler(function (e) {
+        document.getElementById('slaTiles').innerHTML = '<div class="sla-bad">โหลด KPI ไม่สำเร็จ: ' + slaEsc(e.message) + '</div>';
+      }).TRANSPORT_kpi(CURRENT_PROJECT);
+    }
+    function pct(a, b) { return b ? Math.round(a / b * 1000) / 10 : null; }
+    function renderSla() {
+      if (!SLA) return;
+      var m = document.getElementById('slaMonth').value;
+      var rows = SLA.rows.filter(function (r) { return !m || r.month === m; });
+      var on = rows.filter(function (r) { return r.state === 'ontime'; }).length;
+      var late = rows.filter(function (r) { return r.state === 'late'; });
+      var over = rows.filter(function (r) { return r.state === 'overdue'; });
+      var pend = rows.filter(function (r) { return r.state === 'pending'; }).length;
+      var judged = on + late.length + over.length;
+      var p1 = pct(on, judged);
+      var withDoc = rows.filter(function (r) { return r.hasDoc; }).length;
+      var webRows = rows.filter(function (r) { return r.timely !== null; });
+      var timely = webRows.filter(function (r) { return r.timely; }).length;
+      function tile(label, val, sub, good, main) {
+        var cls = val == null ? '' : (good ? 'sla-good' : 'sla-bad');
+        return '<div class="sla-tile' + (main ? ' main' : '') + '"><div class="label">' + label + '</div>' +
+          '<div class="value ' + cls + '">' + (val == null ? '–' : val + '%') + '</div><div class="sub">' + sub + '</div></div>';
+      }
+      document.getElementById('slaTiles').innerHTML =
+        tile('ส่งตรงเวลา', p1, 'ตรงเวลา ' + on + ' / ' + judged + ' รายการ', p1 != null && p1 >= 90, true) +
+        '<div class="sla-tile"><div class="label">ส่งช้า</div><div class="value ' + (late.length ? 'sla-bad' : 'sla-good') + '">' + late.length + '</div><div class="sub">รายการที่ส่งเกินกำหนด</div></div>' +
+        '<div class="sla-tile"><div class="label">ค้างเกินกำหนด</div><div class="value ' + (over.length ? 'sla-bad' : 'sla-good') + '">' + over.length + '</div><div class="sub">ยังไม่ได้รับ และเลยกำหนดแล้ว · รอส่ง (ยังไม่ถึงกำหนด) ' + pend + '</div></div>' +
+        tile('มีใบเบิกแนบ', pct(withDoc, rows.length), withDoc + ' / ' + rows.length + ' รายการ', pct(withDoc, rows.length) === 100) +
+        tile('กรอกทันเวลา', pct(timely, webRows.length), webRows.length ? 'กรอกภายใน 1 วันหลังรับ ' + timely + ' / ' + webRows.length : 'นับเฉพาะรายการที่กรอกบนเว็บ (ยังไม่มี)', pct(timely, webRows.length) >= 95);
+      var bad = over.concat(late).sort(function (a, b) { return b.lateDays - a.lateDays; });
+      document.getElementById('slaLate').innerHTML = bad.length ?
+        '<div class="table-scroll"><table class="summary sla-late"><thead><tr><th>วันที่เบิก</th><th>กำหนดส่ง</th><th>วันที่รับ</th><th style="text-align:right">ช้า (วันทำการ)</th><th>รายการ</th><th>อาคาร/ชั้น</th><th>ผู้ขอเบิก</th></tr></thead><tbody>' +
+        bad.slice(0, 100).map(function (r) {
+          return '<tr><td>' + slaDmy(r.req) + '</td><td>' + slaDmy(r.due) + '</td><td>' + (r.rec ? slaDmy(r.rec) : '<b class="sla-bad">ยังไม่ได้รับ</b>') + '</td>' +
+            '<td class="late" style="text-align:right">' + r.lateDays + '</td><td>' + slaEsc(r.item) + ' ' + (r.qty != null ? r.qty + ' ' + slaEsc(r.unit) : '') + '</td>' +
+            '<td>' + slaEsc(r.building) + (r.floor ? ' ชั้น ' + slaEsc(r.floor) : '') + '</td><td>' + slaEsc(r.requester) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' + (bad.length > 100 ? '<div class="doc-hint">แสดง 100 รายการที่ช้าที่สุด</div>' : '')
+        : (judged ? '<div class="sla-good" style="font-weight:600">✅ ไม่มีรายการส่งช้าหรือค้างเกินกำหนด</div>' : '');
     }
 
     function populateFilterOptions() {
