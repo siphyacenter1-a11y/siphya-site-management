@@ -524,6 +524,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       <span data-i18n="backToFormBtn">กลับไปกรอกฟอร์ม</span>
     </button>
+    <button type="button" class="btn btn-outline btn-full hidden" id="logoutBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      <span id="logoutLabel">ออกจากระบบ</span>
+    </button>
   </div>
 </div>
 <div class="modal-backdrop hidden" id="signModal">
@@ -2203,18 +2207,28 @@
     .then(function(j){
       if(!(j && j.user)) return;
       ME = j.user.username || '';
-      if(j.user.role === 'signer') enterSignerOnlyMode();
+      if(j.user.role === 'signer') enterSignerOnlyMode(j.user.full_name || ME);
     }).catch(function(){}); }catch(e){}
 
   // บัญชี "ลงนามอย่างเดียว" (GF/GE): เห็นเฉพาะแดชบอร์ด — ลงนามและดู/พิมพ์ได้ กรอกหรือแก้ไขไม่ได้
   // (server กันซ้ำอีกชั้นใน routes/gas.js และ middleware/role_guard.js)
-  function enterSignerOnlyMode(){
+  function enterSignerOnlyMode(name){
     SIGNER_ONLY = true;
+    document.getElementById('logoutLabel').textContent = 'ออกจากระบบ' + (name ? ' (' + name + ')' : '');
+    document.getElementById('logoutBtn').classList.remove('hidden');
     document.body.classList.add('signer-only');
     state.tab = 'dashboard';
     renderTabUI();
     refreshSubmissions();
   }
+  // ออกจากระบบ: ลบ cookie ที่ server แล้วกลับหน้า login (ลบค่าที่ api-client.js เก็บไว้ด้วย)
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    var go = function(){
+      try{ localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); }catch(e){}
+      window.location.href = '/login';
+    };
+    fetch('/api/auth/logout', { method:'POST', credentials:'same-origin' }).then(go, go);
+  });
   function signerUsername(){
     var last = ''; try{ last = localStorage.getItem('checklist_signer_user') || ''; }catch(e){}
     return last || (ME === 'staff' || ME === 'admin' ? '' : ME);
