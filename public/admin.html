@@ -184,6 +184,13 @@
       font-size: 13px;
     }
 
+    /* ฟอร์มเพิ่มผู้ใช้: ให้อยู่ในกล่องเดียว ไม่ต้องเลื่อนซ้าย-ขวา */
+    .nu-form { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)) auto; gap:10px; align-items:end; }
+    .nu-form input { width:100%; min-width:0; box-sizing:border-box; }
+    @media (max-width: 640px) {
+      .nu-form { grid-template-columns:1fr; }
+      .nu-form .btn { width:100%; justify-content:center; }
+    }
     @media (max-width: 760px) {
       .grid { grid-template-columns: 1fr; gap: 14px; }
       .card { padding: 18px; grid-template-columns: 52px 1fr; }
@@ -319,7 +326,7 @@
 
   <!-- Modal: จัดการผู้ใช้งาน -->
   <div class="modal-overlay" id="userModal">
-    <div class="modal-card" style="max-width: 600px;">
+    <div class="modal-card" style="max-width: 720px; overflow-x: hidden;">
       <div class="modal-header">
         <h3>จัดการผู้ใช้งานระบบ (User Management)</h3>
         <button class="modal-close" onclick="closeUserModal()">&times;</button>
@@ -327,7 +334,7 @@
 
       <div style="margin-bottom: 20px;">
         <h4 style="font-size:14px; margin-bottom:10px; color:var(--ink);">+ เพิ่มผู้ใช้งานใหม่</h4>
-        <form onsubmit="handleCreateUser(event)" style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end;">
+        <form onsubmit="handleCreateUser(event)" class="nu-form">
           <div class="form-group" style="margin:0;">
             <label>Username</label>
             <input type="text" id="nu_username" required placeholder="foreman1">
@@ -340,7 +347,7 @@
             <label>รหัสผ่าน</label>
             <input type="password" id="nu_password" required placeholder="••••••••">
           </div>
-          <button type="submit" class="btn btn-primary" style="height:42px; background:var(--ink);">+ เพิ่ม</button>
+          <button type="submit" class="btn btn-primary" style="height:42px; background:var(--ink); white-space:nowrap;">+ เพิ่ม</button>
         </form>
       </div>
 
