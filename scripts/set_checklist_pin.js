@@ -8,6 +8,7 @@
 //   ลบรหัส:                        node scripts/set_checklist_pin.js remove <id>
 //
 // หนึ่งโครงการมีรหัส GM ได้หลายรหัส (เพิ่มทีละรหัส)
+// ปกติตั้งผ่านหน้าเว็บได้แล้ว: /checklist → แท็บ "ผู้ลงนาม" (เฉพาะ admin) — สคริปต์นี้ใช้กรณีฉุกเฉิน เช่น ลืมรหัส MASTER
 const bcrypt = require('bcryptjs');
 const { sitePool } = require('../db');
 
@@ -15,7 +16,7 @@ async function main() {
   const [cmd, role, site, pin, label] = process.argv.slice(2);
   if (cmd === 'list') {
     const r = await sitePool.query(
-      'SELECT id, role, COALESCE(site_code, \'(ทุกโครงการ)\') AS site_code, label, created_at FROM checklist_pins ORDER BY role, site_code, id');
+      'SELECT id, role, COALESCE(site_code, \'(ทุกโครงการ)\') AS site_code, label, active, created_at FROM checklist_pins ORDER BY role, site_code, id');
     console.table(r.rows);
     return;
   }

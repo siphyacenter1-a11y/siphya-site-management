@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS checklist_pins (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ผู้ลงนามรายบุคคล (ตั้งในหน้าเว็บ แท็บ "ผู้ลงนาม" เฉพาะ admin)
+--   label = ชื่อผู้ลงนาม → ลงนามด้วยรหัสของใคร ระบบใส่ชื่อคนนั้นให้เอง
+--   active = false → ปิดใช้ชั่วคราว (รหัสใช้ไม่ได้ แต่ยังเก็บไว้)
+ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS active     BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS created_by TEXT DEFAULT '';
+ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS updated_by TEXT DEFAULT '';
+ALTER TABLE site_supervisor_checklists ADD COLUMN IF NOT EXISTS edited_by TEXT DEFAULT '';
+
 -- นับรหัสผิด (ผิดเกิน 5 ครั้ง ล็อก 15 นาที)
 CREATE TABLE IF NOT EXISTS checklist_pin_failures (
   fail_key     TEXT PRIMARY KEY,
