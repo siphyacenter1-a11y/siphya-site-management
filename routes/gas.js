@@ -17,6 +17,9 @@ const transport = require('../services/transport');
 const transportDocs = require('../services/transport_docs');
 const transportKpi = require('../services/transport_kpi');
 
+// บัญชี "ลงนามอย่างเดียว" (role signer): ดูแดชบอร์ดเช็คลิสต์ ลงนาม และเปิด PDF เท่านั้น
+const SIGNER_ALLOWED = new Set(['CHECKLIST_getSubmissions', 'CHECKLIST_signSubmission', 'CHECKLIST_getPrintPdf']);
+
 const ALLOWED = Object.assign({}, checklist.functions, waste.functions, route.functions, transport.functions, transportDocs.functions, transportKpi.functions);
 
 // รับทั้ง application/json และ text/plain (gas-shim ส่งเป็น text/plain เหมือนตอนใช้ Apps Script)
@@ -33,10 +36,15 @@ router.post('/', authenticateToken, async (req, res) => {
   const fn = String((body && body.fn) || '');
   const handler = Object.prototype.hasOwnProperty.call(ALLOWED, fn) ? ALLOWED[fn] : null;
   if (!handler) return res.json({ ok: false, error: 'ไม่อนุญาตให้เรียกฟังก์ชัน: ' + fn });
+  // สิทธิ์ล่าสุดจากฐานข้อมูล (middleware/role_guard.js) ถ้ามี
+  const user = req.liveRole ? Object.assign({}, req.user, { role: req.liveRole }) : req.user;
+  if (user.role === 'signer' && !SIGNER_ALLOWED.has(fn)) {
+    return res.json({ ok: false, error: 'บัญชีนี้ใช้ได้เฉพาะดูและลงนามเช็คลิสต์' });
+  }
 
   const args = Array.isArray(body.args) ? body.args : [];
   try {
-    const result = await handler.apply({ user: req.user }, args); // this.user = ผู้ที่ login
+    const result = await handler.apply({ user }, args); // this.user = ผู้ที่ login
     res.json({ ok: true, result: result === undefined ? null : result });
   } catch (err) {
     if (err instanceof UserError) {

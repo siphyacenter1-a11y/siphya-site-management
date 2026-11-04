@@ -76,6 +76,7 @@
   a{ color:inherit; } button{ font-family:inherit; }
   .wrap{ max-width:880px; margin:0 auto; padding:0 16px; }
   .hidden{ display:none !important; }
+  body.signer-only .tab-btn[data-tab="form"], body.signer-only #backToFormBtn, body.signer-only .hub-home-fab{ display:none !important; }
   /* ตั้งค่าผู้ลงนาม */
   .sg-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); padding:16px; margin-bottom:14px; }
   .sg-card h3{ margin:0 0 4px; font-size:15px; }
@@ -423,6 +424,7 @@
       <h3 id="sgFormTitle">เพิ่มผู้ลงนาม</h3>
       <div class="sg-note">
         ผู้ลงนามใช้ <b>บัญชี login ของตัวเอง</b> (username + รหัสผ่าน) ตอนกดลงนาม/แก้ไข — ชื่อในใบขึ้นตามบัญชีให้เอง<br>
+        บัญชี <b>ลงนามอย่างเดียว</b> (แนะนำสำหรับ GF/GE) เข้าได้แค่แดชบอร์ดเช็คลิสต์ · <b>staff</b> (เช่น ธุรการ) ใช้ได้ทุกระบบ<br>
         <b>GM/ธุรการ</b> = ลงนามช่อง 2 และแก้ไขรายการ · <b>GF/GE</b> = ลงนามช่อง 3 · <b>MASTER</b> = ทำได้ทุกอย่าง ทุกโครงการ<br>
         คนเดียวมีหลายโครงการได้ — เพิ่มทีละโครงการ หรือเลือก "ทุกโครงการ"
       </div>
@@ -440,6 +442,11 @@
         <div class="field"><label for="sgNewUser">ชื่อผู้ใช้ (ภาษาอังกฤษ)</label><input id="sgNewUser" type="text" maxlength="50" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="เช่น somchai.gm"></div>
         <div class="field"><label for="sgNewName">ชื่อ-นามสกุล (ขึ้นในใบลงนาม)</label><input id="sgNewName" type="text" maxlength="100" placeholder="เช่น สมชาย ใจดี"></div>
         <div class="field"><label for="sgNewPw">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="sgNewPw" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="sgNewType">ประเภทบัญชี</label>
+          <select id="sgNewType">
+            <option value="signer">ลงนามอย่างเดียว (เข้าได้แค่แดชบอร์ดเช็คลิสต์)</option>
+            <option value="staff">staff (ใช้ได้ทุกระบบ)</option>
+          </select></div>
       </div>
       <div class="sg-form" id="sgPinWrap" style="margin-top:10px">
         <div class="field"><label for="sgLabel">ชื่อผู้ลงนาม</label><input id="sgLabel" type="text" maxlength="100"></div>
@@ -453,10 +460,15 @@
     </div>
     <div class="sg-card hidden" id="sgAccCard">
       <h3 id="sgAccTitle">บัญชี</h3>
-      <div class="sg-note">แก้ชื่อที่ขึ้นในใบลงนาม หรือตั้งรหัสผ่านใหม่ให้ (กรณีลืมรหัส) — มีผลกับการ login ของบัญชีนี้ด้วย</div>
+      <div class="sg-note">แก้ชื่อที่ขึ้นในใบลงนาม ตั้งรหัสผ่านใหม่ให้ (กรณีลืมรหัส) หรือเปลี่ยนประเภทบัญชี — มีผลกับการ login ของบัญชีนี้ด้วย</div>
       <div class="sg-form">
         <div class="field"><label for="sgAccName">ชื่อ-นามสกุล</label><input id="sgAccName" type="text" maxlength="100"></div>
         <div class="field"><label for="sgAccPw">รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)</label><input id="sgAccPw" type="password" autocomplete="new-password"></div>
+        <div class="field" id="sgAccTypeWrap"><label for="sgAccType">ประเภทบัญชี</label>
+          <select id="sgAccType">
+            <option value="signer">ลงนามอย่างเดียว (เข้าได้แค่แดชบอร์ดเช็คลิสต์)</option>
+            <option value="staff">staff (ใช้ได้ทุกระบบ)</option>
+          </select></div>
       </div>
       <div class="sg-error" id="sgAccError"></div>
       <div class="sg-actions">
@@ -840,6 +852,7 @@
 
   /* ---------------- State ---------------- */
   var STORAGE_KEY = 'siphraya_checklist_draft_v2';
+  var SIGNER_ONLY = false;
   var state = {
     lang:'th', tab:'form', site:'', date:'', recordedBy:'',
     items:{}, signers:['', '', ''], openCats:{},
@@ -1470,7 +1483,7 @@
         if(!sg[1] || !sg[2]){
           html += '      <button type="button" class="dash-sign-btn" data-sign-submission="' + escAttr(s.id) + '">ลงนาม</button>';
         }
-        html += '      <button type="button" class="dash-view-btn" data-edit-submission="' + escAttr(s.id) + '">แก้ไข</button>';
+        if(!SIGNER_ONLY) html += '      <button type="button" class="dash-view-btn" data-edit-submission="' + escAttr(s.id) + '">แก้ไข</button>';
         html += '      <button type="button" class="dash-view-btn" data-view-submission="' + escAttr(s.id) + '">' + escHtml(t('viewPrintBtn')) + '</button>';
         html += '    </div>';
         html += '  </div>';
@@ -2187,7 +2200,21 @@
   // ชื่อผู้ใช้ที่ใส่ให้ล่วงหน้าในหน้าลงนาม/แก้ไข: คนที่ลงนามล่าสุดในเครื่องนี้ หรือบัญชีที่ login อยู่
   var ME = '';
   try{ fetch('/api/auth/me', { credentials:'same-origin' }).then(function(r){ return r.json(); })
-    .then(function(j){ if(j && j.user && j.user.username) ME = j.user.username; }).catch(function(){}); }catch(e){}
+    .then(function(j){
+      if(!(j && j.user)) return;
+      ME = j.user.username || '';
+      if(j.user.role === 'signer') enterSignerOnlyMode();
+    }).catch(function(){}); }catch(e){}
+
+  // บัญชี "ลงนามอย่างเดียว" (GF/GE): เห็นเฉพาะแดชบอร์ด — ลงนามและดู/พิมพ์ได้ กรอกหรือแก้ไขไม่ได้
+  // (server กันซ้ำอีกชั้นใน routes/gas.js และ middleware/role_guard.js)
+  function enterSignerOnlyMode(){
+    SIGNER_ONLY = true;
+    document.body.classList.add('signer-only');
+    state.tab = 'dashboard';
+    renderTabUI();
+    refreshSubmissions();
+  }
   function signerUsername(){
     var last = ''; try{ last = localStorage.getItem('checklist_signer_user') || ''; }catch(e){}
     return last || (ME === 'staff' || ME === 'admin' ? '' : ME);
@@ -2198,7 +2225,8 @@
   function $id(x){ return document.getElementById(x); }
   var sgEls = {
     tab: $id('signersTabBtn'), role: $id('sgRole'), site: $id('sgSite'), acc: $id('sgAcc'), accWrap: $id('sgAccWrap'),
-    newWrap: $id('sgNewWrap'), newUser: $id('sgNewUser'), newName: $id('sgNewName'), newPw: $id('sgNewPw'),
+    newWrap: $id('sgNewWrap'), newUser: $id('sgNewUser'), newName: $id('sgNewName'), newPw: $id('sgNewPw'), newType: $id('sgNewType'),
+    accType: $id('sgAccType'), accTypeWrap: $id('sgAccTypeWrap'),
     pinWrap: $id('sgPinWrap'), label: $id('sgLabel'), pin: $id('sgPin'), pinLabel: $id('sgPinLabel'),
     error: $id('sgError'), save: $id('sgSaveBtn'), cancel: $id('sgCancelBtn'), title: $id('sgFormTitle'), list: $id('sgList'),
     accCard: $id('sgAccCard'), accTitle: $id('sgAccTitle'), accName: $id('sgAccName'), accPw: $id('sgAccPw'),
@@ -2219,7 +2247,7 @@
     var opts = '<option value="new">➕ สร้างบัญชีใหม่</option>';
     if(sgEls.role.value === 'MASTER') opts += '<option value="pin">🔢 ใช้รหัส PIN (สำรองกรณีฉุกเฉิน)</option>';
     opts += sg.users.map(function(u){
-      return '<option value="' + u.id + '">' + escHtml(u.fullName + ' (' + u.username + ')' + (u.role === 'admin' ? ' · admin' : '')) + '</option>';
+      return '<option value="' + u.id + '">' + escHtml(u.fullName + ' (' + u.username + ')' + (u.role === 'admin' ? ' · admin' : u.role === 'signer' ? ' · ลงนามอย่างเดียว' : '')) + '</option>';
     }).join('');
     sgEls.acc.innerHTML = opts;
     if(keep && sgEls.acc.querySelector('option[value="' + keep + '"]')) sgEls.acc.value = keep;
@@ -2235,7 +2263,11 @@
     sgEls.pinWrap.classList.toggle('hidden', mode !== 'pin');
     sgEls.pinLabel.textContent = cur ? 'รหัส PIN ใหม่ (เว้นว่าง = ใช้รหัสเดิม)' : 'รหัส PIN (ตัวเลข 4–12 หลัก)';
   }
-  sgEls.role.addEventListener('change', sgSync);
+  sgEls.role.addEventListener('change', function(){
+    if(!sgEditing() && !sgEls.newType.dataset.touched) sgEls.newType.value = sgEls.role.value === 'GF' ? 'signer' : 'staff';
+    sgSync();
+  });
+  sgEls.newType.addEventListener('change', function(){ sgEls.newType.dataset.touched = '1'; });
   sgEls.acc.addEventListener('change', sgSync);
 
   function sgResetForm(){
@@ -2246,6 +2278,8 @@
     [sgEls.newUser, sgEls.newName, sgEls.newPw, sgEls.label, sgEls.pin].forEach(function(i){ i.value = ''; });
     sgEls.error.textContent = '';
     sgEls.acc.value = 'new';
+    delete sgEls.newType.dataset.touched;
+    sgEls.newType.value = sgEls.role.value === 'GF' ? 'signer' : 'staff';
     sgSync();
   }
   sgEls.cancel.addEventListener('click', sgResetForm);
@@ -2258,7 +2292,7 @@
       if(!rows.length) return;
       html += '<div class="sg-group">' + escHtml(SG_ROLE[r]) + ' (' + rows.length + ')</div>';
       rows.forEach(function(x){
-        var acct = x.kind === 'user' ? ('บัญชี ' + x.username) : (r === 'MASTER' ? 'รหัส PIN' : 'รหัส PIN แบบเก่า — ควรเปลี่ยนเป็นบัญชี');
+        var acct = x.kind === 'user' ? ('บัญชี ' + x.username + (x.userRole === 'signer' ? ' · ลงนามอย่างเดียว' : x.userRole === 'admin' ? ' · admin' : ' · staff')) : (r === 'MASTER' ? 'รหัส PIN' : 'รหัส PIN แบบเก่า — ควรเปลี่ยนเป็นบัญชี');
         html += '<div class="sg-row' + (x.active ? '' : ' off') + '">' +
           '<div class="sg-name">' + escHtml(x.name || '(ไม่มีชื่อ)') + '</div>' +
           '<span class="sg-pill">' + escHtml(sgSiteName(x.siteCode)) + '</span>' +
@@ -2309,7 +2343,7 @@
     var mode = cur ? cur.kind : (sgEls.acc.value === 'new' ? 'new' : sgEls.acc.value === 'pin' ? 'pin' : 'user');
     if(mode === 'new'){
       req.kind = 'user';
-      req.newUser = { username: sgEls.newUser.value.trim(), fullName: sgEls.newName.value.trim(), password: sgEls.newPw.value };
+      req.newUser = { username: sgEls.newUser.value.trim(), fullName: sgEls.newName.value.trim(), password: sgEls.newPw.value, accountRole: sgEls.newType.value };
       if(!/^[A-Za-z0-9._-]{3,50}$/.test(req.newUser.username)) return sgErr('ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข 3–50 ตัว (ใช้ . _ - ได้)', sgEls.newUser);
       if(!req.newUser.fullName) return sgErr('กรุณาพิมพ์ชื่อ-นามสกุล', sgEls.newName);
       if(req.newUser.password.length < 6) return sgErr('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว', sgEls.newPw);
@@ -2335,8 +2369,10 @@
     var pw = sgEls.accPw.value, nm = sgEls.accName.value.trim();
     if(!nm){ sgEls.accError.textContent = 'กรุณาพิมพ์ชื่อ-นามสกุล'; return; }
     if(pw && pw.length < 6){ sgEls.accError.textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; return; }
-    sgCall('CHECKLIST_updateSignerAccount', { userId: sg.accUserId, fullName: nm, password: pw }, sgEls.accError, function(){
-      showToast(pw ? 'บันทึกชื่อและรหัสผ่านใหม่แล้ว' : 'บันทึกชื่อแล้ว'); sgCloseAcc();
+    var req = { userId: sg.accUserId, fullName: nm, password: pw };
+    if(!sgEls.accTypeWrap.classList.contains('hidden')) req.accountRole = sgEls.accType.value;
+    sgCall('CHECKLIST_updateSignerAccount', req, sgEls.accError, function(){
+      showToast('บันทึกบัญชีแล้ว'); sgCloseAcc();
     });
   });
 
@@ -2359,6 +2395,9 @@
       sg.accUserId = x.userId;
       sgEls.accTitle.textContent = 'บัญชี ' + x.username;
       sgEls.accName.value = x.name || ''; sgEls.accPw.value = ''; sgEls.accError.textContent = '';
+      // บัญชี admin เปลี่ยนประเภท/รหัสจากหน้านี้ไม่ได้
+      sgEls.accTypeWrap.classList.toggle('hidden', x.userRole === 'admin');
+      sgEls.accType.value = x.userRole === 'signer' ? 'signer' : 'staff';
       sgEls.accCard.classList.remove('hidden');
       sgEls.accCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       sgEls.accName.focus();

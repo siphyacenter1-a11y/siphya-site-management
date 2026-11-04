@@ -381,7 +381,7 @@ async function CHECKLIST_signerList() {
   const r = await sitePool.query(
     `SELECT p.id, p.role, COALESCE(p.site_code, '') AS "siteCode", p.active,
             CASE WHEN p.user_id IS NULL THEN 'pin' ELSE 'user' END AS kind,
-            p.user_id AS "userId", COALESCE(u.username, '') AS username,
+            p.user_id AS "userId", COALESCE(u.username, '') AS username, COALESCE(u.role, '') AS "userRole",
             COALESCE(u.full_name, p.label, '') AS name,
             TO_CHAR(COALESCE(p.updated_at, p.created_at) AT TIME ZONE '${TZ}', 'DD/MM/YYYY HH24:MI') AS "updatedAt",
             COALESCE(NULLIF(p.updated_by, ''), p.created_by, '') AS "updatedBy"
@@ -394,6 +394,8 @@ async function CHECKLIST_signerList() {
 }
 
 const USERNAME_RE = /^[A-Za-z0-9._-]{3,50}$/;
+// ประเภทบัญชีที่ตั้งจากหน้านี้ได้: signer = ลงนามอย่างเดียว (เข้าได้แค่เช็คลิสต์), staff = ใช้ได้ทุกระบบ
+const ACCOUNT_ROLES = ['signer', 'staff'];
 function checkPassword(pw) {
   if (pw.length < 6) throw new UserError('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');
 }
@@ -428,14 +430,15 @@ async function CHECKLIST_saveSigner(req) {
         const uname = str(nu.username, 50);
         const fullName = str(nu.fullName, 100);
         const pw = String(nu.password || '');
+        const acctRole = ACCOUNT_ROLES.includes(nu.accountRole) ? nu.accountRole : (role === 'GF' ? 'signer' : 'staff');
         if (!USERNAME_RE.test(uname)) throw new UserError('ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข 3–50 ตัว (ใช้ . _ - ได้)');
         if (!fullName) throw new UserError('กรุณาพิมพ์ชื่อ-นามสกุล');
         checkPassword(pw);
         const dup = await client.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)', [uname]);
         if (dup.rows.length) throw new UserError(`ชื่อผู้ใช้ "${uname}" มีอยู่แล้ว — เลือกจากรายชื่อบัญชีที่มีอยู่แทน`);
         userId = (await client.query(
-          `INSERT INTO users (username, password_hash, full_name, role) VALUES ($1, $2, $3, 'staff') RETURNING id`,
-          [uname, await bcrypt.hash(pw, 10), fullName])).rows[0].id;
+          `INSERT INTO users (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id`,
+          [uname, await bcrypt.hash(pw, 10), fullName, acctRole])).rows[0].id;
       }
       if (!userId) throw new UserError('กรุณาเลือกบัญชีผู้ใช้');
       const u = await client.query('SELECT id FROM users WHERE id = $1', [userId]);
@@ -488,7 +491,7 @@ async function CHECKLIST_saveSigner(req) {
   });
 }
 
-// แก้ชื่อ-นามสกุล / ตั้งรหัสผ่านใหม่ ของบัญชีผู้ลงนาม (เฉพาะบัญชี staff — บัญชี admin แก้ที่หน้า /admin)
+// แก้ชื่อ-นามสกุล / ตั้งรหัสผ่านใหม่ / ประเภทบัญชี ของบัญชีผู้ลงนาม (บัญชี admin แก้จากหน้านี้ไม่ได้)
 async function CHECKLIST_updateSignerAccount(req) {
   requireAdmin(this);
   req = req || {};
@@ -498,12 +501,14 @@ async function CHECKLIST_updateSignerAccount(req) {
   if (u.role === 'admin') throw new UserError('บัญชี admin แก้ไขได้ที่หน้าจัดการผู้ใช้ (/admin) เท่านั้น');
   const fullName = str(req.fullName, 100);
   const pw = String(req.password || '');
-  if (!fullName && !pw) throw new UserError('ไม่มีข้อมูลที่จะแก้ไข');
+  const acctRole = ACCOUNT_ROLES.includes(req.accountRole) ? req.accountRole : null;
+  if (!fullName && !pw && !acctRole) throw new UserError('ไม่มีข้อมูลที่จะแก้ไข');
   if (pw) checkPassword(pw);
   await sitePool.query(
     `UPDATE users SET full_name = COALESCE(NULLIF($2, ''), full_name),
-            password_hash = COALESCE($3, password_hash) WHERE id = $1`,
-    [userId, fullName, pw ? await bcrypt.hash(pw, 10) : null]);
+            password_hash = COALESCE($3, password_hash), role = COALESCE($4, role) WHERE id = $1`,
+    [userId, fullName, pw ? await bcrypt.hash(pw, 10) : null, acctRole]);
+  if (acctRole) require('../middleware/role_guard').forget(userId);   // มีผลทันที
   return { ok: true };
 }
 

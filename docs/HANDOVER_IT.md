@@ -14,6 +14,8 @@
 - migration ทุกตัวเป็น SQL แบบรันซ้ำได้ (`IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`) **ไม่ลบข้อมูลเดิม**
 - ตารางเดิมของ IT ที่ถูกใช้/เพิ่มคอลัมน์: `projects`, `waste_records`, `vehicle_transport_requests`, `material_transport_logs`
 - API เดิม (`/api/transport/logs`, `/api/route/logs` ฯลฯ) ยังใช้ได้เหมือนเดิม
+- เพิ่ม role ผู้ใช้ `signer` (ลงนามเช็คลิสต์อย่างเดียว): `middleware/role_guard.js` ติดตั้งใน `server.js` ก่อน static —
+  บัญชี role อื่นไม่ได้รับผลกระทบ · admin สร้าง/เปลี่ยนประเภทบัญชีได้ที่ `/checklist` แท็บ "ผู้ลงนาม" (แก้บัญชี admin จากหน้านั้นไม่ได้)
 - ลิงก์ Export ในหน้า /admin (`/api/export/*`) เดิมเปิดได้โดยไม่ต้อง login — แก้ให้ต้อง login เป็น admin (ไม่ login → ไปหน้า login, staff → แจ้งว่าไม่มีสิทธิ์)
 
 ## ติดตั้งบน server (ตามลำดับ)

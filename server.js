@@ -14,6 +14,8 @@ app.use(express.json({ limit: '30mb' })); // ฟอร์มเช็คลิ�
 app.use(express.urlencoded({ extended: true }));
 
 // Static frontend assets
+// บัญชี "ลงนามอย่างเดียว" (GF/GE) เข้าได้เฉพาะเช็คลิสต์ — ต้องอยู่ก่อน static และ route ทั้งหมด
+app.use(require('./middleware/role_guard').roleGuard);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
