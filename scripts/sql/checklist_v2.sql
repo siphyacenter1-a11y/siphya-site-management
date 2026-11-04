@@ -69,6 +69,18 @@ ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS created_by TEXT DEFAULT '';
 ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS updated_by TEXT DEFAULT '';
 ALTER TABLE site_supervisor_checklists ADD COLUMN IF NOT EXISTS edited_by TEXT DEFAULT '';
+-- ผู้ลงนามแบบใช้บัญชี login (ตาราง users): ลงนามด้วย username + รหัสผ่านของตัวเอง ไม่ต้องมีรหัส PIN แยก
+--   user_id ว่าง = ผู้ลงนามแบบรหัส PIN (ใช้สำรอง เช่น MASTER)
+ALTER TABLE checklist_pins ADD COLUMN IF NOT EXISTS user_id INT;
+ALTER TABLE checklist_pins ALTER COLUMN pin_hash DROP NOT NULL;
+DO $$ BEGIN
+  IF to_regclass('public.users') IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM pg_constraint WHERE conname = 'checklist_pins_user_fk') THEN
+    ALTER TABLE checklist_pins ADD CONSTRAINT checklist_pins_user_fk
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS checklist_pins_user_idx ON checklist_pins (user_id);
 
 -- นับรหัสผิด (ผิดเกิน 5 ครั้ง ล็อก 15 นาที)
 CREATE TABLE IF NOT EXISTS checklist_pin_failures (

@@ -11,7 +11,8 @@
 //   CHECKLIST_getPrintPdf(req)          สร้าง PDF จาก HTML ใบพิมพ์
 //   CHECKLIST_signerList()              รายชื่อผู้ลงนาม (admin)
 //   CHECKLIST_saveSigner(req)           เพิ่ม/แก้ผู้ลงนาม เปลี่ยนรหัส เปิด/ปิด (admin)
-//   CHECKLIST_deleteSigner(id)          ลบผู้ลงนาม (admin)
+//   CHECKLIST_updateSignerAccount(req)  แก้ชื่อ/ตั้งรหัสผ่านใหม่ บัญชีผู้ลงนาม (admin)
+//   CHECKLIST_deleteSigner(id)          ลบสิทธิ์ลงนาม (admin)
 //
 // ข้อผิดพลาดที่ผู้ใช้ควรเห็น โยนเป็น UserError (ข้อความภาษาไทย)
 // ============================================================
@@ -156,19 +157,28 @@ async function lockRow(client, rowId, submittedAt) {
 // ---------- รหัสลงนาม ----------
 // slot 1 = GM/ธุรการสนาม (ใช้แก้ไขด้วย), slot 2 = GF/GE
 // ผู้ลงนามที่ใช้ได้ = บทบาทนั้นของโครงการนี้ + บทบาทนั้นแบบ "ทุกโครงการ" + MASTER (เฉพาะที่เปิดใช้)
+// แต่ละแถวเป็นได้ 2 แบบ: ผูกบัญชี login (ตรวจ username + รหัสผ่านบัญชี) หรือรหัส PIN (ไม่ต้องใส่ username)
 async function expectedPins(client, slot, siteCode) {
   const role = slot === 2 ? 'GF' : 'GM';
   const r = await client.query(
-    `SELECT id, label, pin_hash FROM checklist_pins
-      WHERE active AND (role = 'MASTER' OR (role = $1 AND (site_code IS NULL OR site_code = $2)))
-      ORDER BY (role = 'MASTER'), (site_code IS NULL), id`, [role, siteCode || '']);
+    `SELECT p.id, p.user_id, COALESCE(u.full_name, p.label) AS label, p.pin_hash,
+            u.username, u.password_hash
+       FROM checklist_pins p LEFT JOIN users u ON u.id = p.user_id
+      WHERE p.active AND (p.user_id IS NULL OR u.id IS NOT NULL)
+        AND (p.role = 'MASTER' OR (p.role = $1 AND (p.site_code IS NULL OR p.site_code = $2)))
+      ORDER BY (p.role = 'MASTER'), (p.site_code IS NULL), p.id`, [role, siteCode || '']);
   return r.rows;
 }
 
-// คืนข้อมูลผู้ลงนามที่รหัสตรง { id, label }
-async function assertPin(client, { slot, siteCode, pin, failKey, notSetMsg, wrongMsg }) {
-  const pins = await expectedPins(client, slot, siteCode);
-  if (!pins.length) throw new UserError(notSetMsg);
+// คืนข้อมูลผู้ลงนามที่ตรง { id, label }
+//   username ว่าง → pin คือรหัส PIN · มี username → pin คือรหัสผ่านบัญชี
+async function assertPin(client, { slot, siteCode, pin, username, failKey, notSetMsg, wrongMsg }) {
+  const all = await expectedPins(client, slot, siteCode);
+  if (!all.length) throw new UserError(notSetMsg);
+  const uname = str(username, 50).toLowerCase();
+  const pins = uname
+    ? all.filter(p => p.user_id && String(p.username || '').toLowerCase() === uname)
+    : all.filter(p => !p.user_id && p.pin_hash);
 
   const f = (await client.query(
     `SELECT fails, locked_until > NOW() AS locked,
@@ -182,7 +192,8 @@ async function assertPin(client, { slot, siteCode, pin, failKey, notSetMsg, wron
   let match = null;
   if (given) {
     for (const p of pins) {
-      if (await bcrypt.compare(given, p.pin_hash)) { match = { id: p.id, label: str(p.label, 100) }; break; }
+      const hash = p.user_id ? p.password_hash : p.pin_hash;
+      if (hash && await bcrypt.compare(given, hash)) { match = { id: p.id, label: str(p.label, 100) }; break; }
     }
   }
   if (!match) {
@@ -201,13 +212,13 @@ async function assertPin(client, { slot, siteCode, pin, failKey, notSetMsg, wron
   return match;
 }
 
-function assertEditPin(client, site, pin) {
+function assertEditPin(client, site, pin, username) {
   const siteCode = siteCodeOf(site);
   return assertPin(client, {
-    slot: 1, siteCode, pin,
+    slot: 1, siteCode, pin, username,
     failKey: 'edit_' + siteCode,
     notSetMsg: 'ยังไม่ได้ตั้งรหัสสำหรับโครงการนี้ กรุณาติดต่อผู้ดูแลระบบ',
-    wrongMsg: 'รหัสไม่ถูกต้อง'
+    wrongMsg: username ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขโครงการนี้' : 'รหัสไม่ถูกต้อง'
   });
 }
 
@@ -291,10 +302,10 @@ async function CHECKLIST_signSubmission(req) {
     // อ่านโครงการจาก database เสมอ (ไม่เชื่อค่าจากหน้าเว็บ)
     const siteCode = siteCodeOf(row.site_name);
     const who = await assertPin(client, {
-      slot: req.slot, siteCode, pin: req.pin,
+      slot: req.slot, siteCode, pin: req.pin, username: req.username,
       failKey: 'sign' + req.slot + (req.slot === 1 ? '_' + siteCode : ''),
       notSetMsg: 'ยังไม่ได้ตั้งรหัสลงนามสำหรับโครงการนี้ กรุณาติดต่อผู้ดูแลระบบ',
-      wrongMsg: 'รหัสลงนามไม่ถูกต้อง'
+      wrongMsg: str(req.username) ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่มีสิทธิ์ลงนามช่องนี้ของโครงการนี้' : 'รหัสลงนามไม่ถูกต้อง'
     });
     // รหัสเป็นของใคร ใช้ชื่อคนนั้น (พิมพ์ชื่ออื่นแทนไม่ได้)
     if (who.label) name = who.label;
@@ -314,7 +325,7 @@ async function CHECKLIST_checkEditPin(req) {
   let who;
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
-    who = await assertEditPin(client, row.site_name, req.pin);
+    who = await assertEditPin(client, row.site_name, req.pin, req.username);
   });
   return { ok: true, name: who.label };
 }
@@ -325,7 +336,7 @@ async function CHECKLIST_updateSubmission(req) {
 
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
-    const who = await assertEditPin(client, row.site_name, req.pin);
+    const who = await assertEditPin(client, row.site_name, req.pin, req.username);
 
     const payload = req.payload;
     payload.site = row.site_name; // ล็อกโครงการเดิม ห้ามเปลี่ยน
@@ -368,16 +379,28 @@ const SIGNER_ROLES = ['GM', 'GF', 'MASTER'];
 async function CHECKLIST_signerList() {
   requireAdmin(this);
   const r = await sitePool.query(
-    `SELECT id, role, COALESCE(site_code, '') AS "siteCode", COALESCE(label, '') AS label, active,
-            TO_CHAR(COALESCE(updated_at, created_at) AT TIME ZONE '${TZ}', 'DD/MM/YYYY HH24:MI') AS "updatedAt",
-            COALESCE(NULLIF(updated_by, ''), created_by, '') AS "updatedBy"
-       FROM checklist_pins
-      ORDER BY CASE role WHEN 'GM' THEN 1 WHEN 'GF' THEN 2 ELSE 3 END, site_code NULLS FIRST, label, id`);
-  return r.rows;
+    `SELECT p.id, p.role, COALESCE(p.site_code, '') AS "siteCode", p.active,
+            CASE WHEN p.user_id IS NULL THEN 'pin' ELSE 'user' END AS kind,
+            p.user_id AS "userId", COALESCE(u.username, '') AS username,
+            COALESCE(u.full_name, p.label, '') AS name,
+            TO_CHAR(COALESCE(p.updated_at, p.created_at) AT TIME ZONE '${TZ}', 'DD/MM/YYYY HH24:MI') AS "updatedAt",
+            COALESCE(NULLIF(p.updated_by, ''), p.created_by, '') AS "updatedBy"
+       FROM checklist_pins p LEFT JOIN users u ON u.id = p.user_id
+      WHERE p.user_id IS NULL OR u.id IS NOT NULL
+      ORDER BY CASE p.role WHEN 'GM' THEN 1 WHEN 'GF' THEN 2 ELSE 3 END, p.site_code NULLS FIRST, name, p.id`);
+  const users = await sitePool.query(
+    `SELECT id, username, full_name AS "fullName", role FROM users ORDER BY full_name, username`);
+  return { signers: r.rows, users: users.rows };
 }
 
-// req = { id?, role, siteCode, label, pin?, active }
-//   เพิ่มใหม่ต้องมีรหัส · แก้ไขไม่ใส่รหัส = ใช้รหัสเดิม
+const USERNAME_RE = /^[A-Za-z0-9._-]{3,50}$/;
+function checkPassword(pw) {
+  if (pw.length < 6) throw new UserError('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');
+}
+
+// req = { id?, kind: 'user'|'pin', role, siteCode, active,
+//         kind=user: userId  หรือ newUser { username, fullName, password } (สร้างบัญชีใหม่ role staff)
+//         kind=pin:  label, pin? (เพิ่มใหม่ต้องมี · แก้ไขไม่ใส่ = ใช้รหัสเดิม) — เพิ่มใหม่ได้เฉพาะ MASTER }
 async function CHECKLIST_saveSigner(req) {
   requireAdmin(this);
   req = req || {};
@@ -385,25 +408,65 @@ async function CHECKLIST_saveSigner(req) {
   const id = req.id ? Number(req.id) : null;
   const role = str(req.role, 10).toUpperCase();
   if (!SIGNER_ROLES.includes(role)) throw new UserError('กรุณาเลือกบทบาท');
-  const label = str(req.label, 100);
-  if (!label) throw new UserError('กรุณาพิมพ์ชื่อผู้ลงนาม');
-  let site = role === 'MASTER' ? '' : str(req.siteCode, 10).toUpperCase();
+  const site = role === 'MASTER' ? '' : str(req.siteCode, 10).toUpperCase();
   if (site && !/^[A-Z0-9]{2,10}$/.test(site)) throw new UserError('รหัสโครงการไม่ถูกต้อง');
-  const pin = str(req.pin, 50);
-  if (!id && !pin) throw new UserError('กรุณาตั้งรหัสลงนาม');
-  if (pin && !/^\d{4,12}$/.test(pin)) throw new UserError('รหัสลงนามต้องเป็นตัวเลข 4–12 หลัก');
   const active = req.active !== false;
 
   return withTx(async client => {
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['checklist_pins']);
+    let cur = null;
     if (id) {
-      const ex = await client.query('SELECT id FROM checklist_pins WHERE id = $1', [id]);
-      if (!ex.rows.length) throw new UserError('ไม่พบผู้ลงนามนี้ (อาจถูกลบไปแล้ว) กรุณาโหลดใหม่');
+      cur = (await client.query('SELECT id, user_id FROM checklist_pins WHERE id = $1', [id])).rows[0];
+      if (!cur) throw new UserError('ไม่พบผู้ลงนามนี้ (อาจถูกลบไปแล้ว) กรุณาโหลดใหม่');
     }
-    // รหัสต้องไม่ซ้ำกับคนอื่น ไม่อย่างนั้นระบบบอกไม่ได้ว่าใครลงนาม
+    const kind = cur ? (cur.user_id ? 'user' : 'pin') : (req.kind === 'pin' ? 'pin' : 'user');
+
+    if (kind === 'user') {
+      let userId = cur ? cur.user_id : Number(req.userId) || null;
+      if (!cur && req.newUser) {
+        const nu = req.newUser;
+        const uname = str(nu.username, 50);
+        const fullName = str(nu.fullName, 100);
+        const pw = String(nu.password || '');
+        if (!USERNAME_RE.test(uname)) throw new UserError('ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข 3–50 ตัว (ใช้ . _ - ได้)');
+        if (!fullName) throw new UserError('กรุณาพิมพ์ชื่อ-นามสกุล');
+        checkPassword(pw);
+        const dup = await client.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)', [uname]);
+        if (dup.rows.length) throw new UserError(`ชื่อผู้ใช้ "${uname}" มีอยู่แล้ว — เลือกจากรายชื่อบัญชีที่มีอยู่แทน`);
+        userId = (await client.query(
+          `INSERT INTO users (username, password_hash, full_name, role) VALUES ($1, $2, $3, 'staff') RETURNING id`,
+          [uname, await bcrypt.hash(pw, 10), fullName])).rows[0].id;
+      }
+      if (!userId) throw new UserError('กรุณาเลือกบัญชีผู้ใช้');
+      const u = await client.query('SELECT id FROM users WHERE id = $1', [userId]);
+      if (!u.rows.length) throw new UserError('ไม่พบบัญชีผู้ใช้นี้');
+      const dup = await client.query(
+        `SELECT 1 FROM checklist_pins WHERE user_id = $1 AND role = $2 AND COALESCE(site_code, '') = $3 AND id <> $4`,
+        [userId, role, site, id || 0]);
+      if (dup.rows.length) throw new UserError('บัญชีนี้มีสิทธิ์บทบาทนี้ในโครงการนี้อยู่แล้ว');
+      if (id) {
+        await client.query(
+          `UPDATE checklist_pins SET role = $2, site_code = NULLIF($3, ''), active = $4, updated_at = NOW(), updated_by = $5
+            WHERE id = $1`, [id, role, site, active, by]);
+        return { ok: true, id };
+      }
+      const r = await client.query(
+        `INSERT INTO checklist_pins (role, site_code, label, pin_hash, active, created_by, user_id)
+         VALUES ($1, NULLIF($2, ''), '', NULL, $3, $4, $5) RETURNING id`, [role, site, active, by, userId]);
+      return { ok: true, id: r.rows[0].id, userId };
+    }
+
+    // แบบรหัส PIN
+    if (!cur && role !== 'MASTER') throw new UserError('รหัส PIN แยกใช้ได้เฉพาะ MASTER — GM/GF ให้ใช้บัญชีผู้ใช้');
+    const label = str(req.label, 100);
+    if (!label) throw new UserError('กรุณาพิมพ์ชื่อผู้ลงนาม');
+    const pin = str(req.pin, 50);
+    if (!id && !pin) throw new UserError('กรุณาตั้งรหัส PIN');
+    if (pin && !/^\d{4,12}$/.test(pin)) throw new UserError('รหัส PIN ต้องเป็นตัวเลข 4–12 หลัก');
     if (pin) {
       const others = (await client.query(
-        'SELECT label, pin_hash FROM checklist_pins WHERE active AND id <> $1', [id || 0])).rows;
+        'SELECT label, pin_hash FROM checklist_pins WHERE active AND user_id IS NULL AND pin_hash IS NOT NULL AND id <> $1',
+        [id || 0])).rows;
       for (const o of others) {
         if (await bcrypt.compare(pin, o.pin_hash)) {
           throw new UserError(`รหัสนี้ซ้ำกับของ "${o.label || 'ผู้ลงนามอื่น'}" กรุณาตั้งรหัสอื่น`);
@@ -425,6 +488,26 @@ async function CHECKLIST_saveSigner(req) {
   });
 }
 
+// แก้ชื่อ-นามสกุล / ตั้งรหัสผ่านใหม่ ของบัญชีผู้ลงนาม (เฉพาะบัญชี staff — บัญชี admin แก้ที่หน้า /admin)
+async function CHECKLIST_updateSignerAccount(req) {
+  requireAdmin(this);
+  req = req || {};
+  const userId = Number(req.userId) || 0;
+  const u = (await sitePool.query('SELECT id, role FROM users WHERE id = $1', [userId])).rows[0];
+  if (!u) throw new UserError('ไม่พบบัญชีผู้ใช้นี้');
+  if (u.role === 'admin') throw new UserError('บัญชี admin แก้ไขได้ที่หน้าจัดการผู้ใช้ (/admin) เท่านั้น');
+  const fullName = str(req.fullName, 100);
+  const pw = String(req.password || '');
+  if (!fullName && !pw) throw new UserError('ไม่มีข้อมูลที่จะแก้ไข');
+  if (pw) checkPassword(pw);
+  await sitePool.query(
+    `UPDATE users SET full_name = COALESCE(NULLIF($2, ''), full_name),
+            password_hash = COALESCE($3, password_hash) WHERE id = $1`,
+    [userId, fullName, pw ? await bcrypt.hash(pw, 10) : null]);
+  return { ok: true };
+}
+
+// ลบสิทธิ์ลงนาม (บัญชีผู้ใช้ยังอยู่ ลบบัญชีได้ที่หน้า /admin)
 async function CHECKLIST_deleteSigner(id) {
   requireAdmin(this);
   const r = await sitePool.query('DELETE FROM checklist_pins WHERE id = $1', [Number(id) || 0]);
@@ -565,6 +648,7 @@ module.exports = {
     CHECKLIST_getPrintPdf,
     CHECKLIST_signerList,
     CHECKLIST_saveSigner,
+    CHECKLIST_updateSignerAccount,
     CHECKLIST_deleteSigner
   }
 };

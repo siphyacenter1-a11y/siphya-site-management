@@ -422,9 +422,9 @@
     <div class="sg-card">
       <h3 id="sgFormTitle">เพิ่มผู้ลงนาม</h3>
       <div class="sg-note">
-        แต่ละคนมีรหัสของตัวเอง — ลงนามด้วยรหัสของใคร ระบบใส่ชื่อคนนั้นให้อัตโนมัติ (พิมพ์ชื่อคนอื่นแทนไม่ได้)<br>
+        ผู้ลงนามใช้ <b>บัญชี login ของตัวเอง</b> (username + รหัสผ่าน) ตอนกดลงนาม/แก้ไข — ชื่อในใบขึ้นตามบัญชีให้เอง<br>
         <b>GM/ธุรการ</b> = ลงนามช่อง 2 และแก้ไขรายการ · <b>GF/GE</b> = ลงนามช่อง 3 · <b>MASTER</b> = ทำได้ทุกอย่าง ทุกโครงการ<br>
-        เลือก "ทุกโครงการ" = ใช้ได้กับทุกโครงการ · รหัสต้องเป็นตัวเลข 4–12 หลัก และห้ามซ้ำกับคนอื่น
+        คนเดียวมีหลายโครงการได้ — เพิ่มทีละโครงการ หรือเลือก "ทุกโครงการ"
       </div>
       <div class="sg-form">
         <div class="field"><label for="sgRole">บทบาท</label>
@@ -434,8 +434,16 @@
             <option value="MASTER">MASTER (ทุกช่อง ทุกโครงการ)</option>
           </select></div>
         <div class="field"><label for="sgSite">โครงการ</label><select id="sgSite"></select></div>
-        <div class="field"><label for="sgLabel">ชื่อผู้ลงนาม</label><input id="sgLabel" type="text" maxlength="100" placeholder="เช่น สมชาย ใจดี"></div>
-        <div class="field"><label for="sgPin" id="sgPinLabel">รหัสลงนาม</label><input id="sgPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12"></div>
+        <div class="field" id="sgAccWrap"><label for="sgAcc">บัญชีผู้ใช้</label><select id="sgAcc"></select></div>
+      </div>
+      <div class="sg-form" id="sgNewWrap" style="margin-top:10px">
+        <div class="field"><label for="sgNewUser">ชื่อผู้ใช้ (ภาษาอังกฤษ)</label><input id="sgNewUser" type="text" maxlength="50" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="เช่น somchai.gm"></div>
+        <div class="field"><label for="sgNewName">ชื่อ-นามสกุล (ขึ้นในใบลงนาม)</label><input id="sgNewName" type="text" maxlength="100" placeholder="เช่น สมชาย ใจดี"></div>
+        <div class="field"><label for="sgNewPw">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="sgNewPw" type="password" autocomplete="new-password"></div>
+      </div>
+      <div class="sg-form" id="sgPinWrap" style="margin-top:10px">
+        <div class="field"><label for="sgLabel">ชื่อผู้ลงนาม</label><input id="sgLabel" type="text" maxlength="100"></div>
+        <div class="field"><label for="sgPin" id="sgPinLabel">รหัส PIN (ตัวเลข 4–12 หลัก)</label><input id="sgPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12"></div>
       </div>
       <div class="sg-error" id="sgError"></div>
       <div class="sg-actions">
@@ -443,9 +451,22 @@
         <button type="button" class="btn btn-outline hidden" id="sgCancelBtn">ยกเลิกการแก้ไข</button>
       </div>
     </div>
+    <div class="sg-card hidden" id="sgAccCard">
+      <h3 id="sgAccTitle">บัญชี</h3>
+      <div class="sg-note">แก้ชื่อที่ขึ้นในใบลงนาม หรือตั้งรหัสผ่านใหม่ให้ (กรณีลืมรหัส) — มีผลกับการ login ของบัญชีนี้ด้วย</div>
+      <div class="sg-form">
+        <div class="field"><label for="sgAccName">ชื่อ-นามสกุล</label><input id="sgAccName" type="text" maxlength="100"></div>
+        <div class="field"><label for="sgAccPw">รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)</label><input id="sgAccPw" type="password" autocomplete="new-password"></div>
+      </div>
+      <div class="sg-error" id="sgAccError"></div>
+      <div class="sg-actions">
+        <button type="button" class="btn btn-primary" id="sgAccSaveBtn"><span>บันทึกบัญชี</span></button>
+        <button type="button" class="btn btn-outline" id="sgAccCancelBtn">ปิด</button>
+      </div>
+    </div>
     <div class="sg-card">
       <h3>รายชื่อผู้ลงนาม</h3>
-      <div id="sgList" class="sg-note">กำลังโหลด…</div>
+      <div id="sgList">กำลังโหลด…</div>
     </div>
   </div>
 
@@ -503,13 +524,14 @@
       <select id="signRole"></select>
     </div>
     <div class="field">
-      <label for="signName">ชื่อผู้ลงนาม <span style="font-weight:400">(ระบบใส่ชื่อตามรหัสให้เอง ไม่ต้องพิมพ์)</span></label>
-      <input id="signName" type="text" maxlength="100" autocomplete="name">
+      <label for="signName">ชื่อผู้ใช้ (username)</label>
+      <input id="signName" type="text" maxlength="50" autocomplete="username" autocapitalize="none" spellcheck="false">
     </div>
     <div class="field">
-      <label for="signPin">รหัสลงนาม</label>
-      <input id="signPin" type="password" inputmode="numeric" autocomplete="off">
+      <label for="signPin">รหัสผ่าน</label>
+      <input id="signPin" type="password" autocomplete="current-password">
     </div>
+    <div class="modal-sub">ใช้บัญชีเดียวกับที่ login เข้าระบบ · ชื่อผู้ลงนามขึ้นตามบัญชีให้เอง<br>MASTER แบบรหัส PIN: เว้นชื่อผู้ใช้ว่าง แล้วใส่ PIN</div>
     <div class="modal-error" id="signError"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" id="signCancelBtn">ยกเลิก</button>
@@ -523,8 +545,12 @@
     <div class="modal-sub" id="editModalSub"></div>
     <div class="modal-issues" id="editModalNote"></div>
     <div class="field">
-      <label for="editPin">รหัสแก้ไข</label>
-      <input id="editPin" type="password" inputmode="numeric" autocomplete="off">
+      <label for="editUser">ชื่อผู้ใช้ (username)</label>
+      <input id="editUser" type="text" maxlength="50" autocomplete="username" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="editPin">รหัสผ่าน</label>
+      <input id="editPin" type="password" autocomplete="current-password">
     </div>
     <div class="modal-error" id="editError"></div>
     <div class="modal-actions">
@@ -1581,12 +1607,12 @@
     if(!sg[1]) opts += '<option value="1">' + escHtml(t('sign2')) + '</option>';
     if(!sg[2]) opts += '<option value="2">' + escHtml(t('sign3')) + '</option>';
     signEls.role.innerHTML = opts;
-    signEls.name.value = '';
+    signEls.name.value = signerUsername();
     signEls.pin.value = '';
     signEls.error.textContent = '';
     setSignBusy(false);
     signEls.modal.classList.remove('hidden');
-    setTimeout(function(){ signEls.pin.focus(); }, 50);
+    setTimeout(function(){ (signEls.name.value ? signEls.pin : signEls.name).focus(); }, 50);
   }
   function closeSignModal(){ signEls.modal.classList.add('hidden'); signTarget = null; }
   function setSignBusy(b){
@@ -1604,13 +1630,14 @@
   signEls.confirm.addEventListener('click', function(){
     if(!signTarget) return;
     var name = signEls.name.value.trim();
-    if(!signEls.pin.value){ signEls.error.textContent = 'กรุณาใส่รหัสลงนาม'; signEls.pin.focus(); return; }
+    if(!signEls.pin.value){ signEls.error.textContent = 'กรุณาใส่รหัสผ่าน'; signEls.pin.focus(); return; }
     if(!gasReady){ signEls.error.textContent = t('submitError'); return; }
     signEls.error.textContent = '';
     setSignBusy(true);
     google.script.run
       .withSuccessHandler(function(){
         setSignBusy(false);
+        rememberSigner(name);
         closeSignModal();
         showToast('ลงนามเรียบร้อยแล้ว');
         refreshSubmissions();
@@ -1624,7 +1651,7 @@
         rowId: signTarget.id,
         submittedAt: signTarget.submittedAt,
         slot: parseInt(signEls.role.value, 10),
-        name: name,
+        username: name,
         pin: signEls.pin.value
       });
   });
@@ -1848,6 +1875,7 @@
           rowId: editCtx.id,
           submittedAt: editCtx.submittedAt,
           pin: editCtx.pin,
+          username: editCtx.username,
           payload: payload
         });
       return;
@@ -1879,6 +1907,7 @@
     sub: document.getElementById('editModalSub'),
     note: document.getElementById('editModalNote'),
     pin: document.getElementById('editPin'),
+    user: document.getElementById('editUser'),
     error: document.getElementById('editError'),
     cancel: document.getElementById('editCancelBtn'),
     confirm: document.getElementById('editConfirmBtn')
@@ -1894,12 +1923,13 @@
       escHtml(t('colRecordedBy')) + ': ' + escHtml(sub.recordedBy || t('noRecorder'));
     editEls.note.innerHTML = (sg[1] || sg[2])
       ? '⚠️ รายการนี้ลงนาม GM/GF แล้ว เมื่อบันทึกการแก้ไข ลายเซ็น GM/GF จะถูกล้างและต้องลงนามใหม่'
-      : 'ใส่รหัสธุรการของไซต์นี้เพื่อแก้ไขข้อมูล';
+      : 'ใช้บัญชี GM/ธุรการ ของโครงการนี้ (หรือ MASTER) เพื่อแก้ไขข้อมูล — MASTER แบบรหัส PIN: เว้นชื่อผู้ใช้ว่าง';
+    editEls.user.value = signerUsername();
     editEls.pin.value = '';
     editEls.error.textContent = '';
     setEditBusy(false);
     editEls.modal.classList.remove('hidden');
-    setTimeout(function(){ editEls.pin.focus(); }, 50);
+    setTimeout(function(){ (editEls.user.value ? editEls.pin : editEls.user).focus(); }, 50);
   }
   function closeEditModal(){ editEls.modal.classList.add('hidden'); editTarget = null; }
   function setEditBusy(b){
@@ -1917,7 +1947,8 @@
   editEls.confirm.addEventListener('click', function(){
     if(!editTarget) return;
     var pin = editEls.pin.value;
-    if(!pin){ editEls.error.textContent = 'กรุณาใส่รหัส'; editEls.pin.focus(); return; }
+    var uname = editEls.user.value.trim();
+    if(!pin){ editEls.error.textContent = 'กรุณาใส่รหัสผ่าน'; editEls.pin.focus(); return; }
     if(!gasReady){ editEls.error.textContent = t('submitError'); return; }
     var sub = editTarget;
     editEls.error.textContent = '';
@@ -1925,24 +1956,25 @@
     google.script.run
       .withSuccessHandler(function(){
         setEditBusy(false);
+        rememberSigner(uname);
         closeEditModal();
-        enterEditMode(sub, pin);
+        enterEditMode(sub, pin, uname);
       })
       .withFailureHandler(function(err){
         setEditBusy(false);
         editEls.error.textContent = (err && err.message) ? err.message : t('submitError');
         editEls.pin.value = '';
       })
-      .CHECKLIST_checkEditPin({ rowId: sub.id, submittedAt: sub.submittedAt, pin: pin });
+      .CHECKLIST_checkEditPin({ rowId: sub.id, submittedAt: sub.submittedAt, pin: pin, username: uname });
   });
 
-  function enterEditMode(sub, pin){
+  function enterEditMode(sub, pin, uname){
     // พักร่างเดิมไว้ คืนให้เมื่อออกจากโหมดแก้ไข
     var backup = editCtx ? editCtx.backup : JSON.parse(JSON.stringify({
       site: state.site, date: state.date, recordedBy: state.recordedBy,
       signers: state.signers, items: state.items
     }));
-    editCtx = { id: sub.id, submittedAt: sub.submittedAt, site: sub.site, lang: sub.lang, pin: pin, backup: backup };
+    editCtx = { id: sub.id, submittedAt: sub.submittedAt, site: sub.site, lang: sub.lang, pin: pin, username: uname || '', backup: backup };
     state.site = sub.site || '';
     state.date = sub.date || '';
     state.recordedBy = sub.recordedBy || '';
@@ -2152,14 +2184,25 @@
   renderAll();
 
   /* ---------------- ตั้งค่าผู้ลงนาม (admin) ---------------- */
-  var sg = { list: [], editId: null };
+  // ชื่อผู้ใช้ที่ใส่ให้ล่วงหน้าในหน้าลงนาม/แก้ไข: คนที่ลงนามล่าสุดในเครื่องนี้ หรือบัญชีที่ login อยู่
+  var ME = '';
+  try{ fetch('/api/auth/me', { credentials:'same-origin' }).then(function(r){ return r.json(); })
+    .then(function(j){ if(j && j.user && j.user.username) ME = j.user.username; }).catch(function(){}); }catch(e){}
+  function signerUsername(){
+    var last = ''; try{ last = localStorage.getItem('checklist_signer_user') || ''; }catch(e){}
+    return last || (ME === 'staff' || ME === 'admin' ? '' : ME);
+  }
+  function rememberSigner(u){ try{ if(u) localStorage.setItem('checklist_signer_user', u); }catch(e){} }
+
+  var sg = { list: [], users: [], editId: null, accUserId: null };
+  function $id(x){ return document.getElementById(x); }
   var sgEls = {
-    tab: document.getElementById('signersTabBtn'),
-    role: document.getElementById('sgRole'), site: document.getElementById('sgSite'),
-    label: document.getElementById('sgLabel'), pin: document.getElementById('sgPin'),
-    pinLabel: document.getElementById('sgPinLabel'), error: document.getElementById('sgError'),
-    save: document.getElementById('sgSaveBtn'), cancel: document.getElementById('sgCancelBtn'),
-    title: document.getElementById('sgFormTitle'), list: document.getElementById('sgList')
+    tab: $id('signersTabBtn'), role: $id('sgRole'), site: $id('sgSite'), acc: $id('sgAcc'), accWrap: $id('sgAccWrap'),
+    newWrap: $id('sgNewWrap'), newUser: $id('sgNewUser'), newName: $id('sgNewName'), newPw: $id('sgNewPw'),
+    pinWrap: $id('sgPinWrap'), label: $id('sgLabel'), pin: $id('sgPin'), pinLabel: $id('sgPinLabel'),
+    error: $id('sgError'), save: $id('sgSaveBtn'), cancel: $id('sgCancelBtn'), title: $id('sgFormTitle'), list: $id('sgList'),
+    accCard: $id('sgAccCard'), accTitle: $id('sgAccTitle'), accName: $id('sgAccName'), accPw: $id('sgAccPw'),
+    accError: $id('sgAccError'), accSave: $id('sgAccSaveBtn'), accCancel: $id('sgAccCancelBtn')
   };
   var SG_ROLE = { GM:'GM / ธุรการสนาม', GF:'GF / GE', MASTER:'MASTER' };
   sgEls.site.innerHTML = '<option value="">ทุกโครงการ</option>' + PROJECTS.map(function(p){
@@ -2170,39 +2213,61 @@
     var p = PROJECTS.find(function(x){ return x.code === code; });
     return p ? (p.code + ' ' + p.name) : code;
   }
-  function sgSyncRole(){
-    var m = sgEls.role.value === 'MASTER';
-    sgEls.site.disabled = m;
-    if(m) sgEls.site.value = '';
+  function sgEditing(){ return sg.editId ? sg.list.find(function(x){ return x.id === sg.editId; }) : null; }
+  function sgFillAccounts(){
+    var keep = sgEls.acc.value;
+    var opts = '<option value="new">➕ สร้างบัญชีใหม่</option>';
+    if(sgEls.role.value === 'MASTER') opts += '<option value="pin">🔢 ใช้รหัส PIN (สำรองกรณีฉุกเฉิน)</option>';
+    opts += sg.users.map(function(u){
+      return '<option value="' + u.id + '">' + escHtml(u.fullName + ' (' + u.username + ')' + (u.role === 'admin' ? ' · admin' : '')) + '</option>';
+    }).join('');
+    sgEls.acc.innerHTML = opts;
+    if(keep && sgEls.acc.querySelector('option[value="' + keep + '"]')) sgEls.acc.value = keep;
   }
-  sgEls.role.addEventListener('change', sgSyncRole);
+  function sgSync(){
+    var cur = sgEditing();
+    var m = sgEls.role.value === 'MASTER';
+    sgEls.site.disabled = m; if(m) sgEls.site.value = '';
+    if(!cur) sgFillAccounts();
+    var mode = cur ? cur.kind : (sgEls.acc.value === 'new' ? 'new' : sgEls.acc.value === 'pin' ? 'pin' : 'user');
+    sgEls.accWrap.classList.toggle('hidden', !!cur);
+    sgEls.newWrap.classList.toggle('hidden', mode !== 'new');
+    sgEls.pinWrap.classList.toggle('hidden', mode !== 'pin');
+    sgEls.pinLabel.textContent = cur ? 'รหัส PIN ใหม่ (เว้นว่าง = ใช้รหัสเดิม)' : 'รหัส PIN (ตัวเลข 4–12 หลัก)';
+  }
+  sgEls.role.addEventListener('change', sgSync);
+  sgEls.acc.addEventListener('change', sgSync);
 
   function sgResetForm(){
     sg.editId = null;
     sgEls.title.textContent = 'เพิ่มผู้ลงนาม';
     sgEls.save.querySelector('span').textContent = 'เพิ่มผู้ลงนาม';
     sgEls.cancel.classList.add('hidden');
-    sgEls.pinLabel.textContent = 'รหัสลงนาม';
-    sgEls.label.value = ''; sgEls.pin.value = ''; sgEls.error.textContent = '';
-    sgSyncRole();
+    [sgEls.newUser, sgEls.newName, sgEls.newPw, sgEls.label, sgEls.pin].forEach(function(i){ i.value = ''; });
+    sgEls.error.textContent = '';
+    sgEls.acc.value = 'new';
+    sgSync();
   }
   sgEls.cancel.addEventListener('click', sgResetForm);
 
   function renderSigners(){
-    if(!sg.list.length){ sgEls.list.innerHTML = 'ยังไม่มีผู้ลงนาม — เพิ่มด้านบน'; return; }
+    if(!sg.list.length){ sgEls.list.innerHTML = '<div class="sg-note">ยังไม่มีผู้ลงนาม — เพิ่มด้านบน</div>'; return; }
     var html = '';
     ['GM','GF','MASTER'].forEach(function(r){
       var rows = sg.list.filter(function(x){ return x.role === r; });
       if(!rows.length) return;
       html += '<div class="sg-group">' + escHtml(SG_ROLE[r]) + ' (' + rows.length + ')</div>';
       rows.forEach(function(x){
+        var acct = x.kind === 'user' ? ('บัญชี ' + x.username) : (r === 'MASTER' ? 'รหัส PIN' : 'รหัส PIN แบบเก่า — ควรเปลี่ยนเป็นบัญชี');
         html += '<div class="sg-row' + (x.active ? '' : ' off') + '">' +
-          '<div class="sg-name">' + escHtml(x.label || '(ไม่มีชื่อ — กดแก้ไขเพื่อใส่ชื่อ)') + '</div>' +
+          '<div class="sg-name">' + escHtml(x.name || '(ไม่มีชื่อ)') + '</div>' +
           '<span class="sg-pill">' + escHtml(sgSiteName(x.siteCode)) + '</span>' +
+          '<span class="sg-pill">' + escHtml(acct) + '</span>' +
           (x.active ? '' : '<span class="sg-pill">ปิดใช้</span>') +
           '<div class="sg-meta">แก้ไขล่าสุด ' + escHtml(x.updatedAt || '-') + (x.updatedBy ? ' โดย ' + escHtml(x.updatedBy) : '') + '</div>' +
           '<div class="sg-row-btns">' +
-            '<button type="button" data-sg-edit="' + x.id + '">แก้ไข / เปลี่ยนรหัส</button>' +
+            '<button type="button" data-sg-edit="' + x.id + '">แก้ไขสิทธิ์</button>' +
+            (x.kind === 'user' ? '<button type="button" data-sg-acc="' + x.id + '">ชื่อ / รหัสผ่าน</button>' : '') +
             '<button type="button" data-sg-toggle="' + x.id + '">' + (x.active ? 'ปิดใช้' : 'เปิดใช้') + '</button>' +
             '<button type="button" class="danger" data-sg-del="' + x.id + '">ลบ</button>' +
           '</div></div>';
@@ -2214,7 +2279,12 @@
   function loadSigners(){
     if(!gasReady) return;
     google.script.run
-      .withSuccessHandler(function(rows){ sg.list = rows || []; sgEls.tab.classList.remove('hidden'); renderSigners(); })
+      .withSuccessHandler(function(r){
+        sg.list = (r && r.signers) || []; sg.users = (r && r.users) || [];
+        sgEls.tab.classList.remove('hidden');
+        if(!sgEditing()) sgFillAccounts();
+        sgSync(); renderSigners();
+      })
       .withFailureHandler(function(){
         sgEls.tab.classList.add('hidden');
         if(state.tab === 'signers'){ state.tab = 'form'; renderTabUI(); }
@@ -2222,57 +2292,83 @@
       .CHECKLIST_signerList();
   }
 
-  function sgCall(fn, arg, done){
-    sgEls.error.textContent = '';
+  function sgCall(fn, arg, errEl, done){
+    errEl.textContent = '';
     google.script.run
       .withSuccessHandler(function(r){ done && done(r); loadSigners(); })
       .withFailureHandler(function(err){
         var m = (err && err.message) ? err.message : 'บันทึกไม่สำเร็จ';
-        sgEls.error.textContent = m; showToast(m);
+        errEl.textContent = m; showToast(m);
       })[fn](arg);
   }
+  function sgErr(msg, el){ sgEls.error.textContent = msg; if(el) el.focus(); }
 
   sgEls.save.addEventListener('click', function(){
-    var req = { id: sg.editId, role: sgEls.role.value, siteCode: sgEls.site.value,
-      label: sgEls.label.value.trim(), pin: sgEls.pin.value.trim() };
-    if(!req.label){ sgEls.error.textContent = 'กรุณาพิมพ์ชื่อผู้ลงนาม'; sgEls.label.focus(); return; }
-    if(!req.id && !req.pin){ sgEls.error.textContent = 'กรุณาตั้งรหัสลงนาม'; sgEls.pin.focus(); return; }
-    if(req.pin && !/^\d{4,12}$/.test(req.pin)){ sgEls.error.textContent = 'รหัสลงนามต้องเป็นตัวเลข 4–12 หลัก'; sgEls.pin.focus(); return; }
-    if(req.id){
-      var cur = sg.list.find(function(x){ return x.id === req.id; });
-      req.active = cur ? cur.active : true;
+    var cur = sgEditing();
+    var req = { id: cur ? cur.id : null, role: sgEls.role.value, siteCode: sgEls.site.value, active: cur ? cur.active : true };
+    var mode = cur ? cur.kind : (sgEls.acc.value === 'new' ? 'new' : sgEls.acc.value === 'pin' ? 'pin' : 'user');
+    if(mode === 'new'){
+      req.kind = 'user';
+      req.newUser = { username: sgEls.newUser.value.trim(), fullName: sgEls.newName.value.trim(), password: sgEls.newPw.value };
+      if(!/^[A-Za-z0-9._-]{3,50}$/.test(req.newUser.username)) return sgErr('ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข 3–50 ตัว (ใช้ . _ - ได้)', sgEls.newUser);
+      if(!req.newUser.fullName) return sgErr('กรุณาพิมพ์ชื่อ-นามสกุล', sgEls.newName);
+      if(req.newUser.password.length < 6) return sgErr('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว', sgEls.newPw);
+    } else if(mode === 'user'){
+      req.kind = 'user'; req.userId = cur ? cur.userId : Number(sgEls.acc.value);
+    } else {
+      req.kind = 'pin'; req.label = sgEls.label.value.trim(); req.pin = sgEls.pin.value.trim();
+      if(!req.label) return sgErr('กรุณาพิมพ์ชื่อผู้ลงนาม', sgEls.label);
+      if(!cur && !req.pin) return sgErr('กรุณาตั้งรหัส PIN', sgEls.pin);
+      if(req.pin && !/^\d{4,12}$/.test(req.pin)) return sgErr('รหัส PIN ต้องเป็นตัวเลข 4–12 หลัก', sgEls.pin);
     }
     sgEls.save.disabled = true;
-    sgCall('CHECKLIST_saveSigner', req, function(){
-      showToast(req.id ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มผู้ลงนามแล้ว');
+    sgCall('CHECKLIST_saveSigner', req, sgEls.error, function(){
+      showToast(cur ? 'บันทึกการแก้ไขแล้ว' : (mode === 'new' ? 'สร้างบัญชีและเพิ่มผู้ลงนามแล้ว' : 'เพิ่มผู้ลงนามแล้ว'));
       sgResetForm();
     });
     setTimeout(function(){ sgEls.save.disabled = false; }, 800);
   });
-  sgEls.pin.addEventListener('keydown', function(e){ if(e.key === 'Enter') sgEls.save.click(); });
+
+  function sgCloseAcc(){ sg.accUserId = null; sgEls.accCard.classList.add('hidden'); }
+  sgEls.accCancel.addEventListener('click', sgCloseAcc);
+  sgEls.accSave.addEventListener('click', function(){
+    var pw = sgEls.accPw.value, nm = sgEls.accName.value.trim();
+    if(!nm){ sgEls.accError.textContent = 'กรุณาพิมพ์ชื่อ-นามสกุล'; return; }
+    if(pw && pw.length < 6){ sgEls.accError.textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; return; }
+    sgCall('CHECKLIST_updateSignerAccount', { userId: sg.accUserId, fullName: nm, password: pw }, sgEls.accError, function(){
+      showToast(pw ? 'บันทึกชื่อและรหัสผ่านใหม่แล้ว' : 'บันทึกชื่อแล้ว'); sgCloseAcc();
+    });
+  });
 
   sgEls.list.addEventListener('click', function(e){
     var b = e.target.closest('button'); if(!b) return;
-    var id = Number(b.getAttribute('data-sg-edit') || b.getAttribute('data-sg-toggle') || b.getAttribute('data-sg-del'));
+    var id = Number(b.getAttribute('data-sg-edit') || b.getAttribute('data-sg-acc') || b.getAttribute('data-sg-toggle') || b.getAttribute('data-sg-del'));
     var x = sg.list.find(function(r){ return r.id === id; }); if(!x) return;
     if(b.hasAttribute('data-sg-edit')){
       sg.editId = id;
-      sgEls.role.value = x.role; sgSyncRole();
+      sgEls.role.value = x.role;
       sgEls.site.value = x.siteCode || '';
-      sgEls.label.value = x.label || ''; sgEls.pin.value = '';
-      sgEls.pinLabel.textContent = 'รหัสใหม่ (เว้นว่าง = ใช้รหัสเดิม)';
-      sgEls.title.textContent = 'แก้ไขผู้ลงนาม: ' + (x.label || '');
+      sgEls.label.value = x.kind === 'pin' ? (x.name || '') : ''; sgEls.pin.value = '';
+      sgEls.title.textContent = 'แก้ไขสิทธิ์: ' + (x.name || '') + (x.username ? ' (' + x.username + ')' : '');
       sgEls.save.querySelector('span').textContent = 'บันทึกการแก้ไข';
       sgEls.cancel.classList.remove('hidden');
       sgEls.error.textContent = '';
+      sgSync();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      sgEls.label.focus();
+    } else if(b.hasAttribute('data-sg-acc')){
+      sg.accUserId = x.userId;
+      sgEls.accTitle.textContent = 'บัญชี ' + x.username;
+      sgEls.accName.value = x.name || ''; sgEls.accPw.value = ''; sgEls.accError.textContent = '';
+      sgEls.accCard.classList.remove('hidden');
+      sgEls.accCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      sgEls.accName.focus();
     } else if(b.hasAttribute('data-sg-toggle')){
-      sgCall('CHECKLIST_saveSigner', { id: id, role: x.role, siteCode: x.siteCode, label: x.label || '(ไม่มีชื่อ)', active: !x.active },
-        function(){ showToast(x.active ? 'ปิดใช้แล้ว' : 'เปิดใช้แล้ว'); });
+      var req = { id: id, role: x.role, siteCode: x.siteCode, active: !x.active, kind: x.kind, userId: x.userId, label: x.name || '(ไม่มีชื่อ)' };
+      sgCall('CHECKLIST_saveSigner', req, sgEls.error, function(){ showToast(x.active ? 'ปิดใช้แล้ว' : 'เปิดใช้แล้ว'); });
     } else if(b.hasAttribute('data-sg-del')){
-      if(!confirm('ลบผู้ลงนาม "' + (x.label || '') + '" ?\nรหัสนี้จะใช้ลงนามไม่ได้อีก (ชื่อในรายการที่ลงนามไปแล้วยังอยู่)')) return;
-      sgCall('CHECKLIST_deleteSigner', id, function(){ showToast('ลบแล้ว'); if(sg.editId === id) sgResetForm(); });
+      if(!confirm('ลบสิทธิ์ลงนามของ "' + (x.name || '') + '" (' + sgSiteName(x.siteCode) + ') ?\n' +
+        (x.kind === 'user' ? 'บัญชี login ยังอยู่ ลบบัญชีได้ที่หน้าจัดการผู้ใช้ (/admin)' : 'รหัสนี้จะใช้ลงนามไม่ได้อีก'))) return;
+      sgCall('CHECKLIST_deleteSigner', id, sgEls.error, function(){ showToast('ลบแล้ว'); if(sg.editId === id) sgResetForm(); });
     }
   });
   sgResetForm();
