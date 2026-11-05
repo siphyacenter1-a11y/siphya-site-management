@@ -22,15 +22,18 @@
 ```
 npm install
 npx puppeteer browsers install chrome          # ใช้ทำ PDF (เช็คลิสต์, NPO)
+node scripts/init_users.js                     # ตาราง users (server ที่มีอยู่แล้วข้ามได้) — ต้องมีก่อน migrate_checklist
 node scripts/migrate_checklist.js
 node scripts/migrate_waste.js
 node scripts/migrate_route.js
 node scripts/migrate_transport.js
-node scripts/set_checklist_pin.js add MASTER - <PIN> "ผู้ดูแล"   # ดูรายละเอียดใน CHECKLIST_SETUP.md
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx> --dry-run       # ตรวจก่อน
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx>                 # นำเข้าจริง (ไฟล์ส่งให้แยก ไม่อยู่ใน repo)
 npm start
 ```
+หลังติดตั้ง: login admin → `/users` สร้างบัญชีจริง + สิทธิ์ลงนาม + รหัส PIN สำรอง (ไม่ต้องใช้คำสั่ง)
+- migration ทุกตัวรันซ้ำได้ · ถ้ารัน `migrate_checklist.js` ก่อนมีตาราง users ให้รันซ้ำอีกครั้งหลัง `init_users.js` (เพื่อสร้าง FK `checklist_pins_user_fk`)
+- ทดสอบติดตั้งใหม่จากฐานข้อมูลว่างตามลำดับนี้แล้ว: ทุกหน้าโหลดได้ ไม่มี error, ขนส่ง/ขยะ+NPO/แผนเดินรถ/เช็คลิสต์+PDF ทำงานครบ
 
 ### บน Linux
 - Chrome ของ puppeteer ต้องมี library ระบบ (เช่น `libnss3 libatk-bridge2.0-0 libgbm1 libasound2 libxkbcommon0`)
@@ -48,14 +51,18 @@ npm start
 
 ## ⚠️ ก่อนเปิดใช้จริง
 1. ตั้ง repo เป็น **private**
-2. เปลี่ยนรหัสผ่านผู้ใช้ตั้งต้น `admin` / `staff`
+2. เปลี่ยนรหัสผ่านผู้ใช้ตั้งต้น `admin` / `staff` และ **ลบปุ่ม login ตัวอย่าง** ในหน้า `/login` (กดแล้วเข้าเป็น admin ได้ทันที)
+   แล้วสร้างบัญชีรายคน (admin ของผู้ใช้งานหลัก + admin สำรองของ IT) — บัญชีอื่นสร้างเองได้ที่ `/users`
 3. ตั้ง `JWT_SECRET` ใหม่ (ยาว สุ่ม) ใน `.env`
 4. ใช้ `npm start` (หรือ pm2 / systemd) **ห้ามใช้ `npm run dev`** — โหมด watch จะรีสตาร์ตกลางการสร้าง PDF
 5. ถ้าต้องการชื่อเว็บ/https ให้ตั้ง reverse proxy (nginx ฯลฯ) ชี้มาที่ `PORT` ใน `.env`
 6. body limit ตั้งไว้ 30mb เพราะฟอร์มส่งรูปเป็น base64 — ถ้ามี nginx ให้ตั้ง `client_max_body_size 30m`
+7. ไฟล์ใน `public/uploads/` (รูปเช็คลิสต์/ขยะ, PDF เช็คลิสต์, PDF NPO) เปิดได้ด้วยลิงก์ตรงโดยไม่ต้อง login (เป็นแบบนี้ตั้งแต่ระบบเดิม)
+   ถ้าต้องการให้ต้อง login ให้ย้ายไปเสิร์ฟผ่าน route ที่ตรวจ token เหมือน `/api/transport-doc` (ใบเบิกวัสดุทำแบบนั้นแล้ว)
 
 ## วันย้ายระบบขนส่ง (ข้อมูลจริง)
 1. แจ้งหน้างานหยุดกรอกใน Google Sheet
 2. ดาวน์โหลด Sheet เป็น .xlsx → นำเข้า (dry-run ก่อน)
 3. ให้หน้างานกรอกที่ `/transport-entry` ตั้งแต่นั้น
 4. admin ตั้งอาคาร/ชั้นของโครงการอื่นนอกจาก 0DJ ในหน้า "ตั้งค่าโครงการ" (ในไฟล์ปัจจุบันเป็นค่าตัวอย่าง)
+   — รายชื่อนี้ใช้ร่วมกับช่องอาคาร/ชั้นของเช็คลิสต์ด้วย (เป็นข้อมูลในฐานข้อมูล ตั้งบนเว็บ ไม่ต้องแก้โค้ด)
