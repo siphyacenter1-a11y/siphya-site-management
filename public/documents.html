@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คลังเอกสาร PDF | Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'Prompt', sans-serif; }
+    .top { background:var(--ink); color:#fff; padding:22px 16px 26px; }
+    .wrap { max-width:1100px; margin:0 auto; padding:0 16px; box-sizing:border-box; }
+    .top .wrap { padding:0; }
+    .top a.back { color:#C9D6F2; text-decoration:none; font-size:13px; }
+    .top h1 { margin:8px 0 4px; font-size:22px; }
+    .top p { margin:0; color:#A3BBEB; font-size:13px; }
+    .tabs { display:flex; gap:6px; margin:-16px auto 14px; }
+    .tabs button { font:inherit; font-size:13.5px; font-weight:600; border:1px solid var(--line); background:var(--card); color:var(--muted);
+                   border-radius:999px; padding:8px 16px; cursor:pointer; }
+    .tabs button.on { background:var(--amber); border-color:var(--amber); color:var(--ink); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; }
+    .filters { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; align-items:end; }
+    .filters label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:600; }
+    .filters input, .filters select { width:100%; box-sizing:border-box; font:inherit; font-size:13.5px; padding:8px 10px;
+                   border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); }
+    .sum { font-size:12.5px; color:var(--muted); margin:4px 2px 10px; }
+    .doc { display:flex; gap:12px; align-items:flex-start; padding:12px; border:1px solid var(--line-soft); border-radius:12px; margin-bottom:8px; background:#fff; }
+    .doc.old { background:#FAFAF8; }
+    .doc.old .d-title { color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px; }
+    .d-main { flex:1; min-width:0; }
+    .d-sys { font-size:11.5px; font-weight:700; border-radius:999px; padding:2px 9px; display:inline-block; margin-bottom:4px; }
+    .sys-checklist { background:#E8F0FD; color:var(--blue); }
+    .sys-npo { background:#E3F5EC; color:var(--green); }
+    .sys-transport { background:#FFF4D6; color:#8A6400; }
+    .d-title { font-weight:700; font-size:14.5px; word-break:break-word; }
+    .d-proj { font-size:13px; color:var(--ink-light); margin-top:2px; word-break:break-word; }
+    .d-meta { font-size:12px; color:var(--muted); margin-top:4px; line-height:1.55; word-break:break-word; }
+    .d-status { font-size:11.5px; font-weight:700; margin-left:6px; }
+    .st-current { color:var(--green); }
+    .st-old { color:var(--red); }
+    .d-open { flex:none; font:inherit; font-size:13px; font-weight:700; background:var(--ink); color:#fff; text-decoration:none;
+              border-radius:8px; padding:8px 14px; white-space:nowrap; }
+    .empty { text-align:center; color:var(--muted); padding:30px 10px; font-size:13.5px; }
+    .log { display:grid; grid-template-columns:120px 1fr; gap:4px 12px; padding:10px 12px; border:1px solid var(--line-soft); border-radius:12px; margin-bottom:8px; background:#fff; font-size:13px; }
+    .log .t { color:var(--muted); font-size:12px; }
+    .log b { font-weight:700; }
+    .pill { display:inline-block; font-size:11px; font-weight:700; border-radius:999px; padding:1px 8px; margin-right:4px; background:var(--field); color:var(--muted); }
+    .pill.warn { background:#FFF0E6; color:#B4541A; }
+    .pill.ok { background:#E3F5EC; color:var(--green); }
+    .pill.red { background:#FDECEC; color:var(--red); }
+    .err { color:var(--red); font-weight:600; }
+    @media (max-width:640px) {
+      .doc { flex-direction:column; }
+      .d-open { align-self:stretch; text-align:center; }
+      .log { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top"><div class="wrap">
+    <a class="back" href="/admin">← กลับหน้าผู้ดูแลระบบ</a>
+    <h1>📁 คลังเอกสาร PDF</h1>
+    <p>รวม PDF ทุกระบบ — เช็คลิสต์ที่ลงนามครบ · ใบสั่งงาน NPO · ใบเบิกวัสดุ (เฉพาะ admin)</p>
+  </div></div>
+
+  <div class="wrap">
+    <div class="tabs">
+      <button type="button" class="on" data-tab="docs">เอกสาร PDF</button>
+      <button type="button" data-tab="log">ประวัติการลงนาม</button>
+    </div>
+
+    <div class="card filters">
+      <div id="fSystemWrap"><label for="fSystem">ระบบ</label>
+        <select id="fSystem">
+          <option value="">ทุกระบบ</option>
+          <option value="checklist">เช็คลิสต์ตรวจพื้นที่</option>
+          <option value="npo">ใบสั่งงาน NPO (ขยะ)</option>
+          <option value="transport">ใบเบิกวัสดุ (ขนส่ง)</option>
+        </select></div>
+      <div><label for="fQ">ค้นหา (โครงการ / เลขที่ / ชื่อคน)</label><input id="fQ" type="search" placeholder="เช่น 0DJ, NPO-, สมชาย"></div>
+      <div><label for="fFrom">ตั้งแต่วันที่</label><input id="fFrom" type="date"></div>
+      <div><label for="fTo">ถึงวันที่</label><input id="fTo" type="date"></div>
+      <div id="fStatusWrap"><label for="fStatus">สถานะ</label>
+        <select id="fStatus">
+          <option value="">ทั้งหมด</option>
+          <option value="current">ฉบับปัจจุบัน / ใช้งานอยู่</option>
+          <option value="old">ถูกแทนที่ / ยกเลิก</option>
+        </select></div>
+    </div>
+
+    <div class="sum" id="sum"></div>
+    <div id="list"><div class="empty">กำลังโหลด…</div></div>
+  </div>
+
+<script>
+(function(){
+  var tab = 'docs', timer = null, seq = 0;
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
+  var SLOT = { 2:'ช่อง 2 GM/ธุรการ', 3:'ช่อง 3 GF/GE' };
+  var METHOD = { single:'ลงทีละใบ', bulk:'ลงหลายใบพร้อมกัน', edit:'แก้ไขรายการ' };
+
+  function filters(){
+    return { system: $('fSystem').value, q: $('fQ').value.trim(), from: $('fFrom').value, to: $('fTo').value, status: $('fStatus').value };
+  }
+
+  function renderDocs(res){
+    var rows = res.rows || [];
+    $('sum').textContent = 'พบ ' + rows.length + ' ไฟล์' + (res.truncated ? ' (แสดง 500 รายการล่าสุด — กรองให้แคบลงเพื่อดูเพิ่ม)' : '');
+    if(!rows.length){ $('list').innerHTML = '<div class="empty">ไม่พบเอกสารตามเงื่อนไข</div>'; return; }
+    $('list').innerHTML = rows.map(function(d){
+      return '<div class="doc' + (d.status === 'old' ? ' old' : '') + '"><div class="d-main">' +
+        '<span class="d-sys sys-' + esc(d.system) + '">' + esc(d.systemLabel) + '</span>' +
+        '<span class="d-status ' + (d.status === 'old' ? 'st-old' : 'st-current') + '">' + esc(d.statusLabel) + '</span>' +
+        '<div class="d-title">' + esc(d.title) + (d.docDate ? ' · ' + esc(d.docDate) : '') + '</div>' +
+        '<div class="d-proj">' + esc(d.project) + '</div>' +
+        '<div class="d-meta">' + esc(d.people) + (d.people ? '<br>' : '') + 'สร้างไฟล์ ' + esc(d.created) + (d.by ? ' โดย ' + esc(d.by) : '') + '</div>' +
+        '</div><a class="d-open" href="' + esc(d.url) + '" target="_blank" rel="noopener">เปิด PDF</a></div>';
+    }).join('');
+  }
+
+  function renderLog(rows){
+    $('sum').textContent = 'พบ ' + rows.length + ' รายการ' + (rows.length >= 500 ? ' (แสดง 500 รายการล่าสุด)' : '');
+    if(!rows.length){ $('list').innerHTML = '<div class="empty">ยังไม่มีประวัติการลงนามตามเงื่อนไข</div>'; return; }
+    $('list').innerHTML = rows.map(function(r){
+      var what = r.action === 'cleared'
+        ? '<span class="pill red">ลายเซ็นถูกล้าง</span> เพราะแก้ไขรายการ' + (r.name ? ' โดย <b>' + esc(r.name) + '</b>' : '')
+        : '<span class="pill ok">ลงนาม</span> <b>' + esc(r.name) + '</b>' + (r.username ? ' (' + esc(r.username) + ')' : '') + ' · ' + esc(SLOT[r.slot] || '');
+      var tags = '';
+      if(r.action === 'sign'){
+        tags += '<span class="pill">' + esc(METHOD[r.method] || r.method) + '</span>';
+        tags += r.viewed ? '<span class="pill ok">เปิดดูก่อนลงนาม</span>' : '<span class="pill warn">ไม่ได้เปิดดูก่อน</span>';
+        if(r.confirmed) tags += '<span class="pill">ติ๊กยืนยันแล้ว</span>';
+      }
+      return '<div class="log"><div class="t">' + esc(r.at) + '</div><div>' + what +
+        '<div class="t" style="margin-top:3px">เช็คลิสต์ #' + esc(r.checklistId) + ' · ' + esc(r.site) + (r.docDate ? ' · ตรวจวันที่ ' + esc(r.docDate) : '') +
+        (r.sessionUser ? ' · login ด้วย ' + esc(r.sessionUser) : '') + '</div>' +
+        (tags ? '<div style="margin-top:5px">' + tags + '</div>' : '') + '</div></div>';
+    }).join('');
+  }
+
+  function load(){
+    var my = ++seq, f = filters();
+    $('list').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+    var run = google.script.run
+      .withSuccessHandler(function(r){ if(my === seq) (tab === 'docs' ? renderDocs : renderLog)(r || []); })
+      .withFailureHandler(function(err){
+        if(my !== seq) return;
+        $('sum').textContent = '';
+        $('list').innerHTML = '<div class="empty err">' + esc((err && err.message) || 'โหลดไม่สำเร็จ') + '</div>';
+      });
+    if(tab === 'docs') run.DOCS_list(f); else run.DOCS_signLog(f);
+  }
+  function later(){ clearTimeout(timer); timer = setTimeout(load, 300); }
+
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      tab = b.getAttribute('data-tab');
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.toggle('on', x === b); });
+      $('fSystemWrap').style.display = tab === 'docs' ? '' : 'none';
+      $('fStatusWrap').style.display = tab === 'docs' ? '' : 'none';
+      load();
+    });
+  });
+  ['fSystem','fFrom','fTo','fStatus'].forEach(function(id){ $(id).addEventListener('change', load); });
+  $('fQ').addEventListener('input', later);
+  load();
+})();
+</script>
+</body>
+</html>

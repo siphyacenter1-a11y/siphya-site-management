@@ -228,6 +228,21 @@
   .dash-stat-value{ font-size:22px; font-weight:700; color:var(--accent-ink); }
   .dash-stat-label{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
   .dash-list{ display:flex; flex-direction:column; gap:10px; margin:0 0 32px; }
+  /* ลงนามหลายใบ */
+  .bulk-bar{ position:sticky; top:8px; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+             background:var(--surface); border:1.5px solid var(--accent); border-radius:var(--radius-m); padding:10px 12px; margin:0 0 10px; box-shadow:var(--shadow); }
+  .bulk-bar label{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; cursor:pointer; }
+  .bulk-bar input, .dash-pick input, .confirm-row input{ width:18px; height:18px; accent-color:var(--accent); flex:none; }
+  .bulk-bar .dash-sign-btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  .dash-pick{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; margin-bottom:6px; }
+  .dash-card.picked{ border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .dash-viewed{ font-size:11.5px; color:var(--ok, #1E9E6A); font-weight:600; margin-left:6px; }
+  .confirm-row{ display:flex; gap:8px; align-items:flex-start; font-size:13px; line-height:1.5; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-s); padding:10px; margin:10px 0 4px; cursor:pointer; }
+  .bulk-list{ max-height:180px; overflow:auto; font-size:12.5px; line-height:1.55; border:1px solid var(--border); border-radius:var(--radius-s); padding:8px 10px; margin-top:6px; }
+  .bulk-res{ max-height:50vh; overflow:auto; font-size:13px; line-height:1.55; }
+  .bulk-res div{ padding:6px 0; border-bottom:1px solid var(--border); }
+  .bulk-res .ok{ color:#1E9E6A; font-weight:700; }
+  .bulk-res .skip{ color:var(--room); font-weight:700; }
   .dash-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); padding:14px; box-shadow:var(--shadow); }
   .dash-card-top{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .dash-card-site{ font-weight:700; font-size:14.5px; }
@@ -535,7 +550,7 @@
     <h3 id="signModalTitle">ลงนามรับรองรายการตรวจ</h3>
     <div class="modal-sub" id="signModalSub"></div>
     <div class="modal-issues" id="signModalIssues"></div>
-    <div class="field">
+    <div class="field" id="signRoleWrap">
       <label for="signRole">ลงนามในฐานะ</label>
       <select id="signRole"></select>
     </div>
@@ -548,6 +563,7 @@
       <input id="signPin" type="password" autocomplete="current-password">
     </div>
     <div class="modal-sub">ใช้บัญชีเดียวกับที่ login เข้าระบบ · ชื่อผู้ลงนามขึ้นตามบัญชีให้เอง<br>MASTER แบบรหัส PIN: เว้นชื่อผู้ใช้ว่าง แล้วใส่ PIN</div>
+    <label class="confirm-row"><input type="checkbox" id="signAgree"><span id="signAgreeText">ข้าพเจ้าได้ตรวจสอบเช็คลิสต์นี้แล้ว และรับรองความถูกต้อง</span></label>
     <div class="modal-error" id="signError"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" id="signCancelBtn">ยกเลิก</button>
@@ -1459,13 +1475,25 @@
     if(total === 0){
       html += '<div class="dash-empty">' + escHtml(t('dashboardEmpty')) + '</div>';
     } else {
+      var pend = subs.filter(isPending);
+      var nPicked = pend.filter(function(s){ return picked[s.id]; }).length;
+      if(pend.length){
+        html += '<div class="bulk-bar"><label><input type="checkbox" id="bulkAll"' + (nPicked && nPicked === pend.length ? ' checked' : '') + '>' +
+          ' เลือกทั้งหมดที่รอลงนาม (' + pend.length + ' ใบ)</label>' +
+          '<button type="button" class="dash-sign-btn" id="bulkSignBtn"' + (nPicked ? '' : ' disabled') + '>ลงนามที่เลือก (' + nPicked + ' ใบ)</button></div>';
+      }
       html += '<div class="dash-list">';
       subs.forEach(function(s){
         var n = completedCount(s.items || {});
         var isComplete = n === ALL_ITEM_IDS.length;
         var sg = s.signers || ['', '', ''];
         var sa = s.signedAt || ['', '', ''];
-        html += '<div class="dash-card">';
+        var pend1 = isPending(s);
+        html += '<div class="dash-card' + (pend1 && picked[s.id] ? ' picked' : '') + '">';
+        if(pend1){
+          html += '  <label class="dash-pick"><input type="checkbox" data-pick="' + escAttr(s.id) + '"' + (picked[s.id] ? ' checked' : '') + '> เลือกเพื่อลงนาม' +
+            (viewed[s.id] ? '<span class="dash-viewed">✓ เปิดดูแล้ว</span>' : '') + '</label>';
+        }
         html += '  <div class="dash-card-top">';
         html += '    <div class="dash-card-site">' + escHtml(s.site || t('noSite')) + '</div>';
         html += '    <span class="dash-pill' + (isComplete ? ' complete' : '') + '">' + n + '/' + ALL_ITEM_IDS.length + '</span>';
@@ -1498,7 +1526,17 @@
     els.dashboardContent.innerHTML = html;
   }
   var printOverride = null;
+  els.dashboardContent && els.dashboardContent.addEventListener('change', function(e){
+    var cb = e.target;
+    if(cb.id === 'bulkAll'){
+      getFilteredSubs().filter(isPending).forEach(function(s){ if(cb.checked) picked[s.id] = true; else delete picked[s.id]; });
+      renderDashboard(); return;
+    }
+    var id = cb.getAttribute && cb.getAttribute('data-pick');
+    if(id){ if(cb.checked) picked[id] = true; else delete picked[id]; renderDashboard(); }
+  });
   els.dashboardContent && els.dashboardContent.addEventListener('click', function(e){
+    if(e.target.closest('#bulkSignBtn')){ openBulkSignModal(); return; }
     var signBtn = e.target.closest('[data-sign-submission]');
     if(signBtn){ openSignModal(signBtn.getAttribute('data-sign-submission')); return; }
     var editBtn = e.target.closest('[data-edit-submission]');
@@ -1569,6 +1607,7 @@
 
   function openPreview(sub){
     pvSub = sub;
+    viewed[sub.id] = true;
     renderPrintSheet(sub);
     pvEls.paper.innerHTML = els.printSheet.innerHTML;
     pvEls.title.textContent = (sub.site || t('noSite')) + ' · ' + formatDate(sub.date);
@@ -1602,14 +1641,27 @@
     pin: document.getElementById('signPin'),
     error: document.getElementById('signError'),
     cancel: document.getElementById('signCancelBtn'),
-    confirm: document.getElementById('signConfirmBtn')
+    confirm: document.getElementById('signConfirmBtn'),
+    agree: document.getElementById('signAgree'),
+    agreeText: document.getElementById('signAgreeText'),
+    roleWrap: document.getElementById('signRoleWrap'),
+    title: document.getElementById('signModalTitle')
   };
   var signTarget = null;
+  var signBulk = null;          // [sub, ...] เมื่อลงนามหลายใบ
+  var picked = {};              // id → true  รายการที่ติ๊กเลือก
+  var viewed = {};              // id → true  รายการที่เปิดดูแล้วในรอบนี้
+  function isPending(s){ var sg = s.signers || ['', '', '']; return !sg[1] || !sg[2]; }
+  function pickedSubs(){ return (state.submissions || []).filter(function(s){ return picked[s.id] && isPending(s); }); }
 
   function openSignModal(id){
     var sub = (state.submissions || []).find(function(s){ return s.id === id; });
     if(!sub) return;
-    signTarget = sub;
+    signTarget = sub; signBulk = null;
+    signEls.title.textContent = 'ลงนามรับรองรายการตรวจ';
+    signEls.roleWrap.classList.remove('hidden');
+    signEls.agree.checked = false;
+    signEls.agreeText.textContent = 'ข้าพเจ้าได้ตรวจสอบเช็คลิสต์นี้แล้ว และรับรองความถูกต้อง';
     var sg = sub.signers || ['', '', ''];
     var n = completedCount(sub.items || {});
     signEls.sub.innerHTML = escHtml(sub.site || t('noSite')) + '<br>' +
@@ -1631,10 +1683,71 @@
     signEls.modal.classList.remove('hidden');
     setTimeout(function(){ (signEls.name.value ? signEls.pin : signEls.name).focus(); }, 50);
   }
-  function closeSignModal(){ signEls.modal.classList.add('hidden'); signTarget = null; }
+  function closeSignModal(){ signEls.modal.classList.add('hidden'); signTarget = null; signBulk = null; }
   function setSignBusy(b){
     signEls.confirm.disabled = b;
-    signEls.confirm.querySelector('span').textContent = b ? t('submitting') : 'ยืนยันลงนาม';
+    signEls.confirm.querySelector('span').textContent = b ? t('submitting') :
+      (signBulk ? 'ยืนยันลงนาม ' + signBulk.length + ' ใบ' : 'ยืนยันลงนาม');
+  }
+
+  // ---------- ลงนามหลายใบ ----------
+  function openBulkSignModal(){
+    var list = pickedSubs();
+    if(!list.length){ showToast('ยังไม่ได้เลือกรายการ'); return; }
+    signTarget = null; signBulk = list;
+    signEls.title.textContent = 'ลงนามหลายใบพร้อมกัน (' + list.length + ' ใบ)';
+    var notOk = list.filter(function(s){ return !!buildNotOkSummary(s.items || {}); }).length;
+    var notViewed = list.filter(function(s){ return !viewed[s.id]; }).length;
+    signEls.sub.innerHTML = 'ระบบเลือกช่องให้ตามสิทธิ์ของบัญชี (GM/ธุรการ → ช่อง 2 · GF/GE → ช่อง 3) ใบที่ลงไม่ได้จะข้ามและแจ้งเหตุผล' +
+      '<div class="bulk-list">' + list.map(function(s){
+        return escHtml(s.site || t('noSite')) + ' · ' + escHtml(formatDate(s.date)) + (viewed[s.id] ? ' <span class="dash-viewed">✓ เปิดดูแล้ว</span>' : '');
+      }).join('<br>') + '</div>';
+    signEls.issues.innerHTML = (notOk ? '⚠️ มี <b>' + notOk + ' ใบ</b> ที่มีรายการตรวจไม่ผ่าน<br>' : '✓ ทุกใบไม่มีรายการที่ตรวจไม่ผ่าน<br>') +
+      (notViewed ? '👁 ยังไม่ได้เปิดดู ' + notViewed + ' ใบ (กด "ดู/พิมพ์" ที่ใบนั้นก่อนได้)' : '👁 เปิดดูครบทุกใบแล้ว');
+    signEls.roleWrap.classList.add('hidden');
+    signEls.agree.checked = false;
+    signEls.agreeText.textContent = 'ข้าพเจ้าได้ตรวจสอบเช็คลิสต์ทั้ง ' + list.length + ' ใบนี้แล้ว และรับรองความถูกต้อง';
+    signEls.name.value = signerUsername();
+    signEls.pin.value = '';
+    signEls.error.textContent = '';
+    setSignBusy(false);
+    signEls.modal.classList.remove('hidden');
+    setTimeout(function(){ (signEls.name.value ? signEls.pin : signEls.name).focus(); }, 50);
+  }
+
+  function showBulkResult(res, list){
+    var byId = {}; list.forEach(function(s){ byId[s.id] = s; });
+    var box = document.getElementById('bulkResultBox');
+    if(!box){ box = document.createElement('div'); box.id = 'bulkResultBox'; box.className = 'modal-backdrop'; document.body.appendChild(box); }
+    var skipped = res.results.length - res.signed;
+    box.classList.remove('hidden');
+    box.innerHTML = '<div class="modal"><h3>ลงนามแล้ว ' + res.signed + ' ใบ' + (skipped ? ' · ข้าม ' + skipped + ' ใบ' : '') + '</h3>' +
+      '<div class="modal-sub">ผู้ลงนาม: ' + escHtml(res.name) + '</div><div class="bulk-res">' +
+      res.results.map(function(r){
+        var s = byId[r.rowId] || {};
+        return '<div>' + escHtml((s.site || r.site || '') + ' · ' + formatDate(s.date)) + '<br>' +
+          (r.signedSlot ? '<span class="ok">✓ ลงนามช่อง ' + r.signedSlot + '</span>' : '<span class="skip">ข้าม — ' + escHtml(r.skipped) + '</span>') + '</div>';
+      }).join('') + '</div><div class="modal-actions"><button type="button" class="btn btn-primary" id="bulkResultClose">ปิด</button></div></div>';
+    document.getElementById('bulkResultClose').onclick = function(){ box.classList.add('hidden'); };
+  }
+
+  // ลงนามครบแล้ว → สร้าง PDF เก็บเข้าคลังอัตโนมัติ (ทำเบื้องหลังทีละใบ)
+  var archiveQueue = [], archiveBusy = false;
+  function queueArchive(ids){
+    ids.forEach(function(id){ if(archiveQueue.indexOf(id) < 0) archiveQueue.push(id); });
+    runArchive();
+  }
+  function runArchive(){
+    if(archiveBusy || !archiveQueue.length) return;
+    var id = archiveQueue.shift();
+    var sub = (state.submissions || []).find(function(s){ return s.id === id; });
+    if(!sub){ runArchive(); return; }
+    archiveBusy = true;
+    renderPrintSheet(sub);
+    google.script.run
+      .withSuccessHandler(function(){ archiveBusy = false; runArchive(); })
+      .withFailureHandler(function(err){ archiveBusy = false; console.warn('[archive]', id, err); runArchive(); })
+      .CHECKLIST_getPrintPdf({ rowId: sub.id, html: els.printSheet.innerHTML });
   }
 
   signEls.cancel.addEventListener('click', closeSignModal);
@@ -1643,21 +1756,47 @@
     if(e.key === 'Escape' && !signEls.modal.classList.contains('hidden')) closeSignModal();
   });
   signEls.pin.addEventListener('keydown', function(e){ if(e.key === 'Enter') signEls.confirm.click(); });
+  signEls.agree.addEventListener('change', function(){ if(signEls.agree.checked) signEls.error.textContent = ''; });
 
   signEls.confirm.addEventListener('click', function(){
-    if(!signTarget) return;
+    if(!signTarget && !signBulk) return;
     var name = signEls.name.value.trim();
     if(!signEls.pin.value){ signEls.error.textContent = 'กรุณาใส่รหัสผ่าน'; signEls.pin.focus(); return; }
+    if(!signEls.agree.checked){ signEls.error.textContent = 'กรุณาติ๊กยืนยันว่าได้ตรวจสอบแล้ว'; return; }
     if(!gasReady){ signEls.error.textContent = t('submitError'); return; }
     signEls.error.textContent = '';
     setSignBusy(true);
+    if(signBulk){
+      var list = signBulk;
+      google.script.run
+        .withSuccessHandler(function(res){
+          setSignBusy(false);
+          rememberSigner(name);
+          closeSignModal();
+          list.forEach(function(s){ delete picked[s.id]; });
+          showBulkResult(res, list);
+          var full = res.results.filter(function(r){ return r.fullySigned; }).map(function(r){ return r.rowId; });
+          refreshSubmissions(function(){ if(full.length) queueArchive(full); });
+        })
+        .withFailureHandler(function(err){
+          setSignBusy(false);
+          signEls.error.textContent = (err && err.message) ? err.message : t('submitError');
+          signEls.pin.value = '';
+        })
+        .CHECKLIST_signMany({
+          items: list.map(function(s){ return { rowId: s.id, submittedAt: s.submittedAt, viewed: !!viewed[s.id] }; }),
+          username: name, pin: signEls.pin.value, confirm: true
+        });
+      return;
+    }
+    var target = signTarget;
     google.script.run
-      .withSuccessHandler(function(){
+      .withSuccessHandler(function(res){
         setSignBusy(false);
         rememberSigner(name);
         closeSignModal();
         showToast('ลงนามเรียบร้อยแล้ว');
-        refreshSubmissions();
+        refreshSubmissions(function(){ if(res && res.fullySigned) queueArchive([target.id]); });
       })
       .withFailureHandler(function(err){
         setSignBusy(false);
@@ -1669,7 +1808,9 @@
         submittedAt: signTarget.submittedAt,
         slot: parseInt(signEls.role.value, 10),
         username: name,
-        pin: signEls.pin.value
+        pin: signEls.pin.value,
+        confirm: true,
+        viewed: !!viewed[signTarget.id]
       });
   });
   /* ---------------- Apps Script wiring ---------------- */
@@ -1692,7 +1833,7 @@
     };
   }
 
-  function refreshSubmissions(){
+  function refreshSubmissions(after){
     if(!gasReady){ state.dbAvailable = false; renderDashboard(); return; }
     var done = false;
     var timer = setTimeout(function(){
@@ -1712,6 +1853,7 @@
           state.dbAvailable = true;
           state.submissions = list;
           if(state.tab === 'dashboard') renderDashboard();
+          if(typeof after === 'function') after();
         }catch(err){
           console.error('[DASH] แสดงผลไม่สำเร็จ:', err);
           showDashError('แสดงผลแดชบอร์ดไม่สำเร็จ: ' + err.message);

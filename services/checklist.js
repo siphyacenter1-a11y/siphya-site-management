@@ -180,13 +180,7 @@ async function assertPin(client, { slot, siteCode, pin, username, failKey, notSe
     ? all.filter(p => p.user_id && String(p.username || '').toLowerCase() === uname)
     : all.filter(p => !p.user_id && p.pin_hash);
 
-  const f = (await client.query(
-    `SELECT fails, locked_until > NOW() AS locked,
-            updated_at < NOW() - make_interval(mins => $2) AS stale
-       FROM checklist_pin_failures WHERE fail_key = $1`, [failKey, LOCK_MINUTES])).rows[0];
-  if (f && f.locked) {
-    throw new UserError(`ใส่รหัสผิดหลายครั้ง ระบบล็อกชั่วคราว กรุณาลองใหม่ใน ${LOCK_MINUTES} นาที`);
-  }
+  const f = await lockState(client, failKey);
 
   const given = str(pin, 50);
   let match = null;
@@ -196,20 +190,76 @@ async function assertPin(client, { slot, siteCode, pin, username, failKey, notSe
       if (hash && await bcrypt.compare(given, hash)) { match = { id: p.id, label: str(p.label, 100) }; break; }
     }
   }
-  if (!match) {
-    const prev = (f && !f.stale && !(f.fails >= MAX_PIN_FAILS)) ? f.fails : 0;
-    const fails = prev + 1;
-    // บันทึกนอก transaction หลัก เพื่อให้นับครั้งที่ผิดแม้ transaction ถูกยกเลิก
-    await sitePool.query(
-      `INSERT INTO checklist_pin_failures (fail_key, fails, locked_until, updated_at)
-       VALUES ($1, $2::int, CASE WHEN $2::int >= $3::int THEN NOW() + make_interval(mins => $4::int) END, NOW())
-       ON CONFLICT (fail_key) DO UPDATE
-         SET fails = EXCLUDED.fails, locked_until = EXCLUDED.locked_until, updated_at = NOW()`,
-      [failKey, fails, MAX_PIN_FAILS, LOCK_MINUTES]);
-    throw new UserError(wrongMsg);
-  }
+  if (!match) { await recordFail(failKey, f); throw new UserError(wrongMsg); }
   await sitePool.query('DELETE FROM checklist_pin_failures WHERE fail_key = $1', [failKey]);
   return match;
+}
+
+// ---------- นับรหัสผิด / ล็อกชั่วคราว ----------
+async function lockState(client, failKey) {
+  const f = (await client.query(
+    `SELECT fails, locked_until > NOW() AS locked,
+            updated_at < NOW() - make_interval(mins => $2) AS stale
+       FROM checklist_pin_failures WHERE fail_key = $1`, [failKey, LOCK_MINUTES])).rows[0];
+  if (f && f.locked) {
+    throw new UserError(`ใส่รหัสผิดหลายครั้ง ระบบล็อกชั่วคราว กรุณาลองใหม่ใน ${LOCK_MINUTES} นาที`);
+  }
+  return f;
+}
+async function recordFail(failKey, f) {
+  const prev = (f && !f.stale && !(f.fails >= MAX_PIN_FAILS)) ? f.fails : 0;
+  // บันทึกนอก transaction หลัก เพื่อให้นับครั้งที่ผิดแม้ transaction ถูกยกเลิก
+  await sitePool.query(
+    `INSERT INTO checklist_pin_failures (fail_key, fails, locked_until, updated_at)
+     VALUES ($1, $2::int, CASE WHEN $2::int >= $3::int THEN NOW() + make_interval(mins => $4::int) END, NOW())
+     ON CONFLICT (fail_key) DO UPDATE
+       SET fails = EXCLUDED.fails, locked_until = EXCLUDED.locked_until, updated_at = NOW()`,
+    [failKey, prev + 1, MAX_PIN_FAILS, LOCK_MINUTES]);
+}
+
+// ---------- ลงนามหลายใบ: ตรวจรหัสครั้งเดียว แล้วได้สิทธิ์ทั้งหมดของคนนั้น ----------
+// คืน [{ id, role, site_code, label }] — ว่าง = ชื่อผู้ใช้/รหัสผิด
+async function signerEntriesFor(client, username, pin) {
+  const uname = str(username, 50).toLowerCase();
+  const given = str(pin, 50);
+  if (!given) return [];
+  if (uname) {
+    const rows = (await client.query(
+      `SELECT p.id, p.role, p.site_code, u.full_name AS label, u.password_hash
+         FROM checklist_pins p JOIN users u ON u.id = p.user_id
+        WHERE p.active AND LOWER(u.username) = $1`, [uname])).rows;
+    if (!rows.length || !(await bcrypt.compare(given, rows[0].password_hash))) return [];
+    return rows;
+  }
+  const pins = (await client.query(
+    `SELECT id, role, site_code, label, pin_hash FROM checklist_pins
+      WHERE active AND user_id IS NULL AND pin_hash IS NOT NULL`)).rows;
+  for (const p of pins) {
+    if (await bcrypt.compare(given, p.pin_hash)) return [p];
+  }
+  return [];
+}
+
+// ช่องที่คนนี้ลงได้ในใบนี้ (ช่อง 2 ก่อน แล้วช่อง 3) — null = ลงไม่ได้ พร้อมเหตุผล
+function pickSlot(entries, row) {
+  const code = siteCodeOf(row.site_name);
+  const can = role => entries.some(e => e.role === 'MASTER' || (e.role === role && (!e.site_code || e.site_code === code)));
+  const name = str(entries[0] && entries[0].label, 100);
+  const s2 = str(row.signer2), s3 = str(row.signer3);
+  if (!can('GM') && !can('GF')) return { reason: 'ไม่มีสิทธิ์ลงนามโครงการนี้' };
+  if (name && (s2 === name || s3 === name)) return { reason: 'ลงนามใบนี้ไปแล้ว (คนเดียวลงสองช่องไม่ได้)' };
+  if (!s2 && can('GM')) return { slot: 1 };
+  if (!s3 && can('GF')) return { slot: 2 };
+  return { reason: 'ช่องที่มีสิทธิ์ลงนามครบแล้ว' };
+}
+
+async function logSign(client, row, o) {
+  await client.query(
+    `INSERT INTO checklist_sign_log (checklist_id, site_name, inspection_date, action, slot, signer_name, username,
+                                     method, viewed, confirmed, login_user)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [row.id, row.site_name, row.inspection_date, o.action, o.slot || null, o.name || '', o.username || '',
+      o.method || '', o.viewed == null ? null : !!o.viewed, o.confirmed == null ? null : !!o.confirmed, o.sessionUser || '']);
 }
 
 function assertEditPin(client, site, pin, username) {
@@ -295,7 +345,10 @@ async function CHECKLIST_getSubmissions() {
 
 async function CHECKLIST_signSubmission(req) {
   if (!req || (req.slot !== 1 && req.slot !== 2)) throw new UserError('ช่องลงนามไม่ถูกต้อง');
+  if (req.confirm !== true) throw new UserError('กรุณาติ๊กยืนยันว่าได้ตรวจสอบเช็คลิสต์แล้ว');
   let name = str(req.name, 100);
+  const sessionUser = userName(this);
+  let full = false;
 
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
@@ -313,11 +366,64 @@ async function CHECKLIST_signSubmission(req) {
     const col = req.slot === 1 ? 'signer2' : 'signer3';
     const existing = str(row[col]);
     if (existing) throw new UserError('ช่องนี้ลงนามไปแล้วโดย ' + existing);
+    const other = str(row[req.slot === 1 ? 'signer3' : 'signer2']);
+    if (other && other === name) throw new UserError('คุณลงนามอีกช่องของใบนี้ไปแล้ว — คนเดียวลงสองช่องไม่ได้');
     await client.query(
       `UPDATE site_supervisor_checklists SET ${col} = $2, ${col}_at = NOW() WHERE id = $1`,
       [row.id, name]);
+    await logSign(client, row, { action: 'sign', slot: req.slot + 1, name, username: str(req.username, 50),
+      method: 'single', viewed: !!req.viewed, confirmed: true, sessionUser });
+    full = !!other || !!str(row[req.slot === 1 ? 'signer3' : 'signer2']);
   });
-  return { ok: true };
+  return { ok: true, fullySigned: full };
+}
+
+// ลงนามหลายใบพร้อมกัน
+// req = { items: [{ rowId, submittedAt, viewed }], username, pin, confirm: true }
+// ระบบเลือกช่องให้ตามสิทธิ์ (GM/ธุรการ → ช่อง 2, GF/GE → ช่อง 3) ใบที่ลงไม่ได้จะข้ามพร้อมเหตุผล
+async function CHECKLIST_signMany(req) {
+  req = req || {};
+  if (req.confirm !== true) throw new UserError('กรุณาติ๊กยืนยันว่าได้ตรวจสอบเช็คลิสต์ทุกใบที่เลือกแล้ว');
+  const items = Array.isArray(req.items) ? req.items : [];
+  if (!items.length) throw new UserError('ยังไม่ได้เลือกรายการ');
+  if (items.length > 200) throw new UserError('เลือกได้ครั้งละไม่เกิน 200 ใบ');
+  const sessionUser = userName(this);
+  const username = str(req.username, 50);
+  const failKey = 'bulk_' + (username.toLowerCase() || 'pin');
+
+  const f = await lockState(sitePool, failKey);
+  const entries = await signerEntriesFor(sitePool, username, req.pin);
+  if (!entries.length) {
+    await recordFail(failKey, f);
+    throw new UserError(username ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่ได้เป็นผู้ลงนาม' : 'รหัสลงนามไม่ถูกต้อง');
+  }
+  await sitePool.query('DELETE FROM checklist_pin_failures WHERE fail_key = $1', [failKey]);
+  const name = str(entries[0].label, 100);
+  if (!name) throw new UserError('ผู้ลงนามนี้ยังไม่มีชื่อ กรุณาให้ admin ใส่ชื่อในแท็บผู้ลงนาม');
+
+  const results = [];
+  await withTx(async client => {
+    for (const it of items) {
+      const res = { rowId: str(it && it.rowId, 30) };
+      try {
+        const row = await lockRow(client, it.rowId, it.submittedAt);
+        res.site = row.site_name;
+        const pick = pickSlot(entries, row);
+        if (!pick.slot) { res.skipped = pick.reason; results.push(res); continue; }
+        const col = pick.slot === 1 ? 'signer2' : 'signer3';
+        await client.query(`UPDATE site_supervisor_checklists SET ${col} = $2, ${col}_at = NOW() WHERE id = $1`, [row.id, name]);
+        await logSign(client, row, { action: 'sign', slot: pick.slot + 1, name, username,
+          method: 'bulk', viewed: !!(it && it.viewed), confirmed: true, sessionUser });
+        res.signedSlot = pick.slot + 1;
+        res.fullySigned = !!str(row[pick.slot === 1 ? 'signer3' : 'signer2']);
+      } catch (e) {
+        if (!(e instanceof UserError)) throw e;
+        res.skipped = e.message;
+      }
+      results.push(res);
+    }
+  });
+  return { name, signed: results.filter(r => r.signedSlot).length, results };
 }
 
 async function CHECKLIST_checkEditPin(req) {
@@ -337,6 +443,13 @@ async function CHECKLIST_updateSubmission(req) {
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
     const who = await assertEditPin(client, row.site_name, req.pin, req.username);
+    if (str(row.signer2) || str(row.signer3)) {
+      await logSign(client, row, { action: 'cleared', name: who.label || '', username: str(req.username, 50),
+        method: 'edit', sessionUser: userName(this) });
+      await client.query(
+        `UPDATE checklist_pdf_archive SET superseded_at = NOW(), superseded_reason = 'รายการถูกแก้ไขหลังลงนาม'
+          WHERE checklist_id = $1 AND superseded_at IS NULL`, [row.id]);
+    }
 
     const payload = req.payload;
     payload.site = row.site_name; // ล็อกโครงการเดิม ห้ามเปลี่ยน
@@ -600,6 +713,15 @@ const PDF_CSS =
   'tr{page-break-inside:avoid;}' +
   '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
 
+async function archivePdf(row, filePath, hash, by) {
+  await sitePool.query(
+    `INSERT INTO checklist_pdf_archive (checklist_id, site_name, inspection_date, recorded_by, signer2, signer3,
+                                        signer2_at, signer3_at, file_path, content_hash, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (checklist_id, content_hash) DO NOTHING`,
+    [row.id, row.site_name, row.inspection_date, row.recorded_by, row.signer2, row.signer3,
+      row.signer2_at, row.signer3_at, filePath, hash, by || '']);
+}
+
 async function CHECKLIST_getPrintPdf(req) {
   if (!req || !req.html) throw new UserError('ไม่มีข้อมูลสำหรับสร้าง PDF');
   let body = String(req.html)
@@ -609,14 +731,18 @@ async function CHECKLIST_getPrintPdf(req) {
 
   const id = parseRowId(req.rowId);
   const row = (await sitePool.query(
-    `SELECT id, site_name, TO_CHAR(inspection_date, 'DD-MM-YYYY') AS d, pdf_path, pdf_hash
+    `SELECT id, site_name, TO_CHAR(inspection_date, 'DD-MM-YYYY') AS d, inspection_date, pdf_path, pdf_hash,
+            recorded_by, signer2, signer3, signer2_at, signer3_at
        FROM site_supervisor_checklists WHERE id = $1`, [id])).rows[0];
   if (!row) throw new UserError('ไม่พบรายการนี้ กรุณารีเฟรชแดชบอร์ด');
+  // ลงนามครบทั้ง 2 ช่อง (ตรวจจากฐานข้อมูล) → เก็บเข้าคลัง ไม่ลบทับ
+  const signed = !!(str(row.signer2) && str(row.signer3));
 
   // ถ้าเนื้อหาเหมือนเดิม ใช้ไฟล์เดิมซ้ำ
   const hash = crypto.createHash('md5').update(body).digest('hex');
   if (row.pdf_hash === hash && row.pdf_path && fs.existsSync(path.join(PUBLIC_DIR, row.pdf_path))) {
-    return { url: encodeURI(row.pdf_path) };
+    if (signed) await archivePdf(row, row.pdf_path, hash, userName(this));
+    return { url: encodeURI(row.pdf_path), archived: signed };
   }
 
   const inl = await inlineImages(body);
@@ -626,19 +752,23 @@ async function CHECKLIST_getPrintPdf(req) {
   const pdf = await htmlToPdf(full, { format: 'A4' });
 
   const safe = s => String(s).replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, '').replace(/\s+/g, ' ').trim();
-  const fileName = `เช็คลิสต์_${safe(row.site_name || 'ไม่ระบุหน่วยงาน')}_${safe(row.d || 'ไม่ระบุวันที่')}_${row.id}.pdf`;
+  // ฉบับที่ลงนามครบตั้งชื่อตามเวลา (ไม่ทับฉบับเก่า)
+  const stamp = signed ? '_ลงนาม_' + new Date().toISOString().replace(/\D/g, '').slice(0, 14) : '';
+  const fileName = `เช็คลิสต์_${safe(row.site_name || 'ไม่ระบุหน่วยงาน')}_${safe(row.d || 'ไม่ระบุวันที่')}_${row.id}${stamp}.pdf`;
   fs.mkdirSync(PDF_DIR, { recursive: true });
   await fs.promises.writeFile(path.join(PDF_DIR, fileName), pdf);
   const rel = '/uploads/checklist-pdf/' + fileName;
 
-  // เก็บไว้แค่ฉบับล่าสุดของแต่ละรายการ
+  // ฉบับที่ยังไม่ลงนามครบ เก็บไว้แค่ฉบับล่าสุด · ฉบับที่อยู่ในคลังไม่ลบ
   if (row.pdf_path && row.pdf_path !== rel) {
-    fs.promises.unlink(path.join(PUBLIC_DIR, row.pdf_path)).catch(() => {});
+    const inArchive = (await sitePool.query('SELECT 1 FROM checklist_pdf_archive WHERE file_path = $1', [row.pdf_path])).rows.length;
+    if (!inArchive) fs.promises.unlink(path.join(PUBLIC_DIR, row.pdf_path)).catch(() => {});
   }
+  if (signed && !inl.failed) await archivePdf(row, rel, hash, userName(this));
   // ถ้ารูปขาด ไม่จำไว้ใช้ซ้ำ ครั้งหน้าจะลองดึงรูปใหม่
   await sitePool.query('UPDATE site_supervisor_checklists SET pdf_path = $2, pdf_hash = $3 WHERE id = $1',
     [row.id, rel, inl.failed ? null : hash]);
-  return { url: encodeURI(rel) };
+  return { url: encodeURI(rel), archived: signed && !inl.failed };
 }
 
 module.exports = {
@@ -651,6 +781,7 @@ module.exports = {
     CHECKLIST_checkEditPin,
     CHECKLIST_updateSubmission,
     CHECKLIST_getPrintPdf,
+    CHECKLIST_signMany,
     CHECKLIST_signerList,
     CHECKLIST_saveSigner,
     CHECKLIST_updateSignerAccount,

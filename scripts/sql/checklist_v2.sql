@@ -82,6 +82,50 @@ DO $$ BEGIN
 END $$;
 CREATE INDEX IF NOT EXISTS checklist_pins_user_idx ON checklist_pins (user_id);
 
+-- ประวัติการลงนาม (ไม่ผูก FK — เก็บไว้แม้รายการถูกลบ)
+--   action: sign = ลงนาม · cleared = ลายเซ็นถูกล้างเพราะแก้ไขรายการ
+--   method: single = ลงทีละใบ · bulk = ลงหลายใบพร้อมกัน · edit = จากการแก้ไข
+--   viewed = เปิดดูใบนั้นก่อนลงนามหรือไม่ · confirmed = ติ๊กยืนยันว่าตรวจสอบแล้ว
+CREATE TABLE IF NOT EXISTS checklist_sign_log (
+  id              SERIAL PRIMARY KEY,
+  checklist_id    INT,
+  site_name       TEXT,
+  inspection_date DATE,
+  action          TEXT NOT NULL,
+  slot            INT,
+  signer_name     TEXT,
+  username        TEXT,
+  method          TEXT,
+  viewed          BOOLEAN,
+  confirmed       BOOLEAN,
+  login_user      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS checklist_sign_log_row_idx  ON checklist_sign_log (checklist_id);
+CREATE INDEX IF NOT EXISTS checklist_sign_log_time_idx ON checklist_sign_log (created_at DESC);
+
+-- คลัง PDF เช็คลิสต์ที่ลงนามครบ — เก็บทุกฉบับ ไม่ลบทับ
+--   superseded_at = ฉบับนี้ถูกแทนที่ (รายการถูกแก้ไข/ลบหลังลงนาม)
+CREATE TABLE IF NOT EXISTS checklist_pdf_archive (
+  id                SERIAL PRIMARY KEY,
+  checklist_id      INT,
+  site_name         TEXT,
+  inspection_date   DATE,
+  recorded_by       TEXT,
+  signer2           TEXT,
+  signer3           TEXT,
+  signer2_at        TIMESTAMPTZ,
+  signer3_at        TIMESTAMPTZ,
+  file_path         TEXT NOT NULL,
+  content_hash      TEXT,
+  created_by        TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  superseded_at     TIMESTAMPTZ,
+  superseded_reason TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS checklist_pdf_archive_uq ON checklist_pdf_archive (checklist_id, content_hash);
+CREATE INDEX IF NOT EXISTS checklist_pdf_archive_time_idx ON checklist_pdf_archive (created_at DESC);
+
 -- นับรหัสผิด (ผิดเกิน 5 ครั้ง ล็อก 15 นาที)
 CREATE TABLE IF NOT EXISTS checklist_pin_failures (
   fail_key     TEXT PRIMARY KEY,

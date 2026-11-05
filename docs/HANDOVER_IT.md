@@ -37,6 +37,9 @@ npm start
   หรือใช้ Chromium ที่ติดตั้งในเครื่องแล้วตั้ง `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`
 - ฟอนต์ไทยใน PDF ฝังจาก `fonts/tahoma.ttf` ไม่ต้องติดตั้งฟอนต์ในระบบ
 
+## หน้าใหม่สำหรับ admin
+- `/documents` คลังเอกสาร PDF ทุกระบบ + ประวัติการลงนามเช็คลิสต์ (ดู CHECKLIST_SETUP.md)
+
 ## ไฟล์ที่ต้องสำรอง
 - ฐานข้อมูล PostgreSQL
 - โฟลเดอร์ `storage/` (ไฟล์ PDF ใบเบิกวัสดุของระบบขนส่ง) — อยู่ใน `.gitignore` ไม่ขึ้น git
