@@ -814,6 +814,7 @@
         state.site = saved.site || '';
         state.date = saved.date || '';
         state.recordedBy = saved.recordedBy || '';
+        DRAFT_OWNER = saved.owner || '';
         state.signers = saved.signers && saved.signers.length === 3 ? saved.signers : state.signers;
         if(saved.items){
           ALL_ITEM_IDS.forEach(function(id){
@@ -828,10 +829,12 @@
   }
   var saveTimer = null;
      // เก็บเฉพาะข้อมูลฟอร์ม (ไม่เอา submissions ของแดชบอร์ดลง localStorage)
+  var DRAFT_OWNER = '';
   function draftSnapshot_(){
     return {
       lang: state.lang, site: state.site, date: state.date,
-      recordedBy: state.recordedBy, signers: state.signers, items: state.items
+      recordedBy: state.recordedBy, signers: state.signers, items: state.items,
+      owner: DRAFT_OWNER    // บัญชีที่เป็นเจ้าของร่างนี้ (ใช้ตัดสินว่าจะใส่ชื่อใหม่ไหม)
     };
   }
   function saveDraft(){
@@ -2351,11 +2354,14 @@
   document.getElementById('tabLogoutBtn').addEventListener('click', doLogout);
   // ใส่ชื่อ-นามสกุลของบัญชีที่ login ลงในช่อง "ผู้บันทึกข้อมูล" และ "ผู้ดูแลพื้นที่ควบคุม" (ถ้ายังว่าง แก้เองได้)
   var MY_NAME = '';
+  // ร่างที่ค้างในเครื่องเป็นของบัญชีอื่น (เปลี่ยนคน login บนเครื่องเดิม) → ใส่ชื่อคนปัจจุบันทับ
   function applyMyName(){
     if(!MY_NAME || editCtx) return;
-    var changed = false;
-    if(!String(state.recordedBy || '').trim()){ state.recordedBy = MY_NAME; els.recordedByInput.value = MY_NAME; changed = true; }
-    if(!String(state.signers[0] || '').trim()){ state.signers[0] = MY_NAME; changed = true; }
+    var otherOwner = DRAFT_OWNER !== ME;
+    var changed = otherOwner;
+    if(otherOwner || !String(state.recordedBy || '').trim()){ state.recordedBy = MY_NAME; els.recordedByInput.value = MY_NAME; changed = true; }
+    if(otherOwner || !String(state.signers[0] || '').trim()){ state.signers[0] = MY_NAME; changed = true; }
+    DRAFT_OWNER = ME;
     if(changed){ renderSignatures(); renderProgress(); saveDraft(); }
   }
 
