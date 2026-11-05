@@ -35,6 +35,7 @@
     .c-admin { background:#FDECEC; color:var(--red); }
     .c-staff { background:#E3F5EC; color:var(--green); }
     .c-signer { background:#EDE7FB; color:var(--purple); }
+    .c-checklist { background:#E6F4F7; color:#0F6E80; }
     .c-GM { background:#E8F0FD; color:var(--blue); }
     .c-GF { background:#FFF4D6; color:#8A6400; }
     .c-MASTER { background:var(--ink); color:#fff; }
@@ -76,16 +77,16 @@
   <div class="top"><div class="wrap">
     <a class="back" href="/admin">← กลับหน้าผู้ดูแลระบบ</a>
     <h1>👥 จัดการผู้ใช้งาน</h1>
-    <p>สร้างบัญชีและกำหนดว่าแต่ละคนทำอะไรได้ในที่เดียว — หน้างาน, GM/ธุรการ, GF/GE, MASTER (เฉพาะ admin)</p>
+    <p>สร้างบัญชีและกำหนดว่าแต่ละคนทำอะไรได้ในที่เดียว — ผู้ดูแลพื้นที่, ธุรการ, GF/GE, MASTER (เฉพาะ admin)</p>
   </div></div>
 
   <div class="wrap">
     <div class="card">
       <h2>บัญชีผู้ใช้</h2>
       <div class="note">
-        <b>หน้างาน</b> = กรอกข้อมูลได้ทุกระบบ ไม่มีสิทธิ์ลงนาม ·
-        <b>GM/ธุรการ</b> = หน้างาน + ลงนามช่อง 2 และแก้ไขเช็คลิสต์ของโครงการที่กำหนด ·
-        <b>GF/GE</b> = ลงนามช่อง 3 (ปกติใช้บัญชี "ลงนามอย่างเดียว" เข้าได้แค่แดชบอร์ดเช็คลิสต์) ·
+        <b>ผู้ดูแลพื้นที่ควบคุม</b> = กรอกเช็คลิสต์และดูแดชบอร์ด (เข้าระบบอื่นไม่ได้ ลงนามไม่ได้) ·
+        <b>ธุรการ</b> = ใช้ได้ทุกระบบ + ใส่สิทธิ์ GM/ธุรการ เพื่อลงนามช่อง 2 และแก้ไขเช็คลิสต์ของโครงการ ·
+        <b>GF/GE</b> = ลงนามช่อง 3 (บัญชี "ลงนามอย่างเดียว" เห็นแค่แดชบอร์ดเช็คลิสต์) ·
         <b>MASTER</b> = ลงนามและแก้ไขได้ทุกช่อง ทุกโครงการ
       </div>
       <div class="bar">
@@ -120,7 +121,8 @@
       <div class="sec">
         <div class="sec-t">ประเภทบัญชี — เข้าระบบไหนได้บ้าง</div>
         <div class="types" id="types">
-          <div class="type" data-type="staff"><b>หน้างาน / ธุรการ</b>ใช้ได้ทุกระบบ (เช็คลิสต์ ขยะ ขนส่ง แผนเดินรถ)</div>
+          <div class="type" data-type="checklist"><b>ผู้ดูแลพื้นที่ควบคุม</b>กรอกเช็คลิสต์ + ดูแดชบอร์ด (เข้าระบบอื่นไม่ได้)</div>
+          <div class="type" data-type="staff"><b>ธุรการ</b>ใช้ได้ทุกระบบ (เช็คลิสต์ ขยะ ขนส่ง แผนเดินรถ)</div>
           <div class="type" data-type="signer"><b>ลงนามอย่างเดียว</b>เข้าได้แค่แดชบอร์ดเช็คลิสต์ (สำหรับ GF/GE)</div>
           <div class="type hidden" data-type="admin"><b>ผู้ดูแลระบบ (admin)</b>ประเภทนี้เปลี่ยนจากหน้านี้ไม่ได้</div>
         </div>
@@ -128,7 +130,7 @@
 
       <div class="sec">
         <div class="sec-t">สิทธิ์ลงนามเช็คลิสต์</div>
-        <div class="note" id="rightsNote">ไม่ใส่ = ลงนามไม่ได้ (หน้างานทั่วไป) · คนเดียวใส่ได้หลายโครงการ</div>
+        <div class="note" id="rightsNote">ไม่ใส่ = ลงนามไม่ได้ · คนเดียวใส่ได้หลายโครงการ</div>
         <div class="rights" id="rights"></div>
         <div class="add">
           <select id="rRole">
@@ -157,7 +159,7 @@
   var data = { users: [], pins: [], projects: [] };
   var cur = null;          // บัญชีที่กำลังแก้ (null = เพิ่มใหม่)
   var form = { type: 'staff', rights: [], typeTouched: false };
-  var TYPE = { admin:'admin', staff:'หน้างาน / ธุรการ', signer:'ลงนามอย่างเดียว' };
+  var TYPE = { admin:'admin', staff:'ธุรการ (ทุกระบบ)', checklist:'ผู้ดูแลพื้นที่ (เช็คลิสต์)', signer:'ลงนามอย่างเดียว' };
   var ROLE = { GM:'GM/ธุรการ', GF:'GF/GE', MASTER:'MASTER' };
 
   function toast(m){ var t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 2600); }
@@ -227,7 +229,7 @@
     }).join('');
     $('rightsNote').textContent = form.rights.length
       ? 'คนเดียวใส่ได้หลายโครงการ · กด × เพื่อเอาสิทธิ์ออก'
-      : 'ไม่ใส่ = ลงนามไม่ได้ (หน้างานทั่วไป) · คนเดียวใส่ได้หลายโครงการ';
+      : 'ไม่ใส่ = ลงนามไม่ได้ · คนเดียวใส่ได้หลายโครงการ';
     $('rSite').disabled = $('rRole').value === 'MASTER';
   }
   function openEd(u){
@@ -238,7 +240,7 @@
     $('fPw').value = '';
     $('fPwLabel').textContent = u ? 'รหัสผ่านใหม่ (เว้นว่าง = ใช้รหัสเดิม)' : 'รหัสผ่าน (อย่างน้อย 6 ตัว)';
     $('fPw').disabled = !!(u && u.role === 'admin' && !u.self);
-    form = { type: u ? u.role : 'staff', rights: u ? u.rights.map(function(r){ return { role:r.role, siteCode:r.siteCode }; }) : [], typeTouched: !!u };
+    form = { type: u ? u.role : 'checklist', rights: u ? u.rights.map(function(r){ return { role:r.role, siteCode:r.siteCode }; }) : [], typeTouched: !!u };
     $('rRole').value = 'GM'; $('rSite').value = '';
     $('edErr').textContent = '';
     renderForm();
@@ -260,8 +262,8 @@
     var role = $('rRole').value, site = role === 'MASTER' ? '' : $('rSite').value;
     if(form.rights.some(function(r){ return r.role === role && r.siteCode === site; })){ $('edErr').textContent = 'มีสิทธิ์นี้อยู่แล้ว'; return; }
     form.rights.push({ role: role, siteCode: site });
-    // GM/ธุรการ, MASTER ต้องแก้ไขรายการได้ → ใช้บัญชีหน้างาน · GF/GE บัญชีใหม่ → แนะนำ "ลงนามอย่างเดียว"
-    if(role !== 'GF' && form.type === 'signer') form.type = 'staff';
+    // GM/ธุรการ, MASTER → บัญชีธุรการ (ทุกระบบ) · GF/GE บัญชีใหม่ → แนะนำ "ลงนามอย่างเดียว"
+    if(role !== 'GF' && (form.type === 'signer' || (form.type === 'checklist' && !form.typeTouched))) form.type = 'staff';
     else if(role === 'GF' && !form.typeTouched && form.rights.every(function(r){ return r.role === 'GF'; })) form.type = 'signer';
     $('edErr').textContent = '';
     renderForm();

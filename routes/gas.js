@@ -40,6 +40,10 @@ router.post('/', authenticateToken, async (req, res) => {
   if (!handler) return res.json({ ok: false, error: 'ไม่อนุญาตให้เรียกฟังก์ชัน: ' + fn });
   // สิทธิ์ล่าสุดจากฐานข้อมูล (middleware/role_guard.js) ถ้ามี
   const user = req.liveRole ? Object.assign({}, req.user, { role: req.liveRole }) : req.user;
+  // ผู้ดูแลพื้นที่ (role checklist): ใช้ได้เฉพาะฟังก์ชันของระบบเช็คลิสต์ (สิทธิ์ลงนาม/แก้ไข server ตรวจแยกอีกชั้น)
+  if (user.role === 'checklist' && !/^CHECKLIST_/.test(fn)) {
+    return res.json({ ok: false, error: 'บัญชีนี้ใช้ได้เฉพาะระบบเช็คลิสต์' });
+  }
   if (user.role === 'signer' && !SIGNER_ALLOWED.has(fn)) {
     return res.json({ ok: false, error: 'บัญชีนี้ใช้ได้เฉพาะดูและลงนามเช็คลิสต์' });
   }

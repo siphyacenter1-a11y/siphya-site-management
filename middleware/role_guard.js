@@ -1,5 +1,7 @@
 // ============================================================
-// บัญชี "ลงนามอย่างเดียว" (users.role = 'signer') — ใช้กับ GF/GE
+// บัญชีที่ใช้ได้แค่ระบบเช็คลิสต์:
+//   signer    = ลงนามอย่างเดียว (GF/GE) — เห็นแค่แดชบอร์ด
+//   checklist = ผู้ดูแลพื้นที่ควบคุม — กรอกฟอร์ม + ดูแดชบอร์ดเช็คลิสต์
 //   - เปิดได้เฉพาะหน้าเช็คลิสต์ (/checklist) และหน้า login; หน้าอื่นพากลับไป /checklist
 //   - API: ได้เฉพาะ /api/auth/* และ /api/gas (ฟังก์ชันที่อนุญาตตรวจใน routes/gas.js)
 //   - อ่านสิทธิ์จากฐานข้อมูลจริง (ไม่เชื่อ role ใน token อย่างเดียว) — เปลี่ยนประเภทบัญชีแล้วมีผลภายใน ~15 วินาที
@@ -33,6 +35,7 @@ function tokenUser(req) {
   try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 }
 
+const CHECKLIST_ONLY = new Set(['signer', 'checklist']);
 const OPEN_PAGES = new Set(['/checklist', '/checklist.html', '/login', '/login.html']);
 
 async function roleGuard(req, res, next) {
@@ -40,12 +43,12 @@ async function roleGuard(req, res, next) {
   if (!user) return next();
   const role = await liveRole(user);
   req.liveRole = role;
-  if (role !== 'signer') return next();
+  if (!CHECKLIST_ONLY.has(role)) return next();
 
   const p = req.path;
   if (p.startsWith('/api/')) {
     if (p.startsWith('/api/auth/') || p === '/api/gas' || p === '/api/gas/') return next();
-    return res.status(403).json({ ok: false, error: 'บัญชีนี้ใช้ได้เฉพาะลงนามเช็คลิสต์' });
+    return res.status(403).json({ ok: false, error: 'บัญชีนี้ใช้ได้เฉพาะระบบเช็คลิสต์' });
   }
   const isPage = p === '/' || /\.html$/i.test(p) || !/\.[a-z0-9]+$/i.test(p);
   if (isPage && !OPEN_PAGES.has(p)) return res.redirect('/checklist');

@@ -8,8 +8,9 @@
 //   USERS_deletePin(id)          ลบรหัส PIN สำรอง
 //
 // ประเภทบัญชี (users.role):
-//   staff  = ใช้ได้ทุกระบบ (หน้างาน, ธุรการ)
-//   signer = ลงนามเช็คลิสต์อย่างเดียว (GF/GE) — middleware/role_guard.js
+//   staff     = ธุรการ — ใช้ได้ทุกระบบ
+//   checklist = ผู้ดูแลพื้นที่ควบคุม — กรอกฟอร์ม + ดูแดชบอร์ดเช็คลิสต์ (ระบบอื่นเข้าไม่ได้)
+//   signer    = ลงนามเช็คลิสต์อย่างเดียว (GF/GE) — เห็นแค่แดชบอร์ด · กันที่ middleware/role_guard.js
 //   admin  = ผู้ดูแลระบบ — สร้าง/แก้จากหน้านี้ไม่ได้ (ให้ IT ตั้ง หรือใช้ scripts)
 // สิทธิ์ลงนาม (checklist_pins ที่มี user_id): GM = ช่อง 2 + แก้ไข, GF = ช่อง 3, MASTER = ทุกอย่าง
 // ============================================================
@@ -22,7 +23,7 @@ const PROJECTS = require('./checklist_projects');
 const TZ = 'Asia/Bangkok';
 const str = (v, max) => String(v == null ? '' : v).trim().slice(0, max || 200);
 const USERNAME_RE = /^[A-Za-z0-9._-]{3,50}$/;
-const ACCOUNT_ROLES = ['staff', 'signer'];
+const ACCOUNT_ROLES = ['staff', 'checklist', 'signer'];
 const SIGN_ROLES = ['GM', 'GF', 'MASTER'];
 
 function requireAdmin(ctx) {

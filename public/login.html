@@ -213,7 +213,7 @@
               window.location.href = next;
             } else if (res.user.role === 'admin') {
               window.location.href = '/admin';
-            } else if (res.user.role === 'signer') {
+            } else if (res.user.role === 'signer' || res.user.role === 'checklist') {
               window.location.href = '/checklist';
             } else {
               window.location.href = '/';

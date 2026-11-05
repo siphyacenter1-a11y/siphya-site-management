@@ -76,6 +76,11 @@
   a{ color:inherit; } button{ font-family:inherit; }
   .wrap{ max-width:880px; margin:0 auto; padding:0 16px; }
   .hidden{ display:none !important; }
+  /* ผู้ดูแลพื้นที่ (เช็คลิสต์อย่างเดียว): ไม่มีปุ่มหน้าแรก — มีปุ่มออกจากระบบในแถบแท็บแทน */
+  body.checklist-only .hub-home-fab{ display:none !important; }
+  @media (max-width:1099px){ body.checklist-only header.topbar .topbar-inner{ padding-left:16px; } }
+  .tab-logout{ flex:none; display:inline-flex; align-items:center; gap:6px; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--ink-soft); font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
+  .tab-logout svg{ width:16px; height:16px; }
   body.signer-only .tab-btn[data-tab="form"], body.signer-only #backToFormBtn, body.signer-only .hub-home-fab{ display:none !important; }
 
   /* Header */
@@ -371,6 +376,10 @@
     <button type="button" class="tab-btn" data-tab="dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
       <span data-i18n="tabDashboard">แดชบอร์ด</span>
+    </button>
+    <button type="button" class="tab-logout hidden" id="tabLogoutBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      <span>ออกจากระบบ</span>
     </button>
   </div>
 </div>
@@ -2307,8 +2316,11 @@
       if(!(j && j.user)) return;
       ME = j.user.username || '';
       if(j.user.role === 'signer') enterSignerOnlyMode(j.user.full_name || ME);
-      // บัญชีตั้งต้นที่ใช้ร่วมกัน (admin/staff) ไม่ใส่ชื่อให้ — ชื่อไม่ใช่ของคนจริง
-      else if(ME !== 'admin' && ME !== 'staff'){ MY_NAME = String(j.user.full_name || '').trim(); applyMyName(); }
+      else {
+        if(j.user.role === 'checklist') enterChecklistOnlyMode();
+        // บัญชีตั้งต้นที่ใช้ร่วมกัน (admin/staff) ไม่ใส่ชื่อให้ — ชื่อไม่ใช่ของคนจริง
+        if(ME !== 'admin' && ME !== 'staff'){ MY_NAME = String(j.user.full_name || '').trim(); applyMyName(); }
+      }
     }).catch(function(){}); }catch(e){}
 
   // บัญชี "ลงนามอย่างเดียว" (GF/GE): เห็นเฉพาะแดชบอร์ด — ลงนามและดู/พิมพ์ได้ กรอกหรือแก้ไขไม่ได้
@@ -2322,14 +2334,21 @@
     renderTabUI();
     refreshSubmissions();
   }
+  // บัญชีผู้ดูแลพื้นที่ (เช็คลิสต์อย่างเดียว): ซ่อนปุ่มหน้าแรก แสดงปุ่มออกจากระบบในแถบแท็บ
+  function enterChecklistOnlyMode(){
+    document.body.classList.add('checklist-only');
+    document.getElementById('tabLogoutBtn').classList.remove('hidden');
+  }
   // ออกจากระบบ: ลบ cookie ที่ server แล้วกลับหน้า login (ลบค่าที่ api-client.js เก็บไว้ด้วย)
-  document.getElementById('logoutBtn').addEventListener('click', function(){
+  function doLogout(){
     var go = function(){
       try{ localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); }catch(e){}
       window.location.href = '/login';
     };
     fetch('/api/auth/logout', { method:'POST', credentials:'same-origin' }).then(go, go);
-  });
+  }
+  document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  document.getElementById('tabLogoutBtn').addEventListener('click', doLogout);
   // ใส่ชื่อ-นามสกุลของบัญชีที่ login ลงในช่อง "ผู้บันทึกข้อมูล" และ "ผู้ดูแลพื้นที่ควบคุม" (ถ้ายังว่าง แก้เองได้)
   var MY_NAME = '';
   function applyMyName(){
