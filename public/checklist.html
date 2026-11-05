@@ -940,6 +940,7 @@
     clearTimeout(saveTimer);
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(draftSnapshot_())); }catch(e){}
     renderAll();
+    applyMyName();
     applyMissingMarks();
     window.scrollTo(0, 0);
   }
@@ -2332,6 +2333,7 @@
     ALL_ITEM_IDS.forEach(function(id){ state.items[id] = { status:null, worker:'', remark:'', location:'', photos:[] }; });
     saveDraft();
     renderAll();
+    applyMyName();
   });
 
   // ถ้ากด "ดู/พิมพ์" จากแดชบอร์ด ให้พิมพ์ข้อมูลรายการนั้น ไม่ใช่ข้อมูลในฟอร์ม
@@ -2350,6 +2352,8 @@
       if(!(j && j.user)) return;
       ME = j.user.username || '';
       if(j.user.role === 'signer') enterSignerOnlyMode(j.user.full_name || ME);
+      // บัญชีตั้งต้นที่ใช้ร่วมกัน (admin/staff) ไม่ใส่ชื่อให้ — ชื่อไม่ใช่ของคนจริง
+      else if(ME !== 'admin' && ME !== 'staff'){ MY_NAME = String(j.user.full_name || '').trim(); applyMyName(); }
     }).catch(function(){}); }catch(e){}
 
   // บัญชี "ลงนามอย่างเดียว" (GF/GE): เห็นเฉพาะแดชบอร์ด — ลงนามและดู/พิมพ์ได้ กรอกหรือแก้ไขไม่ได้
@@ -2371,6 +2375,15 @@
     };
     fetch('/api/auth/logout', { method:'POST', credentials:'same-origin' }).then(go, go);
   });
+  // ใส่ชื่อ-นามสกุลของบัญชีที่ login ลงในช่อง "ผู้บันทึกข้อมูล" และ "ผู้ดูแลพื้นที่ควบคุม" (ถ้ายังว่าง แก้เองได้)
+  var MY_NAME = '';
+  function applyMyName(){
+    if(!MY_NAME || editCtx) return;
+    var changed = false;
+    if(!String(state.recordedBy || '').trim()){ state.recordedBy = MY_NAME; els.recordedByInput.value = MY_NAME; changed = true; }
+    if(!String(state.signers[0] || '').trim()){ state.signers[0] = MY_NAME; changed = true; }
+    if(changed){ renderSignatures(); renderProgress(); saveDraft(); }
+  }
   function signerUsername(){
     var last = ''; try{ last = localStorage.getItem('checklist_signer_user') || ''; }catch(e){}
     return last || (ME === 'staff' || ME === 'admin' ? '' : ME);
