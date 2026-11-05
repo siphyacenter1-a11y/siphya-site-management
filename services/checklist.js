@@ -154,46 +154,11 @@ async function lockRow(client, rowId, submittedAt) {
   return row;
 }
 
-// ---------- รหัสลงนาม ----------
-// slot 1 = GM/ธุรการสนาม (ใช้แก้ไขด้วย), slot 2 = GF/GE
-// ผู้ลงนามที่ใช้ได้ = บทบาทนั้นของโครงการนี้ + บทบาทนั้นแบบ "ทุกโครงการ" + MASTER (เฉพาะที่เปิดใช้)
-// แต่ละแถวเป็นได้ 2 แบบ: ผูกบัญชี login (ตรวจ username + รหัสผ่านบัญชี) หรือรหัส PIN (ไม่ต้องใส่ username)
-async function expectedPins(client, slot, siteCode) {
-  const role = slot === 2 ? 'GF' : 'GM';
-  const r = await client.query(
-    `SELECT p.id, p.user_id, COALESCE(u.full_name, p.label) AS label, p.pin_hash,
-            u.username, u.password_hash
-       FROM checklist_pins p LEFT JOIN users u ON u.id = p.user_id
-      WHERE p.active AND (p.user_id IS NULL OR u.id IS NOT NULL)
-        AND (p.role = 'MASTER' OR (p.role = $1 AND (p.site_code IS NULL OR p.site_code = $2)))
-      ORDER BY (p.role = 'MASTER'), (p.site_code IS NULL), p.id`, [role, siteCode || '']);
-  return r.rows;
-}
-
-// คืนข้อมูลผู้ลงนามที่ตรง { id, label }
-//   username ว่าง → pin คือรหัส PIN · มี username → pin คือรหัสผ่านบัญชี
-async function assertPin(client, { slot, siteCode, pin, username, failKey, notSetMsg, wrongMsg }) {
-  const all = await expectedPins(client, slot, siteCode);
-  if (!all.length) throw new UserError(notSetMsg);
-  const uname = str(username, 50).toLowerCase();
-  const pins = uname
-    ? all.filter(p => p.user_id && String(p.username || '').toLowerCase() === uname)
-    : all.filter(p => !p.user_id && p.pin_hash);
-
-  const f = await lockState(client, failKey);
-
-  const given = str(pin, 50);
-  let match = null;
-  if (given) {
-    for (const p of pins) {
-      const hash = p.user_id ? p.password_hash : p.pin_hash;
-      if (hash && await bcrypt.compare(given, hash)) { match = { id: p.id, label: str(p.label, 100) }; break; }
-    }
-  }
-  if (!match) { await recordFail(failKey, f); throw new UserError(wrongMsg); }
-  await sitePool.query('DELETE FROM checklist_pin_failures WHERE fail_key = $1', [failKey]);
-  return match;
-}
+// ---------- สิทธิ์ลงนาม ----------
+// slot 1 = ช่อง 2 GM/ธุรการสนาม (แก้ไขรายการได้ด้วย), slot 2 = ช่อง 3 GF/GE
+// สิทธิ์ในแต่ละโครงการ = บทบาทนั้นของโครงการนั้น + บทบาทนั้นแบบ "ทุกโครงการ" + MASTER (เฉพาะที่เปิดใช้)
+// ผู้ลงนามต้อง login ด้วยบัญชีของตัวเอง แล้วลงนาม/แก้ไขได้เลย (ไม่ต้องพิมพ์รหัสซ้ำ)
+// สำรองฉุกเฉิน: รหัส PIN (MASTER หรือรหัสแบบเก่า) ใช้ได้จากบัญชีใดก็ได้
 
 // ---------- นับรหัสผิด / ล็อกชั่วคราว ----------
 async function lockState(client, failKey) {
@@ -217,39 +182,54 @@ async function recordFail(failKey, f) {
     [failKey, prev + 1, MAX_PIN_FAILS, LOCK_MINUTES]);
 }
 
-// ---------- ลงนามหลายใบ: ตรวจรหัสครั้งเดียว แล้วได้สิทธิ์ทั้งหมดของคนนั้น ----------
-// คืน [{ id, role, site_code, label }] — ว่าง = ชื่อผู้ใช้/รหัสผิด
-async function signerEntriesFor(client, username, pin) {
-  const uname = str(username, 50).toLowerCase();
-  const given = str(pin, 50);
-  if (!given) return [];
-  if (uname) {
-    const rows = (await client.query(
-      `SELECT p.id, p.role, p.site_code, u.full_name AS label, u.password_hash
-         FROM checklist_pins p JOIN users u ON u.id = p.user_id
-        WHERE p.active AND LOWER(u.username) = $1`, [uname])).rows;
-    if (!rows.length || !(await bcrypt.compare(given, rows[0].password_hash))) return [];
-    return rows;
-  }
-  const pins = (await client.query(
-    `SELECT id, role, site_code, label, pin_hash FROM checklist_pins
-      WHERE active AND user_id IS NULL AND pin_hash IS NOT NULL`)).rows;
-  for (const p of pins) {
-    if (await bcrypt.compare(given, p.pin_hash)) return [p];
-  }
-  return [];
+// สิทธิ์ของบัญชีที่ login อยู่ → [{ id, role, site_code, label, username }]
+async function sessionEntries(client, ctx) {
+  const uid = ctx && ctx.user && Number(ctx.user.id);
+  if (!uid) return [];
+  return (await client.query(
+    `SELECT p.id, p.role, p.site_code, u.full_name AS label, u.username
+       FROM checklist_pins p JOIN users u ON u.id = p.user_id
+      WHERE p.active AND p.user_id = $1`, [uid])).rows;
 }
 
-// ช่องที่คนนี้ลงได้ในใบนี้ (ช่อง 2 ก่อน แล้วช่อง 3) — null = ลงไม่ได้ พร้อมเหตุผล
-function pickSlot(entries, row) {
+// ผู้ลงนาม: ส่ง pin มา = ใช้รหัส PIN (สำรอง) · ไม่ส่ง = บัญชีที่ login อยู่
+// คืน { entries, name, username, via: 'session'|'pin' }
+async function resolveSigner(client, ctx, req) {
+  const pin = str(req && req.pin, 50);
+  if (pin) {
+    const failKey = 'pin_fallback';
+    const f = await lockState(client, failKey);
+    const pins = (await client.query(
+      `SELECT id, role, site_code, label, pin_hash FROM checklist_pins
+        WHERE active AND user_id IS NULL AND pin_hash IS NOT NULL`)).rows;
+    let hit = null;
+    for (const p of pins) { if (await bcrypt.compare(pin, p.pin_hash)) { hit = p; break; } }
+    if (!hit) { await recordFail(failKey, f); throw new UserError('รหัส PIN ไม่ถูกต้อง'); }
+    await sitePool.query('DELETE FROM checklist_pin_failures WHERE fail_key = $1', [failKey]);
+    return { entries: [hit], name: str(hit.label, 100), username: '', via: 'pin' };
+  }
+  const rows = await sessionEntries(client, ctx);
+  if (!rows.length) {
+    throw new UserError('บัญชีที่ login อยู่ไม่มีสิทธิ์ลงนาม — ผู้ลงนามต้อง login ด้วยบัญชีของตัวเอง');
+  }
+  const name = str(rows[0].label, 100);
+  if (!name) throw new UserError('บัญชีนี้ยังไม่มีชื่อ-นามสกุล กรุณาให้ admin ใส่ชื่อในแท็บผู้ลงนาม');
+  return { entries: rows, name, username: str(rows[0].username, 50), via: 'session' };
+}
+
+// มีสิทธิ์บทบาท role (GM/GF) ในโครงการ code ไหม
+function canRole(entries, role, code) {
+  return entries.some(e => e.role === 'MASTER' || (e.role === role && (!e.site_code || e.site_code === code)));
+}
+
+// ช่องที่คนนี้ลงได้ในใบนี้ (ช่อง 2 ก่อน แล้วช่อง 3) — ไม่มี slot = ลงไม่ได้ พร้อมเหตุผล
+function pickSlot(entries, row, name) {
   const code = siteCodeOf(row.site_name);
-  const can = role => entries.some(e => e.role === 'MASTER' || (e.role === role && (!e.site_code || e.site_code === code)));
-  const name = str(entries[0] && entries[0].label, 100);
   const s2 = str(row.signer2), s3 = str(row.signer3);
-  if (!can('GM') && !can('GF')) return { reason: 'ไม่มีสิทธิ์ลงนามโครงการนี้' };
+  if (!canRole(entries, 'GM', code) && !canRole(entries, 'GF', code)) return { reason: 'ไม่มีสิทธิ์ลงนามโครงการนี้' };
   if (name && (s2 === name || s3 === name)) return { reason: 'ลงนามใบนี้ไปแล้ว (คนเดียวลงสองช่องไม่ได้)' };
-  if (!s2 && can('GM')) return { slot: 1 };
-  if (!s3 && can('GF')) return { slot: 2 };
+  if (!s2 && canRole(entries, 'GM', code)) return { slot: 1 };
+  if (!s3 && canRole(entries, 'GF', code)) return { slot: 2 };
   return { reason: 'ช่องที่มีสิทธิ์ลงนามครบแล้ว' };
 }
 
@@ -262,14 +242,13 @@ async function logSign(client, row, o) {
       o.method || '', o.viewed == null ? null : !!o.viewed, o.confirmed == null ? null : !!o.confirmed, o.sessionUser || '']);
 }
 
-function assertEditPin(client, site, pin, username) {
-  const siteCode = siteCodeOf(site);
-  return assertPin(client, {
-    slot: 1, siteCode, pin, username,
-    failKey: 'edit_' + siteCode,
-    notSetMsg: 'ยังไม่ได้ตั้งรหัสสำหรับโครงการนี้ กรุณาติดต่อผู้ดูแลระบบ',
-    wrongMsg: username ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขโครงการนี้' : 'รหัสไม่ถูกต้อง'
-  });
+// แก้ไขรายการได้: GM/ธุรการของโครงการนั้น หรือ MASTER
+async function assertCanEdit(client, ctx, site, req) {
+  const who = await resolveSigner(client, ctx, req);
+  if (!canRole(who.entries, 'GM', siteCodeOf(site))) {
+    throw new UserError('ไม่มีสิทธิ์แก้ไขโครงการนี้ (ต้องเป็น GM/ธุรการของโครงการ หรือ MASTER)');
+  }
+  return who;
 }
 
 // ============================================================
@@ -346,23 +325,19 @@ async function CHECKLIST_getSubmissions() {
 async function CHECKLIST_signSubmission(req) {
   if (!req || (req.slot !== 1 && req.slot !== 2)) throw new UserError('ช่องลงนามไม่ถูกต้อง');
   if (req.confirm !== true) throw new UserError('กรุณาติ๊กยืนยันว่าได้ตรวจสอบเช็คลิสต์แล้ว');
-  let name = str(req.name, 100);
-  const sessionUser = userName(this);
+  const ctx = this;
   let full = false;
 
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
     // อ่านโครงการจาก database เสมอ (ไม่เชื่อค่าจากหน้าเว็บ)
-    const siteCode = siteCodeOf(row.site_name);
-    const who = await assertPin(client, {
-      slot: req.slot, siteCode, pin: req.pin, username: req.username,
-      failKey: 'sign' + req.slot + (req.slot === 1 ? '_' + siteCode : ''),
-      notSetMsg: 'ยังไม่ได้ตั้งรหัสลงนามสำหรับโครงการนี้ กรุณาติดต่อผู้ดูแลระบบ',
-      wrongMsg: str(req.username) ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่มีสิทธิ์ลงนามช่องนี้ของโครงการนี้' : 'รหัสลงนามไม่ถูกต้อง'
-    });
-    // รหัสเป็นของใคร ใช้ชื่อคนนั้น (พิมพ์ชื่ออื่นแทนไม่ได้)
-    if (who.label) name = who.label;
-    if (!name) throw new UserError('กรุณาพิมพ์ชื่อผู้ลงนาม');
+    const code = siteCodeOf(row.site_name);
+    const who = await resolveSigner(client, ctx, req);
+    if (!canRole(who.entries, req.slot === 1 ? 'GM' : 'GF', code)) {
+      throw new UserError('ไม่มีสิทธิ์ลงนามช่องนี้ของโครงการนี้');
+    }
+    const name = who.name;
+    if (!name) throw new UserError('ผู้ลงนามยังไม่มีชื่อ กรุณาให้ admin ใส่ชื่อในแท็บผู้ลงนาม');
     const col = req.slot === 1 ? 'signer2' : 'signer3';
     const existing = str(row[col]);
     if (existing) throw new UserError('ช่องนี้ลงนามไปแล้วโดย ' + existing);
@@ -371,15 +346,15 @@ async function CHECKLIST_signSubmission(req) {
     await client.query(
       `UPDATE site_supervisor_checklists SET ${col} = $2, ${col}_at = NOW() WHERE id = $1`,
       [row.id, name]);
-    await logSign(client, row, { action: 'sign', slot: req.slot + 1, name, username: str(req.username, 50),
-      method: 'single', viewed: !!req.viewed, confirmed: true, sessionUser });
-    full = !!other || !!str(row[req.slot === 1 ? 'signer3' : 'signer2']);
+    await logSign(client, row, { action: 'sign', slot: req.slot + 1, name, username: who.username || (who.via === 'pin' ? '(PIN)' : ''),
+      method: 'single', viewed: !!req.viewed, confirmed: true, sessionUser: userName(ctx) });
+    full = !!other;
   });
   return { ok: true, fullySigned: full };
 }
 
 // ลงนามหลายใบพร้อมกัน
-// req = { items: [{ rowId, submittedAt, viewed }], username, pin, confirm: true }
+// req = { items: [{ rowId, submittedAt, viewed }], confirm: true, pin? (สำรอง) }
 // ระบบเลือกช่องให้ตามสิทธิ์ (GM/ธุรการ → ช่อง 2, GF/GE → ช่อง 3) ใบที่ลงไม่ได้จะข้ามพร้อมเหตุผล
 async function CHECKLIST_signMany(req) {
   req = req || {};
@@ -388,18 +363,10 @@ async function CHECKLIST_signMany(req) {
   if (!items.length) throw new UserError('ยังไม่ได้เลือกรายการ');
   if (items.length > 200) throw new UserError('เลือกได้ครั้งละไม่เกิน 200 ใบ');
   const sessionUser = userName(this);
-  const username = str(req.username, 50);
-  const failKey = 'bulk_' + (username.toLowerCase() || 'pin');
-
-  const f = await lockState(sitePool, failKey);
-  const entries = await signerEntriesFor(sitePool, username, req.pin);
-  if (!entries.length) {
-    await recordFail(failKey, f);
-    throw new UserError(username ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชีนี้ไม่ได้เป็นผู้ลงนาม' : 'รหัสลงนามไม่ถูกต้อง');
-  }
-  await sitePool.query('DELETE FROM checklist_pin_failures WHERE fail_key = $1', [failKey]);
-  const name = str(entries[0].label, 100);
-  if (!name) throw new UserError('ผู้ลงนามนี้ยังไม่มีชื่อ กรุณาให้ admin ใส่ชื่อในแท็บผู้ลงนาม');
+  const who = await resolveSigner(sitePool, this, req);
+  const name = who.name;
+  if (!name) throw new UserError('ผู้ลงนามยังไม่มีชื่อ กรุณาให้ admin ใส่ชื่อในแท็บผู้ลงนาม');
+  const uname = who.username || (who.via === 'pin' ? '(PIN)' : '');
 
   const results = [];
   await withTx(async client => {
@@ -408,11 +375,11 @@ async function CHECKLIST_signMany(req) {
       try {
         const row = await lockRow(client, it.rowId, it.submittedAt);
         res.site = row.site_name;
-        const pick = pickSlot(entries, row);
+        const pick = pickSlot(who.entries, row, name);
         if (!pick.slot) { res.skipped = pick.reason; results.push(res); continue; }
         const col = pick.slot === 1 ? 'signer2' : 'signer3';
         await client.query(`UPDATE site_supervisor_checklists SET ${col} = $2, ${col}_at = NOW() WHERE id = $1`, [row.id, name]);
-        await logSign(client, row, { action: 'sign', slot: pick.slot + 1, name, username,
+        await logSign(client, row, { action: 'sign', slot: pick.slot + 1, name, username: uname,
           method: 'bulk', viewed: !!(it && it.viewed), confirmed: true, sessionUser });
         res.signedSlot = pick.slot + 1;
         res.fullySigned = !!str(row[pick.slot === 1 ? 'signer3' : 'signer2']);
@@ -426,14 +393,26 @@ async function CHECKLIST_signMany(req) {
   return { name, signed: results.filter(r => r.signedSlot).length, results };
 }
 
+// สิทธิ์ของบัญชีที่ login อยู่ — หน้าเว็บใช้ซ่อน/แสดงปุ่มลงนาม/แก้ไข (server ตรวจซ้ำทุกครั้ง)
+async function CHECKLIST_myRights() {
+  const rows = await sessionEntries(sitePool, this);
+  return {
+    name: rows.length ? str(rows[0].label, 100) : '',
+    rights: rows.map(r => ({ role: r.role, siteCode: r.site_code || '' })),
+    // admin ไม่มีสิทธิ์ลงนามในบัญชีก็ยังใช้รหัส PIN สำรองได้
+    pinFallback: !!(this && this.user && this.user.role === 'admin')
+  };
+}
+
 async function CHECKLIST_checkEditPin(req) {
   req = req || {};
+  const ctx = this;
   let who;
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
-    who = await assertEditPin(client, row.site_name, req.pin, req.username);
+    who = await assertCanEdit(client, ctx, row.site_name, req);
   });
-  return { ok: true, name: who.label };
+  return { ok: true, name: who.name };
 }
 
 async function CHECKLIST_updateSubmission(req) {
@@ -442,9 +421,9 @@ async function CHECKLIST_updateSubmission(req) {
 
   await withTx(async client => {
     const row = await lockRow(client, req.rowId, req.submittedAt);
-    const who = await assertEditPin(client, row.site_name, req.pin, req.username);
+    const who = await assertCanEdit(client, this, row.site_name, req);
     if (str(row.signer2) || str(row.signer3)) {
-      await logSign(client, row, { action: 'cleared', name: who.label || '', username: str(req.username, 50),
+      await logSign(client, row, { action: 'cleared', name: who.name || '', username: who.username || (who.via === 'pin' ? '(PIN)' : ''),
         method: 'edit', sessionUser: userName(this) });
       await client.query(
         `UPDATE checklist_pdf_archive SET superseded_at = NOW(), superseded_reason = 'รายการถูกแก้ไขหลังลงนาม'
@@ -470,7 +449,7 @@ async function CHECKLIST_updateSubmission(req) {
               edited_at = NOW(), edited_by = $6
         WHERE id = $1`,
       [row.id, str(payload.date), str(payload.lang, 5) || 'th', str(payload.recordedBy, 100), str(signers[0], 100),
-        who.label || userName(this)]);
+        who.name || userName(this)]);
     await writeItems(client, row.id, payload.items || {}, keep);
 
     const still = new Set((await client.query('SELECT url FROM checklist_photos WHERE checklist_id = $1', [row.id]))
@@ -782,6 +761,7 @@ module.exports = {
     CHECKLIST_updateSubmission,
     CHECKLIST_getPrintPdf,
     CHECKLIST_signMany,
+    CHECKLIST_myRights,
     CHECKLIST_signerList,
     CHECKLIST_saveSigner,
     CHECKLIST_updateSignerAccount,

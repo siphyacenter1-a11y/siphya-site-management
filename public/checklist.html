@@ -237,6 +237,7 @@
   .dash-pick{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; margin-bottom:6px; }
   .dash-card.picked{ border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
   .dash-viewed{ font-size:11.5px; color:var(--ok, #1E9E6A); font-weight:600; margin-left:6px; }
+  .pin-toggle{ background:none; border:none; padding:2px 0; margin:2px 0 4px; font:inherit; font-size:12.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; }
   .confirm-row{ display:flex; gap:8px; align-items:flex-start; font-size:13px; line-height:1.5; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-s); padding:10px; margin:10px 0 4px; cursor:pointer; }
   .bulk-list{ max-height:180px; overflow:auto; font-size:12.5px; line-height:1.55; border:1px solid var(--border); border-radius:var(--radius-s); padding:8px 10px; margin-top:6px; }
   .bulk-res{ max-height:50vh; overflow:auto; font-size:13px; line-height:1.55; }
@@ -554,15 +555,12 @@
       <label for="signRole">ลงนามในฐานะ</label>
       <select id="signRole"></select>
     </div>
-    <div class="field">
-      <label for="signName">ชื่อผู้ใช้ (username)</label>
-      <input id="signName" type="text" maxlength="50" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <div class="modal-sub" id="signAsNote"></div>
+    <div class="field hidden" id="signPinWrap">
+      <label for="signPin">รหัส PIN สำรอง (MASTER)</label>
+      <input id="signPin" type="password" inputmode="numeric" autocomplete="off">
     </div>
-    <div class="field">
-      <label for="signPin">รหัสผ่าน</label>
-      <input id="signPin" type="password" autocomplete="current-password">
-    </div>
-    <div class="modal-sub">ใช้บัญชีเดียวกับที่ login เข้าระบบ · ชื่อผู้ลงนามขึ้นตามบัญชีให้เอง<br>MASTER แบบรหัส PIN: เว้นชื่อผู้ใช้ว่าง แล้วใส่ PIN</div>
+    <button type="button" class="pin-toggle hidden" id="signPinToggle">ใช้รหัส PIN สำรอง (กรณีฉุกเฉิน)</button>
     <label class="confirm-row"><input type="checkbox" id="signAgree"><span id="signAgreeText">ข้าพเจ้าได้ตรวจสอบเช็คลิสต์นี้แล้ว และรับรองความถูกต้อง</span></label>
     <div class="modal-error" id="signError"></div>
     <div class="modal-actions">
@@ -576,14 +574,12 @@
     <h3 id="editModalTitle">แก้ไขรายการตรวจ</h3>
     <div class="modal-sub" id="editModalSub"></div>
     <div class="modal-issues" id="editModalNote"></div>
-    <div class="field">
-      <label for="editUser">ชื่อผู้ใช้ (username)</label>
-      <input id="editUser" type="text" maxlength="50" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <div class="modal-sub" id="editAsNote"></div>
+    <div class="field hidden" id="editPinWrap">
+      <label for="editPin">รหัส PIN สำรอง (MASTER)</label>
+      <input id="editPin" type="password" inputmode="numeric" autocomplete="off">
     </div>
-    <div class="field">
-      <label for="editPin">รหัสผ่าน</label>
-      <input id="editPin" type="password" autocomplete="current-password">
-    </div>
+    <button type="button" class="pin-toggle hidden" id="editPinToggle">ใช้รหัส PIN สำรอง (กรณีฉุกเฉิน)</button>
     <div class="modal-error" id="editError"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" id="editCancelBtn">ยกเลิก</button>
@@ -1476,7 +1472,7 @@
     if(total === 0){
       html += '<div class="dash-empty">' + escHtml(t('dashboardEmpty')) + '</div>';
     } else {
-      var pend = subs.filter(isPending);
+      var pend = subs.filter(canSignRow);
       var nPicked = pend.filter(function(s){ return picked[s.id]; }).length;
       if(pend.length){
         html += '<div class="bulk-bar"><label><input type="checkbox" id="bulkAll"' + (nPicked && nPicked === pend.length ? ' checked' : '') + '>' +
@@ -1489,7 +1485,7 @@
         var isComplete = n === ALL_ITEM_IDS.length;
         var sg = s.signers || ['', '', ''];
         var sa = s.signedAt || ['', '', ''];
-        var pend1 = isPending(s);
+        var pend1 = canSignRow(s);
         html += '<div class="dash-card' + (pend1 && picked[s.id] ? ' picked' : '') + '">';
         if(pend1){
           html += '  <label class="dash-pick"><input type="checkbox" data-pick="' + escAttr(s.id) + '"' + (picked[s.id] ? ' checked' : '') + '> เลือกเพื่อลงนาม' +
@@ -1513,10 +1509,10 @@
         html += '  <div class="dash-card-row">';
         html += '    <span class="dash-pill">' + (s.lang==='th'?'ไทย':s.lang==='my'?'မြန်မာ':'ខ្មែរ') + '</span>';
         html += '    <div class="dash-card-actions">';
-        if(!sg[1] || !sg[2]){
+        if(pend1){
           html += '      <button type="button" class="dash-sign-btn" data-sign-submission="' + escAttr(s.id) + '">ลงนาม</button>';
         }
-        if(!SIGNER_ONLY) html += '      <button type="button" class="dash-view-btn" data-edit-submission="' + escAttr(s.id) + '">แก้ไข</button>';
+        if(canEditRow(s)) html += '      <button type="button" class="dash-view-btn" data-edit-submission="' + escAttr(s.id) + '">แก้ไข</button>';
         html += '      <button type="button" class="dash-view-btn" data-view-submission="' + escAttr(s.id) + '">' + escHtml(t('viewPrintBtn')) + '</button>';
         html += '    </div>';
         html += '  </div>';
@@ -1530,7 +1526,7 @@
   els.dashboardContent && els.dashboardContent.addEventListener('change', function(e){
     var cb = e.target;
     if(cb.id === 'bulkAll'){
-      getFilteredSubs().filter(isPending).forEach(function(s){ if(cb.checked) picked[s.id] = true; else delete picked[s.id]; });
+      getFilteredSubs().filter(canSignRow).forEach(function(s){ if(cb.checked) picked[s.id] = true; else delete picked[s.id]; });
       renderDashboard(); return;
     }
     var id = cb.getAttribute && cb.getAttribute('data-pick');
@@ -1638,8 +1634,10 @@
     sub: document.getElementById('signModalSub'),
     issues: document.getElementById('signModalIssues'),
     role: document.getElementById('signRole'),
-    name: document.getElementById('signName'),
     pin: document.getElementById('signPin'),
+    pinWrap: document.getElementById('signPinWrap'),
+    pinToggle: document.getElementById('signPinToggle'),
+    asNote: document.getElementById('signAsNote'),
     error: document.getElementById('signError'),
     cancel: document.getElementById('signCancelBtn'),
     confirm: document.getElementById('signConfirmBtn'),
@@ -1653,7 +1651,39 @@
   var picked = {};              // id → true  รายการที่ติ๊กเลือก
   var viewed = {};              // id → true  รายการที่เปิดดูแล้วในรอบนี้
   function isPending(s){ var sg = s.signers || ['', '', '']; return !sg[1] || !sg[2]; }
-  function pickedSubs(){ return (state.submissions || []).filter(function(s){ return picked[s.id] && isPending(s); }); }
+  function pickedSubs(){ return (state.submissions || []).filter(function(s){ return picked[s.id] && canSignRow(s); }); }
+
+  // ---------- สิทธิ์ของบัญชีที่ login (ใช้ซ่อน/แสดงปุ่ม — server ตรวจซ้ำทุกครั้ง) ----------
+  var RIGHTS = { name:'', rights:[], pinFallback:false, loaded:false };
+  function codeOfSite(site){ var m = String(site || '').match(/\(([A-Za-z0-9]{2,10})\)\s*$/); return m ? m[1].toUpperCase() : ''; }
+  function hasRole(role, code){
+    return RIGHTS.rights.some(function(r){ return r.role === 'MASTER' || (r.role === role && (!r.siteCode || r.siteCode === code)); });
+  }
+  function signableSlots(s){
+    var sg = s.signers || ['', '', ''], code = codeOfSite(s.site), out = [];
+    if(!sg[1] && hasRole('GM', code) && sg[2] !== RIGHTS.name) out.push(1);
+    if(!sg[2] && hasRole('GF', code) && sg[1] !== RIGHTS.name) out.push(2);
+    return out;
+  }
+  function canSignRow(s){ return isPending(s) && (signableSlots(s).length > 0 || RIGHTS.pinFallback); }
+  function canEditRow(s){ return !SIGNER_ONLY && (hasRole('GM', codeOfSite(s.site)) || RIGHTS.pinFallback); }
+  function loadRights(){
+    if(!gasReady) return;
+    google.script.run
+      .withSuccessHandler(function(r){
+        RIGHTS = { name: (r && r.name) || '', rights: (r && r.rights) || [], pinFallback: !!(r && r.pinFallback), loaded: true };
+        if(state.tab === 'dashboard') renderDashboard();
+      })
+      .withFailureHandler(function(){ RIGHTS.loaded = true; })
+      .CHECKLIST_myRights();
+  }
+  // โหมดรหัส PIN สำรองในหน้าต่างลงนาม/แก้ไข
+  function setPinMode(o, on){
+    o.pinWrap.classList.toggle('hidden', !on);
+    o.pinToggle.classList.toggle('hidden', on || !RIGHTS.pinFallback);   // ปุ่มสลับใช้ PIN เฉพาะ admin
+    o.pin.value = '';
+    o.usePin = on;
+  }
 
   function openSignModal(id){
     var sub = (state.submissions || []).find(function(s){ return s.id === id; });
@@ -1673,16 +1703,16 @@
     signEls.issues.innerHTML = issues
       ? '<b>' + escHtml(t('dashNotOkSummary')) + ':</b><br>' + escHtml(issues).split('; ').join('<br>')
       : '✓ ไม่มีรายการที่ตรวจไม่ผ่าน';
-    var opts = '';
-    if(!sg[1]) opts += '<option value="1">' + escHtml(t('sign2')) + '</option>';
-    if(!sg[2]) opts += '<option value="2">' + escHtml(t('sign3')) + '</option>';
-    signEls.role.innerHTML = opts;
-    signEls.name.value = signerUsername();
-    signEls.pin.value = '';
+    var slots = signableSlots(sub);
+    var usePin = !slots.length;                      // ไม่มีสิทธิ์ในบัญชี → ใช้ PIN สำรอง (admin)
+    if(usePin) slots = [1, 2].filter(function(x){ return !sg[x]; });
+    signEls.role.innerHTML = slots.map(function(x){ return '<option value="' + x + '">' + escHtml(t(x === 1 ? 'sign2' : 'sign3')) + '</option>'; }).join('');
+    signEls.asNote.innerHTML = RIGHTS.name && !usePin ? 'ลงนามในชื่อ: <b>' + escHtml(RIGHTS.name) + '</b> (บัญชีที่ login อยู่)' : 'บัญชีนี้ไม่มีสิทธิ์ลงนาม — ใช้รหัส PIN สำรองของ MASTER';
+    setPinMode(signEls, usePin);
     signEls.error.textContent = '';
     setSignBusy(false);
     signEls.modal.classList.remove('hidden');
-    setTimeout(function(){ (signEls.name.value ? signEls.pin : signEls.name).focus(); }, 50);
+    setTimeout(function(){ if(signEls.usePin) signEls.pin.focus(); }, 50);
   }
   function closeSignModal(){ signEls.modal.classList.add('hidden'); signTarget = null; signBulk = null; }
   function setSignBusy(b){
@@ -1708,12 +1738,13 @@
     signEls.roleWrap.classList.add('hidden');
     signEls.agree.checked = false;
     signEls.agreeText.textContent = 'ข้าพเจ้าได้ตรวจสอบเช็คลิสต์ทั้ง ' + list.length + ' ใบนี้แล้ว และรับรองความถูกต้อง';
-    signEls.name.value = signerUsername();
-    signEls.pin.value = '';
+    var bulkPin = !RIGHTS.rights.length;
+    signEls.asNote.innerHTML = !bulkPin ? 'ลงนามในชื่อ: <b>' + escHtml(RIGHTS.name) + '</b> (บัญชีที่ login อยู่)' : 'บัญชีนี้ไม่มีสิทธิ์ลงนาม — ใช้รหัส PIN สำรองของ MASTER';
+    setPinMode(signEls, bulkPin);
     signEls.error.textContent = '';
     setSignBusy(false);
     signEls.modal.classList.remove('hidden');
-    setTimeout(function(){ (signEls.name.value ? signEls.pin : signEls.name).focus(); }, 50);
+    setTimeout(function(){ if(signEls.usePin) signEls.pin.focus(); }, 50);
   }
 
   function showBulkResult(res, list){
@@ -1757,12 +1788,19 @@
     if(e.key === 'Escape' && !signEls.modal.classList.contains('hidden')) closeSignModal();
   });
   signEls.pin.addEventListener('keydown', function(e){ if(e.key === 'Enter') signEls.confirm.click(); });
+  signEls.pinToggle.addEventListener('click', function(){
+    setPinMode(signEls, true);
+    signEls.asNote.innerHTML = 'ลงนามด้วยรหัส PIN สำรอง — ชื่อผู้ลงนามขึ้นตามรหัส';
+    if(signTarget){ var sg = signTarget.signers || ['', '', ''];
+      signEls.role.innerHTML = [1, 2].filter(function(x){ return !sg[x]; }).map(function(x){ return '<option value="' + x + '">' + escHtml(t(x === 1 ? 'sign2' : 'sign3')) + '</option>'; }).join(''); }
+    signEls.pin.focus();
+  });
   signEls.agree.addEventListener('change', function(){ if(signEls.agree.checked) signEls.error.textContent = ''; });
 
   signEls.confirm.addEventListener('click', function(){
     if(!signTarget && !signBulk) return;
-    var name = signEls.name.value.trim();
-    if(!signEls.pin.value){ signEls.error.textContent = 'กรุณาใส่รหัสผ่าน'; signEls.pin.focus(); return; }
+    var pin = signEls.usePin ? signEls.pin.value.trim() : '';
+    if(signEls.usePin && !pin){ signEls.error.textContent = 'กรุณาใส่รหัส PIN'; signEls.pin.focus(); return; }
     if(!signEls.agree.checked){ signEls.error.textContent = 'กรุณาติ๊กยืนยันว่าได้ตรวจสอบแล้ว'; return; }
     if(!gasReady){ signEls.error.textContent = t('submitError'); return; }
     signEls.error.textContent = '';
@@ -1772,7 +1810,6 @@
       google.script.run
         .withSuccessHandler(function(res){
           setSignBusy(false);
-          rememberSigner(name);
           closeSignModal();
           list.forEach(function(s){ delete picked[s.id]; });
           showBulkResult(res, list);
@@ -1786,7 +1823,7 @@
         })
         .CHECKLIST_signMany({
           items: list.map(function(s){ return { rowId: s.id, submittedAt: s.submittedAt, viewed: !!viewed[s.id] }; }),
-          username: name, pin: signEls.pin.value, confirm: true
+          pin: pin, confirm: true
         });
       return;
     }
@@ -1794,7 +1831,6 @@
     google.script.run
       .withSuccessHandler(function(res){
         setSignBusy(false);
-        rememberSigner(name);
         closeSignModal();
         showToast('ลงนามเรียบร้อยแล้ว');
         refreshSubmissions(function(){ if(res && res.fullySigned) queueArchive([target.id]); });
@@ -1808,8 +1844,7 @@
         rowId: signTarget.id,
         submittedAt: signTarget.submittedAt,
         slot: parseInt(signEls.role.value, 10),
-        username: name,
-        pin: signEls.pin.value,
+        pin: pin,
         confirm: true,
         viewed: !!viewed[signTarget.id]
       });
@@ -2067,7 +2102,9 @@
     sub: document.getElementById('editModalSub'),
     note: document.getElementById('editModalNote'),
     pin: document.getElementById('editPin'),
-    user: document.getElementById('editUser'),
+    pinWrap: document.getElementById('editPinWrap'),
+    pinToggle: document.getElementById('editPinToggle'),
+    asNote: document.getElementById('editAsNote'),
     error: document.getElementById('editError'),
     cancel: document.getElementById('editCancelBtn'),
     confirm: document.getElementById('editConfirmBtn')
@@ -2083,13 +2120,14 @@
       escHtml(t('colRecordedBy')) + ': ' + escHtml(sub.recordedBy || t('noRecorder'));
     editEls.note.innerHTML = (sg[1] || sg[2])
       ? '⚠️ รายการนี้ลงนาม GM/GF แล้ว เมื่อบันทึกการแก้ไข ลายเซ็น GM/GF จะถูกล้างและต้องลงนามใหม่'
-      : 'ใช้บัญชี GM/ธุรการ ของโครงการนี้ (หรือ MASTER) เพื่อแก้ไขข้อมูล — MASTER แบบรหัส PIN: เว้นชื่อผู้ใช้ว่าง';
-    editEls.user.value = signerUsername();
-    editEls.pin.value = '';
+      : 'แก้ไขได้เฉพาะ GM/ธุรการ ของโครงการนี้ หรือ MASTER';
+    var editPin = !hasRole('GM', codeOfSite(sub.site));
+    editEls.asNote.innerHTML = !editPin ? 'แก้ไขในชื่อ: <b>' + escHtml(RIGHTS.name) + '</b> (บัญชีที่ login อยู่)' : 'บัญชีนี้ไม่มีสิทธิ์แก้ไข — ใช้รหัส PIN สำรองของ MASTER';
+    setPinMode(editEls, editPin);
     editEls.error.textContent = '';
     setEditBusy(false);
     editEls.modal.classList.remove('hidden');
-    setTimeout(function(){ (editEls.user.value ? editEls.pin : editEls.user).focus(); }, 50);
+    setTimeout(function(){ if(editEls.usePin) editEls.pin.focus(); }, 50);
   }
   function closeEditModal(){ editEls.modal.classList.add('hidden'); editTarget = null; }
   function setEditBusy(b){
@@ -2103,12 +2141,15 @@
     if(e.key === 'Escape' && !editEls.modal.classList.contains('hidden')) closeEditModal();
   });
   editEls.pin.addEventListener('keydown', function(e){ if(e.key === 'Enter') editEls.confirm.click(); });
+  editEls.pinToggle.addEventListener('click', function(){
+    setPinMode(editEls, true); editEls.asNote.innerHTML = 'แก้ไขด้วยรหัส PIN สำรอง'; editEls.pin.focus();
+  });
 
   editEls.confirm.addEventListener('click', function(){
     if(!editTarget) return;
-    var pin = editEls.pin.value;
-    var uname = editEls.user.value.trim();
-    if(!pin){ editEls.error.textContent = 'กรุณาใส่รหัสผ่าน'; editEls.pin.focus(); return; }
+    var pin = editEls.usePin ? editEls.pin.value.trim() : '';
+    var uname = '';
+    if(editEls.usePin && !pin){ editEls.error.textContent = 'กรุณาใส่รหัส PIN'; editEls.pin.focus(); return; }
     if(!gasReady){ editEls.error.textContent = t('submitError'); return; }
     var sub = editTarget;
     editEls.error.textContent = '';
@@ -2116,7 +2157,6 @@
     google.script.run
       .withSuccessHandler(function(){
         setEditBusy(false);
-        rememberSigner(uname);
         closeEditModal();
         enterEditMode(sub, pin, uname);
       })
@@ -2345,7 +2385,7 @@
   renderAll();
 
   /* ---------------- ตั้งค่าผู้ลงนาม (admin) ---------------- */
-  // ชื่อผู้ใช้ที่ใส่ให้ล่วงหน้าในหน้าลงนาม/แก้ไข: คนที่ลงนามล่าสุดในเครื่องนี้ หรือบัญชีที่ login อยู่
+  // บัญชีที่ login อยู่ (ใช้ตัดสินโหมดหน้าจอ และใส่ชื่อผู้บันทึกให้)
   var ME = '';
   try{ fetch('/api/auth/me', { credentials:'same-origin' }).then(function(r){ return r.json(); })
     .then(function(j){
@@ -2384,11 +2424,6 @@
     if(!String(state.signers[0] || '').trim()){ state.signers[0] = MY_NAME; changed = true; }
     if(changed){ renderSignatures(); renderProgress(); saveDraft(); }
   }
-  function signerUsername(){
-    var last = ''; try{ last = localStorage.getItem('checklist_signer_user') || ''; }catch(e){}
-    return last || (ME === 'staff' || ME === 'admin' ? '' : ME);
-  }
-  function rememberSigner(u){ try{ if(u) localStorage.setItem('checklist_signer_user', u); }catch(e){} }
 
   var sg = { list: [], users: [], editId: null, accUserId: null };
   function $id(x){ return document.getElementById(x); }
@@ -2582,6 +2617,7 @@
   sgResetForm();
   initDb();
   loadSigners();
+  loadRights();
 })();
 </script>
 </body>
