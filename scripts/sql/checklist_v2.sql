@@ -123,6 +123,12 @@ CREATE TABLE IF NOT EXISTS checklist_pdf_archive (
   superseded_at     TIMESTAMPTZ,
   superseded_reason TEXT
 );
+-- อาคาร/ชั้นที่ตรวจ (1 ใบ = 1 ชั้น) — เลือกจากรายชื่อของโครงการในตาราง transport_floors
+ALTER TABLE site_supervisor_checklists ADD COLUMN IF NOT EXISTS building TEXT NOT NULL DEFAULT '';
+ALTER TABLE site_supervisor_checklists ADD COLUMN IF NOT EXISTS floor    TEXT NOT NULL DEFAULT '';
+ALTER TABLE checklist_pdf_archive      ADD COLUMN IF NOT EXISTS building TEXT NOT NULL DEFAULT '';
+ALTER TABLE checklist_pdf_archive      ADD COLUMN IF NOT EXISTS floor    TEXT NOT NULL DEFAULT '';
+
 CREATE UNIQUE INDEX IF NOT EXISTS checklist_pdf_archive_uq ON checklist_pdf_archive (checklist_id, content_hash);
 CREATE INDEX IF NOT EXISTS checklist_pdf_archive_time_idx ON checklist_pdf_archive (created_at DESC);
 

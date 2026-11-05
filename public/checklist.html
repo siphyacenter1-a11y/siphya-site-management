@@ -76,6 +76,7 @@
   a{ color:inherit; } button{ font-family:inherit; }
   .wrap{ max-width:880px; margin:0 auto; padding:0 16px; }
   .hidden{ display:none !important; }
+  .field-note{ grid-column:1 / -1; font-size:12.5px; font-weight:600; color:var(--room); }
   /* ผู้ดูแลพื้นที่ (เช็คลิสต์อย่างเดียว): ไม่มีปุ่มหน้าแรก — มีปุ่มออกจากระบบในแถบแท็บแทน */
   body.checklist-only .hub-home-fab{ display:none !important; }
   @media (max-width:1099px){ body.checklist-only header.topbar .topbar-inner{ padding-left:16px; } }
@@ -394,6 +395,15 @@
         <select id="siteInput"></select>
       </div>
       <div class="field">
+        <label for="buildingInput" data-i18n="buildingLabel">อาคาร</label>
+        <select id="buildingInput"></select>
+      </div>
+      <div class="field">
+        <label for="floorInput" data-i18n="floorLabel">ชั้น</label>
+        <select id="floorInput"></select>
+      </div>
+      <div class="field-note hidden" id="buildingNote"></div>
+      <div class="field">
         <label for="dateInput" data-i18n="dateLabel">วันที่ตรวจ</label>
         <input id="dateInput" type="date">
       </div>
@@ -429,6 +439,7 @@
       <h2 data-i18n="dashboardTitle">แดชบอร์ดรายการที่บันทึกแล้ว</h2>
       <div class="dash-filters">
         <select id="dashSiteFilter" class="dash-filter-select"></select>
+        <select id="dashLocFilter" class="dash-filter-select hidden"></select>
         <select id="dashDateFilter" class="dash-filter-select"></select>
         <input type="date" id="dashDateFrom" class="dash-filter-select dash-custom-date hidden">
         <input type="date" id="dashDateTo" class="dash-filter-select dash-custom-date hidden">
@@ -564,6 +575,8 @@
       appTagline:'แบบฟอร์มตรวจควบคุมพื้นที่ก่อสร้าง',
       tabForm:'กรอกแบบฟอร์ม', tabDashboard:'แดชบอร์ด',
       siteLabel:'หน่วยงาน', sitePlaceholder:'ระบุชื่อหน่วยงาน...',
+      buildingLabel:'อาคาร', floorLabel:'ชั้น', selectBuilding:'-- เลือกอาคาร --', selectFloor:'-- เลือกชั้น --',
+      pickSiteFirst:'เลือกหน่วยงานก่อน', noBuildings:'โครงการนี้ยังไม่ได้ตั้งรายชื่ออาคาร/ชั้น — แจ้ง admin', floorWord:'ชั้น', noLocation:'ไม่ระบุอาคาร/ชั้น', allBuildings:'ทุกอาคาร/ชั้น',
       dateLabel:'วันที่ตรวจ',
       recordedByLabel:'ผู้บันทึกข้อมูล', recordedByPlaceholder:'ชื่อผู้กรอก/ผู้ตรวจ',
       expandAll:'ขยายทั้งหมด', collapseAll:'ย่อทั้งหมด',
@@ -636,6 +649,8 @@
       appTitle:'နေ့စဉ် ဧရိယာစစ်ဆေးရေးစာရင်း',
       appTagline:'ဆောက်လုပ်ရေးဧရိယာ ထိန်းချုပ်စစ်ဆေးမှုပုံစံ',
       tabForm:'ဖောင်ဖြည့်ရန်', tabDashboard:'ဒက်ရှ်ဘုတ်',
+      buildingLabel:'အဆောက်အအုံ', floorLabel:'အထပ်', selectBuilding:'-- အဆောက်အအုံ ရွေးပါ --', selectFloor:'-- အထပ် ရွေးပါ --',
+      pickSiteFirst:'ဌာနကို အရင်ရွေးပါ', noBuildings:'ဤစီမံကိန်းတွင် အဆောက်အအုံ/အထပ် မသတ်မှတ်ရသေးပါ — admin ကို အကြောင်းကြားပါ', floorWord:'အထပ်', noLocation:'အဆောက်အအုံ/အထပ် မဖော်ပြ', allBuildings:'အဆောက်အအုံ/အထပ် အားလုံး',
       siteLabel:'ဌာန / လုပ်ငန်းခွင်', sitePlaceholder:'ဌာနအမည်ထည့်ပါ...',
       dateLabel:'စစ်ဆေးသည့်ရက်စွဲ',
       recordedByLabel:'မှတ်တမ်းတင်သူ', recordedByPlaceholder:'ဖြည့်သွင်း/စစ်ဆေးသူအမည်',
@@ -709,6 +724,8 @@
       appTitle:'បញ្ជីត្រួតពិនិត្យតំបន់ប្រចាំថ្ងៃ',
       appTagline:'ទម្រង់ត្រួតពិនិត្យតំបន់សំណង់',
       tabForm:'បំពេញទម្រង់', tabDashboard:'ផ្ទាំងគ្រប់គ្រង',
+      buildingLabel:'អគារ', floorLabel:'ជាន់', selectBuilding:'-- ជ្រើសរើសអគារ --', selectFloor:'-- ជ្រើសរើសជាន់ --',
+      pickSiteFirst:'សូមជ្រើសរើសអង្គភាពជាមុនសិន', noBuildings:'គម្រោងនេះមិនទាន់កំណត់អគារ/ជាន់ — សូមជូនដំណឹង admin', floorWord:'ជាន់', noLocation:'មិនបានបញ្ជាក់អគារ/ជាន់', allBuildings:'អគារ/ជាន់ទាំងអស់',
       siteLabel:'អង្គភាព / ការដ្ឋាន', sitePlaceholder:'បញ្ចូលឈ្មោះអង្គភាព...',
       dateLabel:'កាលបរិច្ឆេទត្រួតពិនិត្យ',
       recordedByLabel:'អ្នកកត់ត្រាទិន្នន័យ', recordedByPlaceholder:'ឈ្មោះអ្នកបំពេញ/អ្នកត្រួតពិនិត្យ',
@@ -796,7 +813,7 @@
   var STORAGE_KEY = 'siphraya_checklist_draft_v2';
   var SIGNER_ONLY = false;
   var state = {
-    lang:'th', tab:'form', site:'', date:'', recordedBy:'',
+    lang:'th', tab:'form', site:'', date:'', recordedBy:'', building:'', floor:'', dashLocFilter:'',
     items:{}, signers:['', '', ''], openCats:{},
     submissions:[], dbAvailable:null, dbErrorCode:null, submitting:false, dashSiteFilter:'',
     dashDateFilter:'all', dashDateFrom:'', dashDateTo:''
@@ -814,6 +831,8 @@
         state.site = saved.site || '';
         state.date = saved.date || '';
         state.recordedBy = saved.recordedBy || '';
+        state.building = saved.building || '';
+        state.floor = saved.floor || '';
         DRAFT_OWNER = saved.owner || '';
         state.signers = saved.signers && saved.signers.length === 3 ? saved.signers : state.signers;
         if(saved.items){
@@ -834,6 +853,7 @@
     return {
       lang: state.lang, site: state.site, date: state.date,
       recordedBy: state.recordedBy, signers: state.signers, items: state.items,
+      building: state.building, floor: state.floor,
       owner: DRAFT_OWNER    // บัญชีที่เป็นเจ้าของร่างนี้ (ใช้ตัดสินว่าจะใส่ชื่อใหม่ไหม)
     };
   }
@@ -859,6 +879,7 @@
     state.date = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
     state.recordedBy = '';
     state.signers = ['', '', ''];
+    state.floor = '';            // ใบถัดไปมักเป็นชั้นอื่น — คงอาคารไว้
     ALL_ITEM_IDS.forEach(function(id){ state.items[id] = { status:null, worker:'', remark:'', location:'', photos:[] }; });
     STRUCTURE.forEach(function(c, idx){ state.openCats[c.cat] = idx === 0; });
     showMissing = false;
@@ -878,6 +899,9 @@
     dashboardView: document.getElementById('dashboardView'),
     dashboardContent: document.getElementById('dashboardContent'),
     dashSiteFilter: document.getElementById('dashSiteFilter'),
+    buildingInput: document.getElementById('buildingInput'),
+    floorInput: document.getElementById('floorInput'),
+    buildingNote: document.getElementById('buildingNote'),
     dashDateFilter: document.getElementById('dashDateFilter'),
     dashDateFrom: document.getElementById('dashDateFrom'),
     dashDateTo: document.getElementById('dashDateTo'),
@@ -1164,8 +1188,12 @@
     var html = '';
     html += '<img class="p-logo" src="' + LOGO_DATA_URI + '" alt="Siphraya logo">';
     html += '<div class="p-title">' + escHtml(t('pTitle', lang)) + '</div>';
+    var pBuilding = dataOverride ? (dataOverride.building || '') : state.building;
+    var pFloor = dataOverride ? (dataOverride.floor || '') : state.floor;
     html += '<table class="p-meta"><tr><td>' + escHtml(t('pSite', lang)) + ': ' + escHtml(site || '.'.repeat(30)) +
-     '</td><td style="text-align:right">' + escHtml(t('pDate', lang)) + ': ' + escHtml(formatDate(date)) + '</td></tr></table>';
+     '</td><td style="text-align:right">' + escHtml(t('pDate', lang)) + ': ' + escHtml(formatDate(date)) + '</td></tr>' +
+     '<tr><td>' + escHtml(t('buildingLabel', lang)) + ': ' + escHtml(pBuilding || '.'.repeat(20)) + '   ' +
+     escHtml(t('floorLabel', lang)) + ': ' + escHtml(pFloor || '.'.repeat(8)) + '</td><td></td></tr></table>';
     html += '<table class="p-table"><thead><tr>';
     html += '<th class="p-num">' + escHtml(t('pNo', lang)) + '</th>';
     html += '<th>' + escHtml(t('pTask', lang)) + '</th>';
@@ -1266,7 +1294,29 @@
 
   function getFilteredSubs(){
     var dateFiltered = getDateFilteredSubs();
-    return state.dashSiteFilter ? dateFiltered.filter(function(s){ return s.site === state.dashSiteFilter; }) : dateFiltered;
+    var list = state.dashSiteFilter ? dateFiltered.filter(function(s){ return s.site === state.dashSiteFilter; }) : dateFiltered;
+    if(state.dashSiteFilter && state.dashLocFilter){
+      list = list.filter(function(s){ return (s.building + '|' + s.floor) === state.dashLocFilter; });
+    }
+    return list;
+  }
+  // ตัวกรองอาคาร/ชั้น: แสดงเมื่อเลือกโครงการ — ตัวเลือกมาจากรายการที่บันทึกแล้วของโครงการนั้น
+  function populateDashLocFilter(){
+    var sel = document.getElementById('dashLocFilter');
+    if(!state.dashSiteFilter){ sel.classList.add('hidden'); state.dashLocFilter = ''; return; }
+    var seen = {}, opts = [];
+    (state.submissions || []).forEach(function(s){
+      if(s.site !== state.dashSiteFilter) return;
+      var k = s.building + '|' + s.floor;
+      if(seen[k]) return; seen[k] = true;
+      opts.push({ k: k, label: s.building ? locText(s) : t('noLocation') });
+    });
+    opts.sort(function(a, b){ return a.label.localeCompare(b.label, 'th', { numeric: true }); });
+    if(state.dashLocFilter && !seen[state.dashLocFilter]) state.dashLocFilter = '';
+    sel.innerHTML = '<option value="">' + escHtml(t('allBuildings')) + '</option>' +
+      opts.map(function(o){ return '<option value="' + escAttr(o.k) + '">' + escHtml(o.label) + '</option>'; }).join('');
+    sel.value = state.dashLocFilter;
+    sel.classList.toggle('hidden', !opts.length);
   }
 
   function buildProblemItemsStats(subsArr){
@@ -1334,7 +1384,7 @@
   function exportDashboardCSV(){
     var subsArr = getFilteredSubs();
     var header = [
-      t('siteLabel'), t('dateLabel'), t('colRecordedBy'), t('colSubmittedAt'),
+      t('siteLabel'), t('buildingLabel'), t('floorLabel'), t('dateLabel'), t('colRecordedBy'), t('colSubmittedAt'),
       t('colCompletion'), t('dashNotOkSummary'), t('sign1'), t('sign2'), t('sign3')
     ];
     var rows = [header];
@@ -1342,6 +1392,8 @@
       var n = completedCount(s.items || {});
       rows.push([
         s.site || t('noSite'),
+        s.building || '',
+        s.floor || '',
         formatDate(s.date),
         s.recordedBy || t('noRecorder'),
         formatDateTime(s.submittedAt),
@@ -1367,6 +1419,7 @@
   function renderDashboard(){
     console.log('[DEBUG] renderDashboard() ถูกเรียก, dbAvailable =', state.dbAvailable, ', submissions.length =', (state.submissions || []).length);
     populateDashSiteFilter();
+    populateDashLocFilter();
     if(state.dbAvailable === false){
       els.dashboardContent.innerHTML = '<div class="dash-noaccess">' + escHtml(t('dashboardNoAccess')) + '</div>';
       return;
@@ -1424,6 +1477,7 @@
         html += '    <span class="dash-pill' + (isComplete ? ' complete' : '') + '">' + n + '/' + ALL_ITEM_IDS.length + '</span>';
         html += '  </div>';
         html += '  <div class="dash-card-meta">';
+        html += '    <b>' + escHtml(s.building ? locText(s) : t('noLocation')) + '</b><br>';
         html += '    ' + escHtml(t('colRecordedBy')) + ': ' + escHtml(s.recordedBy || t('noRecorder')) + '<br>';
         html += '    ' + escHtml(t('dateLabel')) + ': ' + escHtml(formatDate(s.date)) + ' &middot; ' + escHtml(t('colSubmittedAt')) + ': ' + escHtml(formatDateTime(s.submittedAt));
         html += '  </div>';
@@ -1535,7 +1589,7 @@
     viewed[sub.id] = true;
     renderPrintSheet(sub);
     pvEls.paper.innerHTML = els.printSheet.innerHTML;
-    pvEls.title.textContent = (sub.site || t('noSite')) + ' · ' + formatDate(sub.date);
+    pvEls.title.textContent = (sub.site || t('noSite')) + (sub.building ? ' · ' + locText(sub) : '') + ' · ' + formatDate(sub.date);
     pvEls.modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     pvEls.scroll.scrollTop = 0;
@@ -1623,7 +1677,7 @@
     signEls.agreeText.textContent = 'ข้าพเจ้าได้ตรวจสอบเช็คลิสต์นี้แล้ว และรับรองความถูกต้อง';
     var sg = sub.signers || ['', '', ''];
     var n = completedCount(sub.items || {});
-    signEls.sub.innerHTML = escHtml(sub.site || t('noSite')) + '<br>' +
+    signEls.sub.innerHTML = escHtml(sub.site || t('noSite')) + ' · <b>' + escHtml(sub.building ? locText(sub) : t('noLocation')) + '</b><br>' +
       escHtml(t('dateLabel')) + ': ' + escHtml(formatDate(sub.date)) + ' · ' +
       escHtml(t('colRecordedBy')) + ': ' + escHtml(sub.recordedBy || t('noRecorder')) + '<br>' +
       escHtml(t('colCompletion')) + ': ' + n + '/' + ALL_ITEM_IDS.length;
@@ -1659,7 +1713,7 @@
     var notViewed = list.filter(function(s){ return !viewed[s.id]; }).length;
     signEls.sub.innerHTML = 'ระบบเลือกช่องให้ตามสิทธิ์ของบัญชี (GM/ธุรการ → ช่อง 2 · GF/GE → ช่อง 3) ใบที่ลงไม่ได้จะข้ามและแจ้งเหตุผล' +
       '<div class="bulk-list">' + list.map(function(s){
-        return escHtml(s.site || t('noSite')) + ' · ' + escHtml(formatDate(s.date)) + (viewed[s.id] ? ' <span class="dash-viewed">✓ เปิดดูแล้ว</span>' : '');
+        return escHtml(s.site || t('noSite')) + ' · ' + escHtml(s.building ? locText(s) : t('noLocation')) + ' · ' + escHtml(formatDate(s.date)) + (viewed[s.id] ? ' <span class="dash-viewed">✓ เปิดดูแล้ว</span>' : '');
       }).join('<br>') + '</div>';
     signEls.issues.innerHTML = (notOk ? '⚠️ มี <b>' + notOk + ' ใบ</b> ที่มีรายการตรวจไม่ผ่าน<br>' : '✓ ทุกใบไม่มีรายการที่ตรวจไม่ผ่าน<br>') +
       (notViewed ? '👁 ยังไม่ได้เปิดดู ' + notViewed + ' ใบ (กด "ดู/พิมพ์" ที่ใบนั้นก่อนได้)' : '👁 เปิดดูครบทุกใบแล้ว');
@@ -1685,7 +1739,7 @@
       '<div class="modal-sub">ผู้ลงนาม: ' + escHtml(res.name) + '</div><div class="bulk-res">' +
       res.results.map(function(r){
         var s = byId[r.rowId] || {};
-        return '<div>' + escHtml((s.site || r.site || '') + ' · ' + formatDate(s.date)) + '<br>' +
+        return '<div>' + escHtml((s.site || r.site || '') + (s.building ? ' · ' + locText(s) : '') + ' · ' + formatDate(s.date)) + '<br>' +
           (r.signedSlot ? '<span class="ok">✓ ลงนามช่อง ' + r.signedSlot + '</span>' : '<span class="skip">ข้าม — ' + escHtml(r.skipped) + '</span>') + '</div>';
       }).join('') + '</div><div class="modal-actions"><button type="button" class="btn btn-primary" id="bulkResultClose">ปิด</button></div></div>';
     document.getElementById('bulkResultClose').onclick = function(){ box.classList.add('hidden'); };
@@ -1839,6 +1893,8 @@
   function getMissing(){
     var list = [];
     if(!state.site) list.push({ key:'site', label:t('siteLabel') });
+    if(!state.building) list.push({ key:'building', label:t('buildingLabel') });
+    if(!state.floor) list.push({ key:'floor', label:t('floorLabel') });
     if(!state.date) list.push({ key:'date', label:t('dateLabel') });
     if(!String(state.recordedBy || '').trim()) list.push({ key:'recordedBy', label:t('recordedByLabel') });
     ALL_ITEM_IDS.forEach(function(id){
@@ -1870,6 +1926,8 @@
   function goToMissing(m){
     if(m.key === 'item'){ focusItem(m.id); return; }
     var el = m.key === 'site' ? els.siteInput
+           : m.key === 'building' ? els.buildingInput
+           : m.key === 'floor' ? els.floorInput
            : m.key === 'date' ? els.dateInput
            : m.key === 'recordedBy' ? els.recordedByInput
            : els.signGrid.querySelector('[data-signer="0"]');
@@ -1885,6 +1943,8 @@
     function mark(el, on){ if(el) el.classList.toggle('is-missing', !!on); }
 
     mark(els.siteInput, keys.site);
+    mark(els.buildingInput, keys.building);
+    mark(els.floorInput, keys.floor);
     mark(els.dateInput, keys.date);
     mark(els.recordedByInput, keys.recordedBy);
     mark(els.signGrid.querySelector('.sign-line'), keys.sign1);
@@ -1970,6 +2030,8 @@
     });
     var payload = {
       site: state.site || '',
+      building: state.building || '',
+      floor: state.floor || '',
       date: state.date || '',
       lang: editCtx ? (editCtx.lang || state.lang) : state.lang,
       recordedBy: state.recordedBy,
@@ -2043,7 +2105,7 @@
     if(!sub) return;
     editTarget = sub;
     var sg = sub.signers || ['', '', ''];
-    editEls.sub.innerHTML = escHtml(sub.site || t('noSite')) + '<br>' +
+    editEls.sub.innerHTML = escHtml(sub.site || t('noSite')) + ' · ' + escHtml(sub.building ? locText(sub) : t('noLocation')) + '<br>' +
       escHtml(t('dateLabel')) + ': ' + escHtml(formatDate(sub.date)) + ' · ' +
       escHtml(t('colRecordedBy')) + ': ' + escHtml(sub.recordedBy || t('noRecorder'));
     editEls.note.innerHTML = (sg[1] || sg[2])
@@ -2100,12 +2162,14 @@
     // พักร่างเดิมไว้ คืนให้เมื่อออกจากโหมดแก้ไข
     var backup = editCtx ? editCtx.backup : JSON.parse(JSON.stringify({
       site: state.site, date: state.date, recordedBy: state.recordedBy,
-      signers: state.signers, items: state.items
+      signers: state.signers, items: state.items, building: state.building, floor: state.floor
     }));
     editCtx = { id: sub.id, submittedAt: sub.submittedAt, site: sub.site, lang: sub.lang, pin: pin, username: uname || '', backup: backup };
     state.site = sub.site || '';
     state.date = sub.date || '';
     state.recordedBy = sub.recordedBy || '';
+    state.building = sub.building || '';
+    state.floor = sub.floor || '';
     state.signers = [(sub.signers && sub.signers[0]) || '', '', ''];
     ALL_ITEM_IDS.forEach(function(id){
       var it = (sub.items && sub.items[id]) || {};
@@ -2125,6 +2189,7 @@
     var b = editCtx.backup;
     editCtx = null;
     state.site = b.site; state.date = b.date; state.recordedBy = b.recordedBy;
+    state.building = b.building || ''; state.floor = b.floor || '';
     state.signers = b.signers; state.items = b.items;
     renderAll();
     saveDraft();
@@ -2157,6 +2222,7 @@
     renderTabUI();
     populateSiteOptions();
     els.siteInput.value = state.site;
+    renderBuildingOptions();
     els.dateInput.value = state.date;
     els.recordedByInput.value = state.recordedBy;
     renderProgress();
@@ -2187,6 +2253,11 @@
 
   els.dashSiteFilter.addEventListener('change', function(){
     state.dashSiteFilter = els.dashSiteFilter.value;
+    state.dashLocFilter = '';
+    renderDashboard();
+  });
+  document.getElementById('dashLocFilter').addEventListener('change', function(e){
+    state.dashLocFilter = e.target.value;
     renderDashboard();
   });
 
@@ -2208,7 +2279,54 @@
     renderDashboard();
   });
 
-  els.siteInput.addEventListener('change', function(){ state.site = els.siteInput.value; saveDraft(); renderPrintSheet(); });
+  els.siteInput.addEventListener('change', function(){
+    state.site = els.siteInput.value; state.building = ''; state.floor = '';
+    renderBuildingOptions(); saveDraft(); renderPrintSheet(); applyMissingMarks();
+  });
+  els.buildingInput.addEventListener('change', function(){
+    state.building = els.buildingInput.value; state.floor = '';
+    renderBuildingOptions(); saveDraft(); renderPrintSheet(); applyMissingMarks();
+  });
+  els.floorInput.addEventListener('change', function(){
+    state.floor = els.floorInput.value; saveDraft(); renderPrintSheet(); applyMissingMarks();
+  });
+
+  // ---------- อาคาร/ชั้น (รายชื่อจากระบบขนส่ง → ตั้งค่าโครงการ) ----------
+  var buildingCache = {};   // site → [{ building, floors }] | 'loading'
+  function renderBuildingOptions(){
+    var bSel = els.buildingInput, fSel = els.floorInput, note = els.buildingNote;
+    var site = state.site, list = site ? buildingCache[site] : null;
+    if(site && list === undefined && gasReady){
+      buildingCache[site] = 'loading';
+      google.script.run
+        .withSuccessHandler(function(r){ buildingCache[site] = r || []; if(state.site === site) renderBuildingOptions(); })
+        .withFailureHandler(function(){ delete buildingCache[site]; })
+        .CHECKLIST_buildings(site);
+    }
+    var ready = Array.isArray(list);
+    var opt = function(v, label){ return '<option value="' + escAttr(v) + '">' + escHtml(label) + '</option>'; };
+    if(!site || !ready){
+      bSel.innerHTML = opt('', !site ? t('pickSiteFirst') : '…'); fSel.innerHTML = opt('', !site ? t('pickSiteFirst') : '…');
+      bSel.disabled = fSel.disabled = true; note.classList.add('hidden'); return;
+    }
+    if(!list.length){
+      bSel.innerHTML = opt('', '—'); fSel.innerHTML = opt('', '—'); bSel.disabled = fSel.disabled = true;
+      note.textContent = t('noBuildings'); note.classList.remove('hidden'); return;
+    }
+    note.classList.add('hidden');
+    // ค่าเดิม (เช่น ร่าง/รายการเก่า) ที่ไม่มีในรายชื่อแล้ว → ล้าง
+    var b = list.find(function(x){ return x.building === state.building; });
+    if(state.building && !b){ state.building = ''; state.floor = ''; }
+    if(b && state.floor && b.floors.indexOf(state.floor) < 0) state.floor = '';
+    bSel.innerHTML = opt('', t('selectBuilding')) + list.map(function(x){ return opt(x.building, x.building); }).join('');
+    bSel.value = state.building; bSel.disabled = false;
+    fSel.innerHTML = opt('', b ? t('selectFloor') : t('selectBuilding')) +
+      (b ? b.floors.map(function(f){ return opt(f, t('floorWord') + ' ' + f); }).join('') : '');
+    fSel.value = state.floor; fSel.disabled = !b;
+  }
+  function locText(s, lang){
+    return s.building ? s.building + ' ' + t('floorWord', lang) + ' ' + s.floor : '';
+  }
   els.dateInput.addEventListener('input', function(){ state.date = els.dateInput.value; saveDraft(); renderPrintSheet(); });
   els.recordedByInput.addEventListener('input', function(){ state.recordedBy = els.recordedByInput.value; saveDraft(); });
 
@@ -2296,7 +2414,7 @@
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     if(!window.confirm(t('resetConfirm'))) return;
-    state.site = ''; state.date = ''; state.recordedBy = ''; state.signers = ['', '', ''];
+    state.site = ''; state.date = ''; state.recordedBy = ''; state.signers = ['', '', '']; state.building = ''; state.floor = '';
     ALL_ITEM_IDS.forEach(function(id){ state.items[id] = { status:null, worker:'', remark:'', location:'', photos:[] }; });
     saveDraft();
     renderAll();

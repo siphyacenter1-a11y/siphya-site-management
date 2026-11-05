@@ -60,6 +60,8 @@ function validatePayload(payload) {
   if (!str(payload.site)) missing.push('หน่วยงาน');
   if (!str(payload.date)) missing.push('วันที่ตรวจ');
   else if (!/^\d{4}-\d{2}-\d{2}$/.test(str(payload.date))) missing.push('วันที่ตรวจ (รูปแบบ ปปปป-ดด-วว)');
+  if (!str(payload.building)) missing.push('อาคาร');
+  if (!str(payload.floor)) missing.push('ชั้น');
   if (!str(payload.recordedBy)) missing.push('ผู้บันทึกข้อมูล');
   const signers = Array.isArray(payload.signers) ? payload.signers : [];
   if (!str(signers[0])) missing.push('ลงนามผู้ดูแลพื้นที่ควบคุม');
@@ -75,6 +77,32 @@ function validatePayload(payload) {
   });
   if (bad.length) missing.push('ข้อ ' + bad.join(', '));
   if (missing.length) throw new UserError('กรุณากรอกให้ครบ: ' + missing.join(' / '));
+}
+
+// อาคาร/ชั้นต้องอยู่ในรายชื่อของโครงการ (ตั้งที่ระบบขนส่ง → ⚙ ตั้งค่าโครงการ)
+async function assertBuildingFloor(client, site, building, floor) {
+  const code = siteCodeOf(site);
+  const r = await client.query(
+    'SELECT 1 FROM transport_floors WHERE project_code = $1 AND building = $2 AND floor = $3', [code, str(building, 100), str(floor, 50)]);
+  if (r.rows.length) return;
+  const any = await client.query('SELECT 1 FROM transport_floors WHERE project_code = $1 LIMIT 1', [code]);
+  throw new UserError(any.rows.length
+    ? 'อาคาร/ชั้นที่เลือกไม่มีในรายชื่อของโครงการนี้ กรุณาโหลดหน้าใหม่แล้วเลือกอีกครั้ง'
+    : 'โครงการนี้ยังไม่ได้ตั้งรายชื่ออาคาร/ชั้น กรุณาแจ้ง admin (ตั้งที่ระบบขนส่ง → ตั้งค่าโครงการ)');
+}
+
+// รายชื่ออาคาร/ชั้นของโครงการ → [{ building, floors: [...] }] ตามลำดับที่ตั้งไว้
+async function CHECKLIST_buildings(siteOrCode) {
+  const code = siteCodeOf(siteOrCode) || str(siteOrCode, 10).toUpperCase();
+  const r = await sitePool.query(
+    'SELECT building, floor FROM transport_floors WHERE project_code = $1 ORDER BY b_order, building, f_order, floor', [code]);
+  const out = [];
+  r.rows.forEach(x => {
+    let b = out[out.length - 1];
+    if (!b || b.building !== x.building) { b = { building: x.building, floors: [] }; out.push(b); }
+    b.floors.push(x.floor);
+  });
+  return out;
 }
 
 // บันทึกรูป base64 เป็นไฟล์ คืนลิงก์ /uploads/checklist/<ปี-เดือน>/<ไฟล์>
@@ -257,14 +285,15 @@ async function CHECKLIST_saveSubmission(payload) {
   const signers = payload.signers || [];
 
   await withTx(async client => {
+    await assertBuildingFloor(client, payload.site, payload.building, payload.floor);
     // ตอนส่งฟอร์ม รับเฉพาะลายเซ็นช่องที่ 1 — ช่อง 2, 3 ต้องลงนามผ่านแดชบอร์ดเท่านั้น
     const r = await client.query(
       `INSERT INTO site_supervisor_checklists
-         (submission_time, site_name, inspection_date, lang, recorded_by, signer1, signer2, signer3)
-       VALUES (date_trunc('milliseconds', NOW()), $1, $2, $3, $4, $5, '', '')
+         (submission_time, site_name, inspection_date, lang, recorded_by, signer1, signer2, signer3, building, floor)
+       VALUES (date_trunc('milliseconds', NOW()), $1, $2, $3, $4, $5, '', '', $6, $7)
        RETURNING id`,
       [str(payload.site, 200), str(payload.date), str(payload.lang, 5) || 'th',
-        str(payload.recordedBy, 100), str(signers[0], 100)]);
+        str(payload.recordedBy, 100), str(signers[0], 100), str(payload.building, 100), str(payload.floor, 50)]);
     await writeItems(client, r.rows[0].id, payload.items || {}, null);
   });
   return { ok: true };
@@ -273,7 +302,7 @@ async function CHECKLIST_saveSubmission(payload) {
 async function CHECKLIST_getSubmissions() {
   const heads = (await sitePool.query(
     `SELECT id, submission_time, site_name, TO_CHAR(inspection_date, 'YYYY-MM-DD') AS date, lang,
-            recorded_by, signer1, signer2, signer3, signer2_at, signer3_at
+            recorded_by, signer1, signer2, signer3, signer2_at, signer3_at, building, floor
        FROM site_supervisor_checklists
       ORDER BY submission_time DESC, id DESC`)).rows;
   if (!heads.length) return [];
@@ -302,6 +331,8 @@ async function CHECKLIST_getSubmissions() {
     date: h.date || '',
     lang: h.lang || '',
     recordedBy: h.recorded_by || '',
+    building: h.building || '',
+    floor: h.floor || '',
     signers: [h.signer1 || '', h.signer2 || '', h.signer3 || ''],
     signedAt: ['', fmtTs(h.signer2_at), fmtTs(h.signer3_at)],
     items: ITEM_IDS.map(id => {
@@ -436,16 +467,17 @@ async function CHECKLIST_updateSubmission(req) {
       .rows.map(r => r.url);
     const keep = new Set(oldUrls);
 
+    await assertBuildingFloor(client, row.site_name, payload.building, payload.floor);
     await client.query('DELETE FROM checklist_items WHERE checklist_id = $1', [row.id]);
     await client.query('DELETE FROM checklist_photos WHERE checklist_id = $1', [row.id]);
     await client.query(
       `UPDATE site_supervisor_checklists
           SET inspection_date = $2, lang = $3, recorded_by = $4, signer1 = $5,
               signer2 = '', signer3 = '', signer2_at = NULL, signer3_at = NULL,
-              edited_at = NOW(), edited_by = $6
+              edited_at = NOW(), edited_by = $6, building = $7, floor = $8
         WHERE id = $1`,
       [row.id, str(payload.date), str(payload.lang, 5) || 'th', str(payload.recordedBy, 100), str(signers[0], 100),
-        who.name || userName(this)]);
+        who.name || userName(this), str(payload.building, 100), str(payload.floor, 50)]);
     await writeItems(client, row.id, payload.items || {}, keep);
 
     const still = new Set((await client.query('SELECT url FROM checklist_photos WHERE checklist_id = $1', [row.id]))
@@ -544,10 +576,10 @@ const PDF_CSS =
 async function archivePdf(row, filePath, hash, by) {
   await sitePool.query(
     `INSERT INTO checklist_pdf_archive (checklist_id, site_name, inspection_date, recorded_by, signer2, signer3,
-                                        signer2_at, signer3_at, file_path, content_hash, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (checklist_id, content_hash) DO NOTHING`,
+                                        signer2_at, signer3_at, file_path, content_hash, created_by, building, floor)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT (checklist_id, content_hash) DO NOTHING`,
     [row.id, row.site_name, row.inspection_date, row.recorded_by, row.signer2, row.signer3,
-      row.signer2_at, row.signer3_at, filePath, hash, by || '']);
+      row.signer2_at, row.signer3_at, filePath, hash, by || '', row.building || '', row.floor || '']);
 }
 
 async function CHECKLIST_getPrintPdf(req) {
@@ -560,7 +592,7 @@ async function CHECKLIST_getPrintPdf(req) {
   const id = parseRowId(req.rowId);
   const row = (await sitePool.query(
     `SELECT id, site_name, TO_CHAR(inspection_date, 'DD-MM-YYYY') AS d, inspection_date, pdf_path, pdf_hash,
-            recorded_by, signer2, signer3, signer2_at, signer3_at
+            recorded_by, signer2, signer3, signer2_at, signer3_at, building, floor
        FROM site_supervisor_checklists WHERE id = $1`, [id])).rows[0];
   if (!row) throw new UserError('ไม่พบรายการนี้ กรุณารีเฟรชแดชบอร์ด');
   // ลงนามครบทั้ง 2 ช่อง (ตรวจจากฐานข้อมูล) → เก็บเข้าคลัง ไม่ลบทับ
@@ -582,7 +614,8 @@ async function CHECKLIST_getPrintPdf(req) {
   const safe = s => String(s).replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, '').replace(/\s+/g, ' ').trim();
   // ฉบับที่ลงนามครบตั้งชื่อตามเวลา (ไม่ทับฉบับเก่า)
   const stamp = signed ? '_ลงนาม_' + new Date().toISOString().replace(/\D/g, '').slice(0, 14) : '';
-  const fileName = `เช็คลิสต์_${safe(row.site_name || 'ไม่ระบุหน่วยงาน')}_${safe(row.d || 'ไม่ระบุวันที่')}_${row.id}${stamp}.pdf`;
+  const where = row.building ? `_${safe(row.building)}_ชั้น${safe(row.floor)}` : '';
+  const fileName = `เช็คลิสต์_${safe(row.site_name || 'ไม่ระบุหน่วยงาน')}${where}_${safe(row.d || 'ไม่ระบุวันที่')}_${row.id}${stamp}.pdf`;
   fs.mkdirSync(PDF_DIR, { recursive: true });
   await fs.promises.writeFile(path.join(PDF_DIR, fileName), pdf);
   const rel = '/uploads/checklist-pdf/' + fileName;
@@ -610,6 +643,7 @@ module.exports = {
     CHECKLIST_updateSubmission,
     CHECKLIST_getPrintPdf,
     CHECKLIST_signMany,
-    CHECKLIST_myRights
+    CHECKLIST_myRights,
+    CHECKLIST_buildings
   }
 };

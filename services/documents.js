@@ -38,18 +38,19 @@ async function DOCS_list(req) {
 
   if (!system || system === 'checklist') {
     const r = await sitePool.query(
-      `SELECT a.id, a.checklist_id, a.site_name, ${fmt('a.inspection_date')} AS doc_date, a.inspection_date AS sort_date,
+      `SELECT a.id, a.checklist_id, a.site_name, a.building, a.floor, ${fmt('a.inspection_date')} AS doc_date, a.inspection_date AS sort_date,
               a.recorded_by, a.signer2, a.signer3, ${fmtTs('a.signer2_at')} AS s2_at, ${fmtTs('a.signer3_at')} AS s3_at,
               a.file_path, a.created_by, ${fmtTs('a.created_at')} AS created, a.created_at,
               a.superseded_at IS NOT NULL AS old, a.superseded_reason
          FROM checklist_pdf_archive a
-        WHERE ($1::text IS NULL OR a.site_name ILIKE $1 OR a.signer2 ILIKE $1 OR a.signer3 ILIKE $1 OR a.recorded_by ILIKE $1)
+        WHERE ($1::text IS NULL OR a.site_name ILIKE $1 OR a.signer2 ILIKE $1 OR a.signer3 ILIKE $1 OR a.recorded_by ILIKE $1
+               OR (a.building || ' ชั้น ' || a.floor) ILIKE $1)
           AND ($2::date IS NULL OR a.inspection_date >= $2) AND ($3::date IS NULL OR a.inspection_date <= $3)
           AND ($4 = '' OR ($4 = 'old') = (a.superseded_at IS NOT NULL))
         ORDER BY a.created_at DESC LIMIT ${LIMIT}`, [like, from, to, status]);
     r.rows.forEach(x => out.push({
       system: 'checklist', systemLabel: 'เช็คลิสต์ตรวจพื้นที่',
-      title: 'เช็คลิสต์ #' + x.checklist_id, project: x.site_name, docDate: x.doc_date,
+      title: 'เช็คลิสต์ #' + x.checklist_id + (x.building ? ' · ' + x.building + ' ชั้น ' + x.floor : ''), project: x.site_name, docDate: x.doc_date,
       people: [x.recorded_by && 'บันทึก ' + x.recorded_by, x.signer2 && 'GM/ธุรการ ' + x.signer2 + (x.s2_at ? ' (' + x.s2_at + ')' : ''),
         x.signer3 && 'GF/GE ' + x.signer3 + (x.s3_at ? ' (' + x.s3_at + ')' : '')].filter(Boolean).join(' · '),
       by: x.created_by, created: x.created, status: x.old ? 'old' : 'current',
