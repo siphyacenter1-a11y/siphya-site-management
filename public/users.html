@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการผู้ใช้งาน | Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'Prompt', sans-serif; }
+    .top { background:var(--ink); color:#fff; padding:22px 16px 26px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:0 16px; box-sizing:border-box; }
+    .top .wrap { padding:0; }
+    .top a.back { color:#C9D6F2; text-decoration:none; font-size:13px; }
+    .top h1 { margin:8px 0 4px; font-size:22px; }
+    .top p { margin:0; color:#A3BBEB; font-size:13px; line-height:1.6; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; }
+    .card h2 { margin:0 0 4px; font-size:16px; }
+    .note { font-size:12.5px; color:var(--muted); line-height:1.6; }
+    .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0 8px; }
+    .bar input { flex:1 1 200px; }
+    input, select { font:inherit; font-size:13.5px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); box-sizing:border-box; min-width:0; }
+    label.f { display:block; font-size:12px; color:var(--muted); font-weight:600; margin-bottom:4px; }
+    .btn1 { font:inherit; font-size:13px; font-weight:700; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; background:var(--ink); color:#fff; }
+    .btn2 { font:inherit; font-size:12.5px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; background:#fff; color:var(--ink); }
+    .btn2.danger { color:var(--red); }
+    .btn1[disabled] { opacity:.5; cursor:default; }
+    .u { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; padding:12px; border:1px solid var(--line-soft); border-radius:12px; margin-bottom:8px; }
+    .u-main { flex:1 1 260px; min-width:0; }
+    .u-name { font-weight:700; font-size:14.5px; }
+    .u-user { font-size:12.5px; color:var(--muted); }
+    .chips { margin-top:6px; display:flex; gap:5px; flex-wrap:wrap; }
+    .chip { font-size:11.5px; font-weight:700; border-radius:999px; padding:2px 9px; background:var(--field); color:var(--muted); }
+    .c-admin { background:#FDECEC; color:var(--red); }
+    .c-staff { background:#E3F5EC; color:var(--green); }
+    .c-signer { background:#EDE7FB; color:var(--purple); }
+    .c-GM { background:#E8F0FD; color:var(--blue); }
+    .c-GF { background:#FFF4D6; color:#8A6400; }
+    .c-MASTER { background:var(--ink); color:#fff; }
+    .u-btns { display:flex; gap:6px; flex-wrap:wrap; }
+    .empty { text-align:center; color:var(--muted); padding:24px 10px; font-size:13.5px; }
+    /* หน้าต่างแก้ไข */
+    .bd { position:fixed; inset:0; background:rgba(11,31,75,.45); display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; z-index:50; }
+    .bd.hidden { display:none; }
+    .md { background:#fff; border-radius:16px; width:100%; max-width:620px; padding:20px; box-sizing:border-box; }
+    .md h3 { margin:0 0 12px; font-size:17px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; }
+    .grid input, .grid select { width:100%; }
+    .sec { margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft); }
+    .sec-t { font-size:13.5px; font-weight:700; margin-bottom:4px; }
+    .types { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px; margin-top:6px; }
+    .type { border:1.5px solid var(--line); border-radius:10px; padding:10px; cursor:pointer; font-size:12.5px; color:var(--muted); line-height:1.5; }
+    .type b { display:block; font-size:13.5px; color:var(--ink); }
+    .type.on { border-color:var(--ink); background:#F3F5FA; }
+    .type.off { opacity:.45; cursor:not-allowed; }
+    .rights { margin:8px 0; display:flex; flex-direction:column; gap:6px; }
+    .right { display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--line-soft); border-radius:8px; font-size:13px; }
+    .right span { flex:1; }
+    .right button { border:none; background:none; color:var(--red); font-size:18px; line-height:1; cursor:pointer; padding:0 4px; }
+    .add { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr) auto; gap:8px; }
+    .err { color:var(--red); font-size:12.5px; font-weight:600; min-height:18px; margin-top:10px; }
+    .acts { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+    .pin-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 12px; border:1px solid var(--line-soft); border-radius:10px; margin-bottom:6px; font-size:13px; }
+    .pin-row b { flex:1; }
+    .pin-add { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr) auto; gap:8px; margin-top:8px; }
+    .hidden { display:none !important; }
+    #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:60; }
+    #toast.show { opacity:1; }
+    @media (max-width:560px) {
+      .add, .pin-add { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top"><div class="wrap">
+    <a class="back" href="/admin">← กลับหน้าผู้ดูแลระบบ</a>
+    <h1>👥 จัดการผู้ใช้งาน</h1>
+    <p>สร้างบัญชีและกำหนดว่าแต่ละคนทำอะไรได้ในที่เดียว — หน้างาน, GM/ธุรการ, GF/GE, MASTER (เฉพาะ admin)</p>
+  </div></div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>บัญชีผู้ใช้</h2>
+      <div class="note">
+        <b>หน้างาน</b> = กรอกข้อมูลได้ทุกระบบ ไม่มีสิทธิ์ลงนาม ·
+        <b>GM/ธุรการ</b> = หน้างาน + ลงนามช่อง 2 และแก้ไขเช็คลิสต์ของโครงการที่กำหนด ·
+        <b>GF/GE</b> = ลงนามช่อง 3 (ปกติใช้บัญชี "ลงนามอย่างเดียว" เข้าได้แค่แดชบอร์ดเช็คลิสต์) ·
+        <b>MASTER</b> = ลงนามและแก้ไขได้ทุกช่อง ทุกโครงการ
+      </div>
+      <div class="bar">
+        <input id="q" type="search" placeholder="ค้นหาชื่อ / username / โครงการ">
+        <button type="button" class="btn1" id="addBtn">+ เพิ่มบัญชี</button>
+      </div>
+      <div id="list"><div class="empty">กำลังโหลด…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>รหัส PIN สำรอง (MASTER)</h2>
+      <div class="note">ใช้ลงนาม/แก้ไขเช็คลิสต์กรณีฉุกเฉิน จากบัญชี admin ที่ไม่มีสิทธิ์ลงนาม · ชื่อที่ตั้งไว้จะขึ้นในใบเมื่อใช้รหัสนี้ · รหัสเก็บแบบเข้ารหัส ดูย้อนหลังไม่ได้</div>
+      <div id="pins" style="margin-top:10px"></div>
+      <div class="pin-add">
+        <input id="pinLabel" type="text" maxlength="100" placeholder="ชื่อที่จะขึ้นในใบ เช่น ผู้จัดการโครงการ">
+        <input id="pinCode" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="รหัส PIN 4–12 หลัก">
+        <button type="button" class="btn1" id="pinAddBtn">เพิ่มรหัส</button>
+      </div>
+      <div class="err" id="pinErr"></div>
+    </div>
+  </div>
+
+  <div class="bd hidden" id="ed">
+    <div class="md" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+      <h3 id="edTitle">เพิ่มบัญชี</h3>
+      <div class="grid">
+        <div><label class="f" for="fUser">ชื่อผู้ใช้ (ภาษาอังกฤษ ใช้ login)</label><input id="fUser" type="text" maxlength="50" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="เช่น somchai.gm"></div>
+        <div><label class="f" for="fName">ชื่อ-นามสกุล (ขึ้นในใบลงนาม)</label><input id="fName" type="text" maxlength="100" placeholder="เช่น สมชาย ใจดี"></div>
+        <div><label class="f" for="fPw" id="fPwLabel">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="fPw" type="password" autocomplete="new-password"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-t">ประเภทบัญชี — เข้าระบบไหนได้บ้าง</div>
+        <div class="types" id="types">
+          <div class="type" data-type="staff"><b>หน้างาน / ธุรการ</b>ใช้ได้ทุกระบบ (เช็คลิสต์ ขยะ ขนส่ง แผนเดินรถ)</div>
+          <div class="type" data-type="signer"><b>ลงนามอย่างเดียว</b>เข้าได้แค่แดชบอร์ดเช็คลิสต์ (สำหรับ GF/GE)</div>
+          <div class="type hidden" data-type="admin"><b>ผู้ดูแลระบบ (admin)</b>ประเภทนี้เปลี่ยนจากหน้านี้ไม่ได้</div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-t">สิทธิ์ลงนามเช็คลิสต์</div>
+        <div class="note" id="rightsNote">ไม่ใส่ = ลงนามไม่ได้ (หน้างานทั่วไป) · คนเดียวใส่ได้หลายโครงการ</div>
+        <div class="rights" id="rights"></div>
+        <div class="add">
+          <select id="rRole">
+            <option value="GM">GM / ธุรการสนาม (ช่อง 2 + แก้ไข)</option>
+            <option value="GF">GF / GE (ช่อง 3)</option>
+            <option value="MASTER">MASTER (ทุกช่อง ทุกโครงการ)</option>
+          </select>
+          <select id="rSite"></select>
+          <button type="button" class="btn2" id="rAdd">+ เพิ่มสิทธิ์</button>
+        </div>
+      </div>
+
+      <div class="err" id="edErr"></div>
+      <div class="acts">
+        <button type="button" class="btn2" id="edCancel">ยกเลิก</button>
+        <button type="button" class="btn1" id="edSave">บันทึก</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
+  var data = { users: [], pins: [], projects: [] };
+  var cur = null;          // บัญชีที่กำลังแก้ (null = เพิ่มใหม่)
+  var form = { type: 'staff', rights: [], typeTouched: false };
+  var TYPE = { admin:'admin', staff:'หน้างาน / ธุรการ', signer:'ลงนามอย่างเดียว' };
+  var ROLE = { GM:'GM/ธุรการ', GF:'GF/GE', MASTER:'MASTER' };
+
+  function toast(m){ var t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 2600); }
+  function siteName(code){
+    if(!code) return 'ทุกโครงการ';
+    var p = data.projects.find(function(x){ return x.code === code; });
+    return p ? code + ' ' + p.name : code;
+  }
+  function rightLabel(r){ return ROLE[r.role] + (r.role === 'MASTER' ? '' : ' · ' + siteName(r.siteCode)); }
+  function call(fn, arg, ok, errEl){
+    var run = google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){
+      var m = (e && e.message) || 'ทำรายการไม่สำเร็จ';
+      if(errEl) errEl.textContent = m; else toast(m);
+    });
+    arg === undefined ? run[fn]() : run[fn](arg);
+  }
+
+  // ---------- รายการบัญชี ----------
+  function renderList(){
+    var q = $('q').value.trim().toLowerCase();
+    var rows = data.users.filter(function(u){
+      if(!q) return true;
+      return (u.fullName + ' ' + u.username + ' ' + u.rights.map(rightLabel).join(' ')).toLowerCase().indexOf(q) >= 0;
+    });
+    if(!rows.length){ $('list').innerHTML = '<div class="empty">ไม่พบบัญชี</div>'; return; }
+    $('list').innerHTML = rows.map(function(u){
+      var chips = '<span class="chip c-' + esc(u.role) + '">' + esc(TYPE[u.role] || u.role) + '</span>' +
+        (u.rights.length ? u.rights.map(function(r){ return '<span class="chip c-' + esc(r.role) + '">' + esc(rightLabel(r)) + '</span>'; }).join('')
+                         : '<span class="chip">ไม่มีสิทธิ์ลงนาม</span>');
+      return '<div class="u"><div class="u-main"><div class="u-name">' + esc(u.fullName) + (u.self ? ' <span class="chip">บัญชีของคุณ</span>' : '') + '</div>' +
+        '<div class="u-user">' + esc(u.username) + (u.lastLogin ? ' · เข้าระบบล่าสุด ' + esc(u.lastLogin) : ' · ยังไม่เคยเข้าระบบ') + '</div>' +
+        '<div class="chips">' + chips + '</div></div><div class="u-btns">' +
+        '<button type="button" class="btn2" data-edit="' + u.id + '">แก้ไข</button>' +
+        (u.self ? '' : '<button type="button" class="btn2 danger" data-del="' + u.id + '">ลบ</button>') + '</div></div>';
+    }).join('');
+  }
+  function renderPins(){
+    $('pins').innerHTML = data.pins.length ? data.pins.map(function(p){
+      return '<div class="pin-row"><b>' + esc(p.label || '(ไม่มีชื่อ)') + '</b><span class="chip c-' + esc(p.role) + '">' + esc(p.role === 'MASTER' ? 'MASTER' : rightLabel(p) + ' · แบบเก่า') + '</span>' +
+        '<button type="button" class="btn2" data-pin-edit="' + p.id + '">เปลี่ยนชื่อ/รหัส</button>' +
+        '<button type="button" class="btn2 danger" data-pin-del="' + p.id + '">ลบ</button></div>';
+    }).join('') : '<div class="note">ยังไม่มีรหัส PIN สำรอง</div>';
+  }
+  function load(){
+    call('USERS_list', undefined, function(r){
+      data = r; renderList(); renderPins();
+      $('rSite').innerHTML = '<option value="">ทุกโครงการ</option>' + data.projects.map(function(p){
+        return '<option value="' + esc(p.code) + '">' + esc(p.code + ' — ' + p.name) + '</option>'; }).join('');
+    }, $('list'));
+  }
+  $('q').addEventListener('input', renderList);
+
+  // ---------- หน้าต่างเพิ่ม/แก้ไข ----------
+  function renderForm(){
+    var isAdmin = cur && cur.role === 'admin';
+    document.querySelectorAll('.type').forEach(function(el){
+      var t = el.getAttribute('data-type');
+      el.classList.toggle('hidden', t === 'admin' ? !isAdmin : isAdmin);
+      el.classList.toggle('on', t === form.type);
+      var blocked = t === 'signer' && form.rights.some(function(r){ return r.role !== 'GF'; });
+      el.classList.toggle('off', blocked);
+    });
+    $('rights').innerHTML = form.rights.map(function(r, i){
+      return '<div class="right"><span class="chip c-' + esc(r.role) + '">' + esc(ROLE[r.role]) + '</span><span>' +
+        esc(r.role === 'MASTER' ? 'ทุกช่อง ทุกโครงการ' : siteName(r.siteCode)) + '</span>' +
+        '<button type="button" title="เอาสิทธิ์นี้ออก" data-rm="' + i + '">×</button></div>';
+    }).join('');
+    $('rightsNote').textContent = form.rights.length
+      ? 'คนเดียวใส่ได้หลายโครงการ · กด × เพื่อเอาสิทธิ์ออก'
+      : 'ไม่ใส่ = ลงนามไม่ได้ (หน้างานทั่วไป) · คนเดียวใส่ได้หลายโครงการ';
+    $('rSite').disabled = $('rRole').value === 'MASTER';
+  }
+  function openEd(u){
+    cur = u || null;
+    $('edTitle').textContent = u ? 'แก้ไขบัญชี: ' + u.username : 'เพิ่มบัญชี';
+    $('fUser').value = u ? u.username : ''; $('fUser').disabled = !!u;
+    $('fName').value = u ? u.fullName : '';
+    $('fPw').value = '';
+    $('fPwLabel').textContent = u ? 'รหัสผ่านใหม่ (เว้นว่าง = ใช้รหัสเดิม)' : 'รหัสผ่าน (อย่างน้อย 6 ตัว)';
+    $('fPw').disabled = !!(u && u.role === 'admin' && !u.self);
+    form = { type: u ? u.role : 'staff', rights: u ? u.rights.map(function(r){ return { role:r.role, siteCode:r.siteCode }; }) : [], typeTouched: !!u };
+    $('rRole').value = 'GM'; $('rSite').value = '';
+    $('edErr').textContent = '';
+    renderForm();
+    $('ed').classList.remove('hidden');
+    setTimeout(function(){ (u ? $('fName') : $('fUser')).focus(); }, 50);
+  }
+  function closeEd(){ $('ed').classList.add('hidden'); cur = null; }
+  $('addBtn').addEventListener('click', function(){ openEd(null); });
+  $('edCancel').addEventListener('click', closeEd);
+  $('ed').addEventListener('click', function(e){ if(e.target === $('ed')) closeEd(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !$('ed').classList.contains('hidden')) closeEd(); });
+
+  $('types').addEventListener('click', function(e){
+    var el = e.target.closest('.type'); if(!el || el.classList.contains('off') || el.classList.contains('hidden')) return;
+    form.type = el.getAttribute('data-type'); form.typeTouched = true; renderForm();
+  });
+  $('rRole').addEventListener('change', renderForm);
+  $('rAdd').addEventListener('click', function(){
+    var role = $('rRole').value, site = role === 'MASTER' ? '' : $('rSite').value;
+    if(form.rights.some(function(r){ return r.role === role && r.siteCode === site; })){ $('edErr').textContent = 'มีสิทธิ์นี้อยู่แล้ว'; return; }
+    form.rights.push({ role: role, siteCode: site });
+    // GM/ธุรการ, MASTER ต้องแก้ไขรายการได้ → ใช้บัญชีหน้างาน · GF/GE บัญชีใหม่ → แนะนำ "ลงนามอย่างเดียว"
+    if(role !== 'GF' && form.type === 'signer') form.type = 'staff';
+    else if(role === 'GF' && !form.typeTouched && form.rights.every(function(r){ return r.role === 'GF'; })) form.type = 'signer';
+    $('edErr').textContent = '';
+    renderForm();
+  });
+  $('rights').addEventListener('click', function(e){
+    var b = e.target.closest('[data-rm]'); if(!b) return;
+    form.rights.splice(Number(b.getAttribute('data-rm')), 1); renderForm();
+  });
+
+  $('edSave').addEventListener('click', function(){
+    var req = { id: cur ? cur.id : null, username: $('fUser').value.trim(), fullName: $('fName').value.trim(),
+      password: $('fPw').value, accountRole: form.type, rights: form.rights };
+    if(!cur && !/^[A-Za-z0-9._-]{3,50}$/.test(req.username)){ $('edErr').textContent = 'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข 3–50 ตัว (ใช้ . _ - ได้)'; $('fUser').focus(); return; }
+    if(!req.fullName){ $('edErr').textContent = 'กรุณาพิมพ์ชื่อ-นามสกุล'; $('fName').focus(); return; }
+    if(!cur && req.password.length < 6){ $('edErr').textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; $('fPw').focus(); return; }
+    if(cur && req.password && req.password.length < 6){ $('edErr').textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; $('fPw').focus(); return; }
+    if(form.type === 'signer' && !form.rights.length){ $('edErr').textContent = 'บัญชี "ลงนามอย่างเดียว" ต้องมีสิทธิ์ลงนาม GF/GE อย่างน้อย 1 โครงการ'; return; }
+    $('edSave').disabled = true;
+    call('USERS_save', req, function(){
+      $('edSave').disabled = false; closeEd(); toast(req.id ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มบัญชีแล้ว'); load();
+    }, { set textContent(m){ $('edSave').disabled = false; $('edErr').textContent = m; } });
+  });
+
+  $('list').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var id = Number(b.getAttribute('data-edit') || b.getAttribute('data-del'));
+    var u = data.users.find(function(x){ return x.id === id; }); if(!u) return;
+    if(b.hasAttribute('data-edit')) return openEd(u);
+    if(!confirm('ลบบัญชี "' + u.fullName + '" (' + u.username + ') ?\nคนนี้จะเข้าระบบไม่ได้อีก · ชื่อในใบที่ลงนามไปแล้วยังอยู่')) return;
+    call('USERS_delete', id, function(){ toast('ลบบัญชีแล้ว'); load(); });
+  });
+
+  // ---------- รหัส PIN สำรอง ----------
+  var pinEditId = null;
+  function resetPinForm(){ pinEditId = null; $('pinLabel').value = ''; $('pinCode').value = ''; $('pinCode').placeholder = 'รหัส PIN 4–12 หลัก'; $('pinAddBtn').textContent = 'เพิ่มรหัส'; }
+  $('pinAddBtn').addEventListener('click', function(){
+    var req = { id: pinEditId, label: $('pinLabel').value.trim(), pin: $('pinCode').value.trim() };
+    if(!req.label){ $('pinErr').textContent = 'กรุณาพิมพ์ชื่อที่จะขึ้นในใบ'; return; }
+    if(!req.id && !req.pin){ $('pinErr').textContent = 'กรุณาตั้งรหัส PIN'; return; }
+    if(req.pin && !/^\d{4,12}$/.test(req.pin)){ $('pinErr').textContent = 'รหัส PIN ต้องเป็นตัวเลข 4–12 หลัก'; return; }
+    $('pinErr').textContent = '';
+    call('USERS_savePin', req, function(){ toast(req.id ? 'บันทึกแล้ว' : 'เพิ่มรหัสแล้ว'); resetPinForm(); load(); }, $('pinErr'));
+  });
+  $('pins').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var id = Number(b.getAttribute('data-pin-edit') || b.getAttribute('data-pin-del'));
+    var p = data.pins.find(function(x){ return x.id === id; }); if(!p) return;
+    if(b.hasAttribute('data-pin-edit')){
+      pinEditId = id; $('pinLabel').value = p.label; $('pinCode').value = '';
+      $('pinCode').placeholder = 'รหัสใหม่ (เว้นว่าง = ใช้รหัสเดิม)'; $('pinAddBtn').textContent = 'บันทึก'; $('pinLabel').focus(); return;
+    }
+    if(!confirm('ลบรหัส PIN "' + p.label + '" ?')) return;
+    call('USERS_deletePin', id, function(){ toast('ลบแล้ว'); if(pinEditId === id) resetPinForm(); load(); });
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
