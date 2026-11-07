@@ -8,7 +8,8 @@ router.get('/summary', async (req, res) => {
     const [transportRes, wasteRes, routeRes, checklistRes, projectsRes] = await Promise.all([
       querySite('SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status2 = $1) AS completed FROM material_transport_logs', ['ส่งแล้ว']),
       querySite('SELECT COUNT(*) AS total, COALESCE(SUM(volume_m3), 0) AS total_volume, COALESCE(SUM(cost), 0) AS total_cost FROM waste_records'),
-      querySite('SELECT COUNT(*) AS total FROM vehicle_transport_requests'),
+      // บันทึกการเปลี่ยนแผนเดินรถ: จำนวนสัปดาห์ที่อัปโหลดแผนแล้ว (ยังไม่รัน migration = 0)
+      querySite('SELECT COUNT(DISTINCT week_start) AS total FROM rplan_revisions').catch(() => ({ rows: [{ total: 0 }] })),
       querySite('SELECT COUNT(*) AS total FROM site_supervisor_checklists'),
       querySite('SELECT id, name FROM projects ORDER BY name ASC')
     ]);
@@ -34,10 +35,10 @@ router.get('/summary', async (req, res) => {
             badge: `${wasteRes.rows[0].total} เที่ยว`
           },
           route: {
-            title: 'ระบบแผนการเดินรถ',
+            title: 'บันทึกการเปลี่ยนแผนเดินรถ',
             total: parseInt(routeRes.rows[0].total, 10),
-            path: '/route',
-            badge: `${routeRes.rows[0].total} ทริป`
+            path: '/route-plan',
+            badge: `${routeRes.rows[0].total} สัปดาห์`
           },
           checklist: {
             title: 'เช็กลิสต์ตรวจพื้นที่ประจำวัน',

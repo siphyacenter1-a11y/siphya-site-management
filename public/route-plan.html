@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกการเปลี่ยนแผนเดินรถ | Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'Prompt', sans-serif; }
+    .top { background:var(--ink); color:#fff; padding:22px 16px 0; }
+    .wrap { max-width:1100px; margin:0 auto; padding:0 16px; box-sizing:border-box; }
+    .top .wrap { padding:0; }
+    .top a.back { color:#C9D6F2; text-decoration:none; font-size:13px; }
+    .top h1 { margin:8px 0 4px; font-size:22px; }
+    .top p { margin:0; color:#A3BBEB; font-size:13px; line-height:1.6; }
+    .tabs { display:flex; gap:4px; margin-top:16px; }
+    .tab { font:inherit; font-size:13.5px; font-weight:600; border:none; background:transparent; color:#A3BBEB; padding:10px 16px; border-radius:10px 10px 0 0; cursor:pointer; }
+    .tab.on { background:var(--paper); color:var(--ink); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; }
+    .card h2 { margin:0 0 6px; font-size:16px; }
+    .note { font-size:12.5px; color:var(--muted); line-height:1.6; }
+    input, select { font:inherit; font-size:13.5px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); box-sizing:border-box; min-width:0; }
+    .btn1 { font:inherit; font-size:13px; font-weight:700; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; background:var(--ink); color:#fff; }
+    .btn1[disabled] { opacity:.5; cursor:default; }
+    .btn2 { font:inherit; font-size:12.5px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; background:#fff; color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+    .btn2.danger { color:var(--red); }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .grow { flex:1 1 auto; }
+    .hidden { display:none !important; }
+    .msg { font-size:13px; margin-top:8px; line-height:1.6; }
+    .msg.err { color:var(--red); } .msg.ok { color:var(--green); }
+    /* ไฟล์ที่เลือกอัปโหลด */
+    .files { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+    .file { display:flex; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line-soft); border-radius:10px; font-size:13px; flex-wrap:wrap; }
+    .file .fn { flex:1 1 240px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .file input { width:70px; }
+    .file .st { font-size:12px; color:var(--muted); }
+    /* ตัวเลขสรุป */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:12px 0 4px; }
+    .stat { background:var(--field); border-radius:12px; padding:12px 14px; }
+    .stat b { display:block; font-size:24px; line-height:1.2; }
+    .stat span { font-size:12px; color:var(--muted); }
+    .stat.hl { background:#FDECEC; } .stat.hl b { color:var(--red); }
+    .stat.warn { background:#FFF4D6; }
+    .revs { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+    .rev { display:inline-flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:12.5px; background:#fff; }
+    .rev a { color:var(--blue); font-weight:700; text-decoration:none; }
+    .rev .x { border:none; background:none; color:var(--faint); cursor:pointer; font-size:14px; padding:0 2px; }
+    /* รายการเปลี่ยนแปลง */
+    .grp { margin:18px 0 6px; font-weight:700; font-size:14px; display:flex; gap:8px; align-items:baseline; }
+    .grp small { color:var(--muted); font-weight:400; font-size:12px; }
+    .ch { border:1px solid var(--line-soft); border-left:4px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; background:#fff; }
+    .ch.t-add { border-left-color:var(--green); } .ch.t-cancel { border-left-color:var(--red); } .ch.t-move { border-left-color:var(--amber); } .ch.t-swap { border-left-color:var(--faint); }
+    .ch.off { background:#FAFAF8; } .ch.off .txt { color:var(--muted); }
+    .ch.stale { opacity:.6; }
+    .ch-h { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12.5px; }
+    .badge { font-size:11.5px; font-weight:700; border-radius:999px; padding:2px 9px; }
+    .b-add { background:#E3F5EC; color:var(--green); } .b-cancel { background:#FDECEC; color:var(--red); }
+    .b-move { background:#FFF4D6; color:#8A6400; } .b-swap { background:var(--field); color:var(--muted); }
+    .b-unload { background:#E8F0FD; color:var(--blue); }
+    .when { color:var(--muted); }
+    .txt { font-size:13.5px; font-weight:600; margin:5px 0 6px; line-height:1.5; }
+    .chips { display:flex; gap:5px; flex-wrap:wrap; }
+    .chip { font-size:11.5px; font-weight:600; border-radius:999px; padding:2px 9px; background:var(--field); color:var(--muted); }
+    .chip.bu { background:#EDE7FB; color:var(--purple); }
+    .ch-f { display:grid; grid-template-columns:minmax(200px, 1.3fr) auto minmax(160px, 1fr) auto; gap:8px; align-items:center; margin-top:8px; }
+    .ch-f select, .ch-f input[type=text] { width:100%; }
+    .cnt { display:flex; align-items:center; gap:5px; font-size:12.5px; white-space:nowrap; }
+    .att { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .att a.th { display:inline-block; width:38px; height:38px; border-radius:6px; border:1px solid var(--line); background:var(--field) center/cover no-repeat; position:relative; font-size:10px; color:var(--muted); text-align:center; line-height:38px; text-decoration:none; }
+    .att .del { position:absolute; top:-6px; right:-6px; width:16px; height:16px; line-height:14px; border-radius:50%; border:none; background:var(--red); color:#fff; font-size:11px; cursor:pointer; padding:0; }
+    .saved { font-size:11.5px; color:var(--green); }
+    .auto { font-size:11.5px; color:var(--muted); margin-top:4px; }
+    @media (max-width: 720px) { .ch-f { grid-template-columns:1fr; } }
+    /* รายงาน */
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:7px 8px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap; }
+    th:first-child, td:first-child { text-align:left; white-space:normal; }
+    th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); }
+    .rep-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:0 14px; }
+    @media (max-width: 480px) { .rep-grid { grid-template-columns:1fr; } }
+    .tbl { overflow-x:auto; }
+    .pbar { display:inline-block; height:8px; border-radius:4px; background:var(--coral); vertical-align:middle; margin-right:6px; }
+    .empty { text-align:center; color:var(--muted); padding:24px 10px; font-size:13.5px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="wrap">
+      <a class="back" href="/admin">← กลับหน้าหลัก</a>
+      <h1>บันทึกการเปลี่ยนแผนเดินรถ</h1>
+      <p>อัปโหลด PDF แผนเดินรถประจำสัปดาห์ของศูนย์สระบุรีทุก Revise — ระบบเทียบกับฉบับก่อนหน้าให้ว่าเที่ยวไหนเพิ่ม ยกเลิก หรือย้ายวัน แล้วเลือกสาเหตุ + แนบใบแจ้งยกเลิก/จองด่วน</p>
+      <div class="tabs">
+        <button class="tab on" data-tab="week">รายสัปดาห์</button>
+        <button class="tab" data-tab="report">รายงาน</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- ===== รายสัปดาห์ ===== -->
+    <div id="tab-week">
+      <div class="card">
+        <h2>อัปโหลดแผนเดินรถ (PDF)</h2>
+        <div class="note">เลือกได้หลายไฟล์พร้อมกัน · เลข Revise อ่านจากชื่อไฟล์ (ฉบับแรกที่ไม่มีเลข = 0) แก้ได้ก่อนกดอัปโหลด · ส่งเลขเดิมซ้ำ = แทนที่ฉบับเดิม</div>
+        <div class="row" style="margin-top:10px;">
+          <input type="file" id="pdfFiles" accept="application/pdf,.pdf" multiple class="grow">
+          <button class="btn1" id="btnUpload" disabled>อัปโหลด</button>
+        </div>
+        <div class="files" id="fileList"></div>
+        <div class="msg" id="upMsg"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">สัปดาห์</h2>
+          <select id="weekSel"></select>
+        </div>
+        <div id="weekBody"><div class="empty">ยังไม่มีแผน — อัปโหลด PDF ด้านบน</div></div>
+      </div>
+    </div>
+
+    <!-- ===== รายงาน ===== -->
+    <div id="tab-report" class="hidden">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">รายงานการผิดแผน</h2>
+          <label class="note">ตั้งแต่ <select id="repFrom"></select></label>
+          <label class="note">ถึง <select id="repTo"></select></label>
+        </div>
+        <div class="note" style="margin-top:6px;">นับเฉพาะงานขนส่งที่ติ๊ก "นับ" (ไม่รวมสลับคัน/เที่ยว · เที่ยวลงของ · สระบุรีจัดรถเอง · รถเสีย) และเฉพาะวัน จ.–อา. ของสัปดาห์ · % = รายการที่นับ ÷ งานใน Rev 0</div>
+        <div id="repBody"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var META = { causes: [], buList: [], types: {} };
+  var WEEKS = [];
+  var CUR = null;            // ข้อมูลสัปดาห์ที่เปิดอยู่
+  var SHOW_ALL = false;
+  var DAY = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  var MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  var TYPE_TH = { add: 'เพิ่ม', cancel: 'ยกเลิก', move: 'ย้ายวัน', swap: 'สลับคัน/เที่ยว' };
+
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (ok, fail) {
+      var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail);
+      r[fn].apply(r, args);
+    });
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function $(id) { return document.getElementById(id); }
+  function dTh(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T00:00:00');
+    return DAY[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
+  }
+  function weekLabel(ws, we) {
+    var a = new Date(ws + 'T00:00:00'), b = new Date((we || ws) + 'T00:00:00');
+    return a.getDate() + (a.getMonth() !== b.getMonth() ? ' ' + MON[a.getMonth()] : '') + ' – ' + b.getDate() + ' ' + MON[b.getMonth()] + ' ' + (b.getFullYear() + 543);
+  }
+  function pct(v) { return v == null ? '-' : v.toLocaleString('th-TH', { maximumFractionDigits: 1 }) + '%'; }
+
+  // ---------------- แท็บ
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('tab-week').classList.toggle('hidden', b.dataset.tab !== 'week');
+      $('tab-report').classList.toggle('hidden', b.dataset.tab !== 'report');
+      if (b.dataset.tab === 'report') loadReport();
+    };
+  });
+
+  // ---------------- อัปโหลด
+  var PICKED = [];
+  function revFromName(n) {
+    var m = n.match(/Rev(?:ise)?[\s_.-]*(\d{1,2})[\s_.-]+\d{1,2}[._-]\d{1,2}[._-]\d{2,4}/i);
+    if (m) return Number(m[1]);
+    m = n.match(/Rev(?:ise)?[\s_.-]*(\d{1,2})(?!\d|[._-]\d)/i);
+    if (m) return Number(m[1]);
+    if (/Rev(?:ise)?[\s_.-]*\d{1,2}[._-]\d{1,2}[._-]\d{2,4}/i.test(n)) return 0;
+    return '';
+  }
+  $('pdfFiles').onchange = function () {
+    PICKED = Array.prototype.map.call(this.files, function (f) { return { file: f, rev: revFromName(f.name), status: '' }; });
+    PICKED.sort(function (a, b) { return (a.rev === '' ? 99 : a.rev) - (b.rev === '' ? 99 : b.rev); });
+    renderPicked();
+    $('upMsg').textContent = '';
+  };
+  function renderPicked() {
+    $('fileList').innerHTML = PICKED.map(function (p, i) {
+      return '<div class="file"><span class="fn" title="' + esc(p.file.name) + '">📄 ' + esc(p.file.name) + '</span>' +
+        '<label class="note">Rev <input type="number" min="0" max="99" data-i="' + i + '" value="' + p.rev + '" placeholder="?"></label>' +
+        '<span class="st">' + esc(p.status) + '</span></div>';
+    }).join('');
+    $('fileList').querySelectorAll('input').forEach(function (inp) {
+      inp.oninput = function () { PICKED[+inp.dataset.i].rev = inp.value === '' ? '' : Number(inp.value); };
+    });
+    $('btnUpload').disabled = !PICKED.length;
+  }
+  function readDataUrl(file) {
+    return new Promise(function (ok, fail) { var r = new FileReader(); r.onload = function () { ok(r.result); }; r.onerror = fail; r.readAsDataURL(file); });
+  }
+  $('btnUpload').onclick = async function () {
+    if (PICKED.some(function (p) { return p.rev === ''; })) { $('upMsg').className = 'msg err'; $('upMsg').textContent = 'กรุณาใส่เลข Revise ให้ครบทุกไฟล์'; return; }
+    this.disabled = true;
+    var lastWeek = null, errs = 0;
+    PICKED.sort(function (a, b) { return a.rev - b.rev; });
+    for (var i = 0; i < PICKED.length; i++) {
+      var p = PICKED[i];
+      p.status = 'กำลังอัปโหลด…'; renderPicked();
+      try {
+        var res = await call('RPLAN_upload', { fileName: p.file.name, dataUrl: await readDataUrl(p.file), revNo: p.rev });
+        p.status = '✅ สัปดาห์ ' + weekLabel(res.weekStart, res.weekEnd) + ' · Rev ' + res.revNo + ' · ' + res.jobs + ' งาน' + (res.replaced ? ' (แทนที่ฉบับเดิม)' : '');
+        lastWeek = res.weekStart;
+      } catch (e) { p.status = '❌ ' + e.message; errs++; }
+      renderPicked();
+    }
+    this.disabled = false;
+    $('upMsg').className = 'msg ' + (errs ? 'err' : 'ok');
+    $('upMsg').textContent = errs ? 'มีไฟล์ที่อัปโหลดไม่สำเร็จ ' + errs + ' ไฟล์' : 'อัปโหลดเรียบร้อย';
+    if (!errs) { $('pdfFiles').value = ''; }
+    await loadWeeks(lastWeek);
+  };
+
+  // ---------------- สัปดาห์
+  async function loadWeeks(select) {
+    WEEKS = await call('RPLAN_weeks');
+    var sel = $('weekSel');
+    sel.innerHTML = WEEKS.map(function (w) {
+      return '<option value="' + w.weekStart + '">' + weekLabel(w.weekStart, w.weekEnd) + ' · Rev 0–' + w.lastRev + (w.pending ? ' · รอระบุ ' + w.pending : '') + '</option>';
+    }).join('');
+    ['repFrom', 'repTo'].forEach(function (id, k) {
+      var asc = WEEKS.slice().reverse();
+      $(id).innerHTML = asc.map(function (w) { return '<option value="' + w.weekStart + '">' + weekLabel(w.weekStart, w.weekEnd) + '</option>'; }).join('');
+      if (asc.length) $(id).value = k === 0 ? asc[Math.max(0, asc.length - 8)].weekStart : asc[asc.length - 1].weekStart;
+    });
+    if (!WEEKS.length) { $('weekBody').innerHTML = '<div class="empty">ยังไม่มีแผน — อัปโหลด PDF ด้านบน</div>'; return; }
+    sel.value = select && WEEKS.some(function (w) { return w.weekStart === select; }) ? select : WEEKS[0].weekStart;
+    await loadWeek(sel.value);
+  }
+  $('weekSel').onchange = function () { loadWeek(this.value); };
+
+  async function loadWeek(ws) {
+    $('weekBody').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+    try { CUR = await call('RPLAN_week', ws); renderWeek(); }
+    catch (e) { $('weekBody').innerHTML = '<div class="empty" style="color:var(--red)">' + esc(e.message) + '</div>'; }
+  }
+
+  function renderWeek() {
+    var w = CUR, s = w.summary;
+    var revHtml = w.revisions.map(function (r) {
+      return '<span class="rev"><a href="/api/route-plan-file/rev/' + r.id + '" target="_blank">Rev ' + r.revNo + '</a>' +
+        '<span class="note">' + (r.revDate ? r.revDate + ' · ' : '') + r.jobs + ' งาน · อัปโหลด ' + esc(r.uploadedAt) + '</span>' +
+        '<button class="x" title="ลบฉบับนี้" data-del-rev="' + r.id + '" data-rev="' + r.revNo + '">✕</button></span>';
+    }).join('');
+    var counted = w.changes.filter(function (c) { return c.kind === 'job' && c.inWeek && !c.stale && c.effCounted; });
+    var shown = SHOW_ALL ? w.changes : w.changes.filter(function (c) { return c.kind === 'job' && c.inWeek && (c.effCounted || c.cause != null || c.stale); });
+    var hiddenN = w.changes.length - shown.length;
+
+    var html = '<div class="stats">' +
+      '<div class="stat"><b>' + w.revisions.length + '</b><span>ฉบับที่ได้รับ (Rev ' + w.revisions[0].revNo + '–' + w.revisions[w.revisions.length - 1].revNo + ')</span></div>' +
+      '<div class="stat"><b>' + s.baseJobs + '</b><span>งานใน Rev ' + s.baseRev + ' (จ.–อา.)</span></div>' +
+      '<div class="stat hl"><b>' + s.counted + '</b><span>ผิดแผน · เพิ่ม ' + s.byType.add + ' · ยกเลิก ' + s.byType.cancel + ' · ย้ายวัน ' + s.byType.move + '</span></div>' +
+      '<div class="stat hl"><b>' + pct(s.pct) + '</b><span>% ผิดแผน เทียบ Rev ' + s.baseRev + '</span></div>' +
+      '<div class="stat' + (s.pending ? ' warn' : '') + '"><b>' + s.pending + '</b><span>รอยืนยันสาเหตุ</span></div>' +
+      '</div>' +
+      (s.baseRev !== 0 ? '<div class="msg err">ยังไม่มี Rev 0 ของสัปดาห์นี้ — ตอนนี้ใช้ Rev ' + s.baseRev + ' เป็นแผนตั้งต้น</div>' : '') +
+      '<div class="revs">' + revHtml + '</div>' +
+      '<div class="row" style="margin-top:14px;"><label class="cnt"><input type="checkbox" id="showAll"' + (SHOW_ALL ? ' checked' : '') + '> แสดงทั้งหมด (รวมสลับคัน/เที่ยว · เที่ยวลงของ · วันนอกสัปดาห์' + (hiddenN && !SHOW_ALL ? ' — ซ่อนอยู่ ' + hiddenN + ' รายการ' : '') + ')</label></div>';
+
+    if (w.revisions.length < 2) html += '<div class="empty">มีฉบับเดียว — อัปโหลด Revise ถัดไปเพื่อดูการเปลี่ยนแปลง</div>';
+    else if (!shown.length) html += '<div class="empty">ไม่มีรายการเปลี่ยนแปลง' + (hiddenN ? ' ที่นับ (ติ๊ก "แสดงทั้งหมด" เพื่อดูการสลับคัน ฯลฯ)' : '') + '</div>';
+    var lastRev = null;
+    shown.forEach(function (c) {
+      if (c.revNo !== lastRev) {
+        lastRev = c.revNo;
+        var n = shown.filter(function (x) { return x.revNo === c.revNo; }).length;
+        html += '<div class="grp">Rev ' + (c.revNo - 1 >= 0 ? prevRevOf(c.revNo) + ' → ' : '') + c.revNo + ' <small>' + n + ' รายการ</small></div>';
+      }
+      html += changeHtml(c);
+    });
+    $('weekBody').innerHTML = html;
+    bindWeek();
+  }
+  function prevRevOf(r) {
+    var revs = CUR.revisions.map(function (x) { return x.revNo; }).filter(function (x) { return x < r; });
+    return revs.length ? revs[revs.length - 1] : r - 1;
+  }
+  function locTxt(d, plate, trip) { return dTh(d) + ' เที่ยว ' + trip + (plate ? ' · ' + plate : ''); }
+
+  function changeHtml(c) {
+    var when = c.type === 'add' ? '→ ' + locTxt(c.toDate, c.toPlate, c.toTrip)
+      : c.type === 'cancel' ? locTxt(c.fromDate, c.fromPlate, c.fromTrip)
+      : locTxt(c.fromDate, c.fromPlate, c.fromTrip) + ' → ' + locTxt(c.toDate, c.toPlate, c.toTrip);
+    var cls = 'ch t-' + c.type + (c.effCounted && c.kind === 'job' && c.inWeek ? '' : ' off') + (c.stale ? ' stale' : '');
+    var opts = '<option value="">' + (c.autoCause ? 'ตามระบบ: ' + esc(c.autoCause) : '— เลือกสาเหตุ —') + '</option>' +
+      META.causes.map(function (k) { return '<option' + (c.cause === k.name ? ' selected' : '') + '>' + esc(k.name) + '</option>'; }).join('');
+    var att = (c.attachments || []).map(function (a) {
+      var img = /^image\//.test(a.mime);
+      return '<a class="th" href="/api/route-plan-file/att/' + a.id + '" target="_blank" title="' + esc(a.name) + '"' +
+        (img ? ' style="background-image:url(/api/route-plan-file/att/' + a.id + ')"' : '') + '>' + (img ? '' : 'PDF') +
+        '<button class="del" data-del-att="' + a.id + '" title="ลบไฟล์แนบ">×</button></a>';
+    }).join('');
+    return '<div class="' + cls + '" data-id="' + c.id + '">' +
+      '<div class="ch-h"><span class="badge b-' + c.type + '">' + TYPE_TH[c.type] + '</span>' +
+      (c.kind === 'unload' ? '<span class="badge b-unload">ลงของ</span>' : '') +
+      '<span class="when">' + esc(when) + '</span>' +
+      (c.stale ? '<span class="badge b-cancel">ไม่พบแล้วหลังอัปโหลดใหม่</span>' : '') + '</div>' +
+      '<div class="txt">' + esc(c.text) + '</div>' +
+      '<div class="chips">' + (c.bu ? '<span class="chip bu">' + esc(c.bu) + '</span>' : '') +
+      (c.project ? '<span class="chip">โครงการ ' + esc(c.project) + '</span>' : '') +
+      (c.booker ? '<span class="chip">ผู้จอง ' + esc(c.booker) + '</span>' : '') + '</div>' +
+      '<div class="ch-f">' +
+      '<select data-f="cause">' + opts + '</select>' +
+      '<label class="cnt" title="นับเป็นการผิดแผนในรายงาน"><input type="checkbox" data-f="counted"' + (c.effCounted ? ' checked' : '') + '> นับ</label>' +
+      '<input type="text" data-f="note" placeholder="หมายเหตุ เช่น เลขที่ใบแจ้ง" value="' + esc(c.note || '') + '">' +
+      '<div class="att">' + att + '<label class="btn2">📎 แนบใบแจ้ง<input type="file" accept="image/*,application/pdf" data-f="file" hidden></label><span class="saved"></span></div>' +
+      '</div>' +
+      (c.reviewedBy ? '<div class="auto">ยืนยันโดย ' + esc(c.reviewedBy) + ' · ' + esc(c.reviewedAt) + '</div>' : '') +
+      '</div>';
+  }
+
+  function bindWeek() {
+    $('showAll').onchange = function () { SHOW_ALL = this.checked; renderWeek(); };
+    document.querySelectorAll('[data-del-rev]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm('ลบ Rev ' + b.dataset.rev + ' ของสัปดาห์นี้? (รายการเปลี่ยนแปลงจะคำนวณใหม่)')) return;
+        try { await call('RPLAN_deleteRevision', +b.dataset.delRev); await loadWeeks(CUR.weekStart); } catch (e) { alert(e.message); }
+      };
+    });
+    document.querySelectorAll('[data-del-att]').forEach(function (b) {
+      b.onclick = async function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        if (!confirm('ลบไฟล์แนบนี้?')) return;
+        try { await call('RPLAN_deleteAttachment', +b.dataset.delAtt); await loadWeek(CUR.weekStart); } catch (e) { alert(e.message); }
+      };
+    });
+    document.querySelectorAll('.ch').forEach(function (box) {
+      var id = +box.dataset.id;
+      var c = CUR.changes.filter(function (x) { return x.id === id; })[0];
+      var cause = box.querySelector('[data-f=cause]'), cnt = box.querySelector('[data-f=counted]'), note = box.querySelector('[data-f=note]');
+      var saved = box.querySelector('.saved');
+      async function save() {
+        saved.textContent = 'กำลังบันทึก…';
+        try {
+          await call('RPLAN_saveChange', id, { cause: cause.value || null, counted: cnt.checked, note: note.value });
+          c.cause = cause.value || null; c.counted = cnt.checked; c.effCounted = cnt.checked; c.note = note.value;
+          c.effCause = c.cause || c.autoCause;
+          saved.textContent = 'บันทึกแล้ว ✓';
+          box.classList.toggle('off', !(cnt.checked && c.kind === 'job' && c.inWeek));
+          updateStats();
+        } catch (e) { saved.textContent = ''; alert(e.message); }
+      }
+      cause.onchange = function () {
+        var k = META.causes.filter(function (x) { return x.name === cause.value; })[0];
+        cnt.checked = k ? k.counted : c.autoCounted;   // สาเหตุฝั่งสระบุรี/รถเสีย = ไม่นับ
+        save();
+      };
+      cnt.onchange = save;
+      note.onchange = save;
+      box.querySelector('[data-f=file]').onchange = async function () {
+        var f = this.files[0]; if (!f) return;
+        saved.textContent = 'กำลังแนบ…';
+        try {
+          var dataUrl = /^image\//.test(f.type) ? await shrinkImage(f) : await readDataUrl(f);
+          await call('RPLAN_attach', id, { fileName: f.name, dataUrl: dataUrl });
+          await loadWeek(CUR.weekStart);
+        } catch (e) { saved.textContent = ''; alert(e.message); }
+      };
+    });
+  }
+  function updateStats() {
+    var counted = CUR.changes.filter(function (c) { return c.kind === 'job' && c.inWeek && !c.stale && c.effCounted; });
+    var s = CUR.summary;
+    s.counted = counted.length;
+    s.pending = counted.filter(function (c) { return c.cause == null; }).length;
+    s.pct = s.baseJobs ? Math.round(s.counted / s.baseJobs * 1000) / 10 : null;
+    ['add', 'cancel', 'move'].forEach(function (t) { s.byType[t] = counted.filter(function (c) { return c.type === t; }).length; });
+    var st = document.querySelectorAll('.stat');
+    st[2].innerHTML = '<b>' + s.counted + '</b><span>ผิดแผน · เพิ่ม ' + s.byType.add + ' · ยกเลิก ' + s.byType.cancel + ' · ย้ายวัน ' + s.byType.move + '</span>';
+    st[3].innerHTML = '<b>' + pct(s.pct) + '</b><span>% ผิดแผน เทียบ Rev ' + s.baseRev + '</span>';
+    st[4].className = 'stat' + (s.pending ? ' warn' : '');
+    st[4].innerHTML = '<b>' + s.pending + '</b><span>รอยืนยันสาเหตุ</span>';
+  }
+  // ย่อรูปจากมือถือ (ด้านยาวไม่เกิน 1800px) ให้ไฟล์เล็กลงก่อนส่ง
+  function shrinkImage(file) {
+    return readDataUrl(file).then(function (url) {
+      return new Promise(function (ok) {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, 1800 / Math.max(img.width, img.height));
+          if (k === 1 && file.size < 1.5e6) return ok(url);
+          var cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          ok(cv.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = function () { ok(url); };
+        img.src = url;
+      });
+    });
+  }
+
+  // ---------------- รายงาน
+  $('repFrom').onchange = $('repTo').onchange = loadReport;
+  async function loadReport() {
+    if (!WEEKS.length) { $('repBody').innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
+    $('repBody').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+    try {
+      var r = await call('RPLAN_report', { from: $('repFrom').value, to: $('repTo').value });
+      var t = r.total;
+      var html = '<div class="stats">' +
+        '<div class="stat"><b>' + r.weeks.length + '</b><span>สัปดาห์</span></div>' +
+        '<div class="stat"><b>' + t.baseJobs + '</b><span>งานใน Rev 0 รวม</span></div>' +
+        '<div class="stat hl"><b>' + t.counted + '</b><span>ผิดแผน (นับ)</span></div>' +
+        '<div class="stat hl"><b>' + pct(t.pct) + '</b><span>% ผิดแผน</span></div></div>';
+      html += '<h2 style="margin-top:16px;">รายสัปดาห์</h2><div class="tbl"><table><tr><th>สัปดาห์</th><th>Revise</th><th>งาน Rev 0</th><th>เพิ่ม</th><th>ยกเลิก</th><th>ย้ายวัน</th><th>รวม</th><th>%</th></tr>' +
+        r.weeks.map(function (w) {
+          return '<tr><td>' + weekLabel(w.weekStart, addDays(w.weekStart, 6)) + '</td><td>' + w.revCount + ' ฉบับ</td><td>' + w.baseJobs + '</td><td>' + w.add + '</td><td>' + w.cancel + '</td><td>' + w.move + '</td><td><b>' + w.counted + '</b></td><td>' + pct(w.pct) + '</td></tr>';
+        }).join('') + '</table></div>';
+      html += '<div class="rep-grid">' + table('แยกตาม BU', r.byBu, true) + table('แยกตามโครงการ', r.byProject, true) +
+        table('แยกตามผู้จอง', r.byBooker, true) + table('แยกตามสาเหตุ', r.byCause, false) + '</div>';
+      $('repBody').innerHTML = html;
+    } catch (e) { $('repBody').innerHTML = '<div class="empty" style="color:var(--red)">' + esc(e.message) + '</div>'; }
+  }
+  function addDays(iso, n) { var d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function table(title, rows, withBase) {
+    var max = Math.max.apply(null, rows.map(function (x) { return x.total; }).concat([1]));
+    return '<div><h2 style="margin-top:16px;">' + title + '</h2><div class="tbl"><table><tr><th>' + title.replace('แยกตาม', '') + '</th><th>เพิ่ม</th><th>ยกเลิก</th><th>ย้ายวัน</th><th>รวม</th>' +
+      (withBase ? '<th>งาน Rev 0</th><th>%</th>' : '') + '</tr>' +
+      (rows.length ? rows.map(function (x) {
+        return '<tr><td>' + esc(x.key) + '</td><td>' + x.add + '</td><td>' + x.cancel + '</td><td>' + x.move + '</td>' +
+          '<td><span class="pbar" style="width:' + Math.round(x.total / max * 40) + 'px"></span><b>' + x.total + '</b></td>' +
+          (withBase ? '<td>' + x.base + '</td><td>' + pct(x.pct) + '</td>' : '') + '</tr>';
+      }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted)">ไม่มีรายการ</td></tr>') + '</table></div></div>';
+  }
+
+  // ---------------- เริ่ม
+  (async function () {
+    try { META = await call('RPLAN_meta'); await loadWeeks(); }
+    catch (e) { $('weekBody').innerHTML = '<div class="empty" style="color:var(--red)">' + esc(e.message) + '</div>'; }
+  })();
+</script>
+</body>
+</html>

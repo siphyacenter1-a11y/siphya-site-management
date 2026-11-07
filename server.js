@@ -29,13 +29,15 @@ app.use('/api/checklist', require('./routes/checklist'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/gas', require('./routes/gas'));
 app.use('/api/transport-doc', require('./routes/transport_doc')); // เปิดไฟล์ใบเบิก (ต้อง login) // หน้าเว็บที่ย้ายมาจาก Apps Script (เช็คลิสต์ฉบับเต็ม)
+app.use('/api/route-plan-file', require('./routes/route_plan_file')); // เปิด PDF แผนเดินรถ / ไฟล์แนบ (admin)
 
 // HTML Page Rewrites for clean URLs
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/transport', (req, res) => res.sendFile(path.join(__dirname, 'public', 'transport.html')));
 app.get('/waste', (req, res) => res.sendFile(path.join(__dirname, 'public', 'waste.html')));
-app.get('/route', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route.html')));
+app.get('/route', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route.html'))); // ฟอร์มขอจองรถเดิม (เก็บไว้ก่อน)
+app.get('/route-plan', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route-plan.html'))); // บันทึกการเปลี่ยนแผนเดินรถ (admin)
 app.get('/checklist', (req, res) => res.sendFile(path.join(__dirname, 'public', 'checklist.html')));
 app.get('/npo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'npo.html')));
 app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'public', 'users.html'))); // จัดการผู้ใช้งาน + สิทธิ์ลงนาม (admin)

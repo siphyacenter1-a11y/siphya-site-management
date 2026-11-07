@@ -4,7 +4,8 @@
 |---|---|---|---|
 | เช็คลิสต์ตรวจหน้างาน | `/checklist` | ทดลอง (เริ่มจากตารางว่าง) | [CHECKLIST_SETUP.md](CHECKLIST_SETUP.md) |
 | ติดตามขยะ + ใบสั่งงาน NPO | `/waste`, `/npo` | ทดลอง (เริ่มจากตารางว่าง) | [WASTE_NPO_SETUP.md](WASTE_NPO_SETUP.md) |
-| แผนการเดินรถ | `/route` | ทดลอง (ยังไม่อนุมัติใช้จริง) | [ROUTE_SETUP.md](ROUTE_SETUP.md) |
+| แผนการเดินรถ (ฟอร์มขอจองรถเดิม) | `/route` | เก็บไว้ ไม่มีลิงก์ใน /admin แล้ว | [ROUTE_SETUP.md](ROUTE_SETUP.md) |
+| บันทึกการเปลี่ยนแผนเดินรถ | `/route-plan` | ทดลอง (admin เท่านั้น) | [ROUTE_PLAN_SETUP.md](ROUTE_PLAN_SETUP.md) |
 | ขนส่งวัสดุในไซต์ | `/transport`, `/transport-entry` | **ข้อมูลจริง** นำเข้าจาก Google Sheet | [TRANSPORT_SETUP.md](TRANSPORT_SETUP.md) |
 
 ## หลักการที่ใช้
@@ -27,6 +28,7 @@ node scripts/migrate_checklist.js
 node scripts/migrate_waste.js
 node scripts/migrate_route.js
 node scripts/migrate_transport.js
+node scripts/migrate_route_plan.js                # บันทึกการเปลี่ยนแผนเดินรถ
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx> --dry-run       # ตรวจก่อน
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx>                 # นำเข้าจริง (ไฟล์ส่งให้แยก ไม่อยู่ใน repo)
 npm start
