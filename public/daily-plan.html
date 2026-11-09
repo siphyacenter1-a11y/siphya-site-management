@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แผนรถเข้า-ออก / เครื่องจักรประจำวัน | Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'Prompt', sans-serif; }
+    .top { background:var(--ink); color:#fff; padding:22px 16px 0; }
+    .wrap { max-width:1240px; margin:0 auto; padding:0 16px; box-sizing:border-box; }
+    .top .wrap { padding:0; }
+    .top a.back { color:#C9D6F2; text-decoration:none; font-size:13px; }
+    .top h1 { margin:8px 0 4px; font-size:22px; }
+    .top p { margin:0; color:#A3BBEB; font-size:13px; line-height:1.6; }
+    .tabs { display:flex; gap:4px; margin-top:16px; flex-wrap:wrap; }
+    .tab { font:inherit; font-size:13.5px; font-weight:600; border:none; background:transparent; color:#A3BBEB; padding:10px 16px; border-radius:10px 10px 0 0; cursor:pointer; }
+    .tab.on { background:var(--paper); color:var(--ink); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; }
+    .card h2 { margin:0 0 6px; font-size:16px; }
+    .note { font-size:12.5px; color:var(--muted); line-height:1.6; }
+    input, select, textarea { font:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); box-sizing:border-box; min-width:0; }
+    .btn1 { font:inherit; font-size:13px; font-weight:700; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; background:var(--ink); color:#fff; }
+    .btn1.go { background:var(--green); }
+    .btn1[disabled] { opacity:.5; cursor:default; }
+    .btn2 { font:inherit; font-size:12.5px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:6px 12px; cursor:pointer; background:#fff; color:var(--ink); }
+    .btn2.danger { color:var(--red); }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .grow { flex:1 1 auto; }
+    .hidden { display:none !important; }
+    .msg { font-size:13px; margin-top:8px; line-height:1.6; }
+    .msg.err { color:var(--red); } .msg.ok { color:var(--green); }
+    .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .seg button { font:inherit; font-size:13px; font-weight:600; border:none; background:#fff; color:var(--muted); padding:7px 14px; cursor:pointer; }
+    .seg button.on { background:var(--ink); color:#fff; }
+    label.f { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+    /* สถานะแผน */
+    .status { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    .pill { font-size:12px; font-weight:700; border-radius:999px; padding:3px 10px; background:var(--field); color:var(--muted); }
+    .pill.ok { background:#E3F5EC; color:var(--green); } .pill.bad { background:#FDECEC; color:var(--red); }
+    .pill.warn { background:#FFF4D6; color:#8A6400; } .pill.blue { background:#E8F0FD; color:var(--blue); }
+    .miss { margin-top:8px; font-size:12.5px; color:var(--red); line-height:1.7; }
+    /* ตารางรายการ */
+    .tbl { overflow-x:auto; }
+    table.items { width:100%; border-collapse:collapse; font-size:13px; min-width:980px; }
+    table.items th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); padding:6px; text-align:left; }
+    table.items td { padding:4px 4px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+    table.items input, table.items select { width:100%; }
+    table.items td.n { color:var(--faint); font-size:12px; padding-top:10px; text-align:center; width:26px; }
+    table.items td.x { width:30px; }
+    table.items tr.after td { background:#F4F1FB; }
+    .need { border-color:#E8A0A0 !important; background:#FFF5F5 !important; }
+    .xbtn { border:none; background:none; color:var(--faint); font-size:18px; cursor:pointer; padding:4px; }
+    .tag { font-size:10.5px; font-weight:700; color:var(--purple); }
+    .time2 { display:flex; gap:3px; align-items:center; } .time2 select { flex:1 1 0; }
+    /* ปฏิทินเดือน */
+    .days { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+    .day { border:1px solid var(--line); border-radius:10px; padding:5px 8px; font-size:12px; background:#fff; cursor:pointer; min-width:54px; text-align:center; }
+    .day b { display:block; font-size:14px; }
+    .day.cur { outline:2px solid var(--ink); }
+    .day.s-ok { background:#E3F5EC; border-color:#BFE6D2; } .day.s-bad { background:#FDECEC; border-color:#F2C4C4; }
+    .day.s-draft { background:#FFF4D6; border-color:#F0DCA0; } .day.s-ex { background:var(--field); color:var(--faint); }
+    /* KPI */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:12px 0 4px; }
+    .stat { background:var(--field); border-radius:12px; padding:12px 14px; }
+    .stat b { display:block; font-size:24px; line-height:1.2; }
+    .stat span { font-size:12px; color:var(--muted); }
+    .stat.hl b { color:var(--green); } .stat.low b { color:var(--red); }
+    table.rep { width:100%; border-collapse:collapse; font-size:13px; }
+    table.rep th, table.rep td { padding:7px 8px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap; }
+    table.rep th:first-child, table.rep td:first-child { text-align:left; white-space:normal; }
+    table.rep th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); }
+    table.rep tr.sub td { color:var(--muted); font-size:12.5px; }
+    table.rep tr.sub td:first-child { padding-left:24px; }
+    a.lnk { color:var(--blue); cursor:pointer; text-decoration:none; font-weight:600; }
+    /* ตั้งค่า */
+    table.res { width:100%; border-collapse:collapse; font-size:13px; }
+    table.res th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); padding:6px; text-align:left; }
+    table.res td { padding:3px 4px; border-bottom:1px solid var(--line-soft); }
+    table.res input { width:100%; }
+    .empty { text-align:center; color:var(--muted); padding:24px 10px; font-size:13.5px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="wrap">
+      <a class="back" id="backLink" href="/">← กลับหน้าหลัก</a>
+      <h1>แผนรถเข้า-ออก / เครื่องจักรประจำวัน</h1>
+      <p>FM-GM-01-07 ตารางสรุปแผนรถเข้า-ออกหน่วยงาน · FM-GM-01-03 ตารางการใช้เครื่องจักร — ส่งก่อน 16:00 น. ของวันทำงานก่อนวันแผน · ระบบตรวจข้อมูลครบถ้วนตอนกดส่ง และคิด KPI ให้อัตโนมัติ</p>
+      <div class="tabs">
+        <button class="tab on" data-tab="plan">กรอกแผน</button>
+        <button class="tab" data-tab="kpi">KPI</button>
+        <button class="tab" data-tab="setup">ตั้งค่ารายชื่อรถ / เครื่องจักร</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- เลือกฟอร์ม + โครงการ (ใช้ร่วมทุกแท็บ) -->
+    <div class="card">
+      <div class="row">
+        <div class="seg" id="kindSeg">
+          <button data-kind="vehicle" class="on">🚚 รถเข้า-ออก (01-07)</button>
+          <button data-kind="machine">🏗 เครื่องจักร (01-03)</button>
+        </div>
+        <label class="f grow" style="max-width:420px;">โครงการ<select id="projSel"></select></label>
+      </div>
+    </div>
+
+    <!-- ===== กรอกแผน ===== -->
+    <div id="tab-plan">
+      <div class="card">
+        <div class="row" style="align-items:flex-end;">
+          <label class="f">วันที่ของแผน<input type="date" id="planDate"></label>
+          <label class="f m-only">วันที่ช่วง OT (17:00 น. –)<input type="date" id="otDate"></label>
+          <label class="f grow" style="max-width:260px;">PE/PM<input type="text" id="pmName" placeholder="ชื่อ PE/PM ที่ลงนาม"></label>
+          <div class="grow"></div>
+          <button class="btn2" id="btnCopy">⧉ คัดลอกจากแผนก่อน</button>
+          <button class="btn2" id="btnPrint">🖨 พิมพ์ฟอร์ม</button>
+        </div>
+        <div class="status" id="statusBar"></div>
+        <div class="miss hidden" id="missBox"></div>
+        <div class="row hidden" id="exRow" style="margin-top:10px;">
+          <label class="note"><input type="checkbox" id="exChk"> ไม่นับใน KPI</label>
+          <select id="exReason"></select>
+          <button class="btn2" id="btnEx">บันทึก</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;" id="itemsTitle">รายการ</h2>
+          <span class="note" id="needNote"></span>
+        </div>
+        <div class="note" id="itemsHelp" style="margin:4px 0 8px;"></div>
+        <div class="tbl"><table class="items" id="itemsTbl"></table></div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn2" id="btnAdd">+ เพิ่มแถว</button>
+          <div class="grow"></div>
+          <button class="btn2 danger hidden" id="btnDel">ลบแผนนี้</button>
+          <button class="btn1" id="btnSave">บันทึกร่าง</button>
+          <button class="btn1 go" id="btnSubmit">ส่งแผน</button>
+        </div>
+        <div class="msg" id="saveMsg"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">แผนของเดือน</h2>
+          <input type="month" id="monthSel">
+        </div>
+        <div class="note">เขียว = ส่งแล้ว ข้อมูลครบ · แดง = ส่งแล้ว ข้อมูลไม่ครบ · เหลือง = ร่าง (ยังไม่ส่ง) · เทา = ไม่นับ · กดที่วันเพื่อเปิด</div>
+        <div class="days" id="monthDays"></div>
+      </div>
+    </div>
+
+    <!-- ===== KPI ===== -->
+    <div id="tab-kpi" class="hidden">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">KPI ความครบถ้วนของแผน</h2>
+          <label class="note">ตั้งแต่ <input type="month" id="kFrom"></label>
+          <label class="note">ถึง <input type="month" id="kTo"></label>
+          <label class="note"><input type="checkbox" id="kAll"> ทุกโครงการ</label>
+        </div>
+        <div class="note" style="margin-top:6px;">KPI = (จำนวนแผนที่ข้อมูลครบถ้วน ÷ จำนวนแผนทั้งหมดที่จัดทำ) × 100 · นับเฉพาะแผนที่กดส่งแล้ว · ตรวจตอนส่งครั้งแรก (แก้ไข/เพิ่มรถทีหลังไม่นับ) · แผนที่ติ๊ก "ไม่นับ" ไม่อยู่ในตัวหาร · "ส่งทัน 16:00" แสดงประกอบ ไม่อยู่ในสูตร</div>
+        <div id="kpiBody"></div>
+      </div>
+    </div>
+
+    <!-- ===== ตั้งค่า ===== -->
+    <div id="tab-setup" class="hidden">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;" id="setupTitle">รายชื่อ</h2>
+          <button class="btn2" id="btnTpl">ใช้รายชื่อตั้งต้นจากแบบฟอร์ม</button>
+        </div>
+        <div class="note" id="setupHelp" style="margin:4px 0 10px;"></div>
+        <table class="res" id="resTbl"></table>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn2" id="btnResAdd">+ เพิ่มแถว</button>
+          <div class="grow"></div>
+          <button class="btn1" id="btnResSave">บันทึกรายชื่อ</button>
+        </div>
+        <div class="msg" id="resMsg"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var META = null;
+  var S = { kind: 'vehicle', code: '', tab: 'plan', plan: null, items: [], resources: [], projectName: '', setupRows: [] };
+  var MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  var DOW_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (ok, fail) {
+      var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail);
+      r[fn].apply(r, args);
+    });
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function thDate(d) { if (!d) return ''; var p = d.split('-'); return +p[2] + ' ' + MONTH_TH[+p[1] - 1] + ' ' + (+p[0] + 543); }
+  function thDateShort(d) { var p = d.split('-'); return p[2] + '/' + p[1] + '/' + (+p[0] + 543); }
+  function dowOf(d) { return new Date(d + 'T00:00:00Z').getUTCDay(); }
+  function msg(id, text, cls) { var el = $(id); el.textContent = text || ''; el.className = 'msg' + (cls ? ' ' + cls : ''); }
+  function form() { return META.forms[S.kind]; }
+  var dirty = false;
+
+  // ---------------- เริ่มต้น ----------------
+  call('DPLAN_meta').then(function (m) {
+    META = m;
+    $('backLink').href = m.isAdmin ? '/admin' : '/';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('dplan.sel') || '{}'); } catch (e) {}
+    $('projSel').innerHTML = m.projects.map(function (p) { return '<option value="' + esc(p.code) + '">' + esc(p.name) + ' (' + esc(p.code) + ')</option>'; }).join('');
+    if (saved.code && m.projects.some(function (p) { return p.code === saved.code; })) $('projSel').value = saved.code;
+    S.code = $('projSel').value;
+    if (saved.kind === 'machine') setKind('machine', true);
+    $('planDate').value = m.nextWorkday;
+    $('monthSel').value = m.nextWorkday.slice(0, 7);
+    $('kFrom').value = m.today.slice(0, 7); $('kTo').value = m.today.slice(0, 7);
+    $('exReason').innerHTML = m.excludeReasons.map(function (r) { return '<option>' + esc(r) + '</option>'; }).join('');
+    applyKind();
+    loadPlan();
+  }).catch(function (e) { document.querySelector('.wrap').insertAdjacentHTML('afterbegin', '<div class="card msg err">' + esc(e.message) + '</div>'); });
+
+  function remember() { try { localStorage.setItem('dplan.sel', JSON.stringify({ code: S.code, kind: S.kind })); } catch (e) {} }
+
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); });
+      S.tab = b.dataset.tab;
+      ['plan', 'kpi', 'setup'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== S.tab); });
+      refreshTab();
+    };
+  });
+  function refreshTab() {
+    if (S.tab === 'plan') loadPlan();
+    else if (S.tab === 'kpi') loadKpi();
+    else loadSetup();
+  }
+
+  document.querySelectorAll('#kindSeg button').forEach(function (b) {
+    b.onclick = function () { if (confirmLeave()) { setKind(b.dataset.kind); applyKind(); refreshTab(); } };
+  });
+  function setKind(k) {
+    S.kind = k;
+    document.querySelectorAll('#kindSeg button').forEach(function (x) { x.classList.toggle('on', x.dataset.kind === k); });
+    remember();
+  }
+  function applyKind() {
+    document.querySelectorAll('.m-only').forEach(function (el) { el.classList.toggle('hidden', S.kind !== 'machine'); });
+    $('itemsHelp').textContent = S.kind === 'vehicle'
+      ? '1 แถว = รถ 1 ประเภท/คัน × 1 ช่วงเวลา · ต้องมี ทะเบียนรถ · ประเภทรถ · จุดกอง/จุดลงของ · เวลา ครบทุกแถว จึงนับว่า "แผนสมบูรณ์" (ช่องที่ยังว่างจะเป็นสีแดง — บันทึก/ส่งได้ แต่ KPI จะนับว่าไม่ครบ)'
+      : '1 แถว = เครื่องจักร 1 ตัว × 1 ช่วงเวลา · ช่วง OT (17:00 น. –) เป็นของ "วันที่ช่วง OT" ส่วน 07:00–17:00 เป็นของวันที่ของแผน · ต้องมี เครื่องจักร · ช่วงเวลา · งานที่ทำ · ผู้ขอใช้ (ลิฟท์ไม่ต้องมีผู้ขอใช้) ครบทุกแถว';
+  }
+  $('projSel').onchange = function () { if (!confirmLeave()) { $('projSel').value = S.code; return; } S.code = this.value; remember(); refreshTab(); };
+  $('planDate').onchange = function () { if (!confirmLeave()) return; $('monthSel').value = this.value.slice(0, 7); loadPlan(); };
+  $('monthSel').onchange = loadMonth;
+  function confirmLeave() { return !dirty || confirm('ยังไม่ได้บันทึกการแก้ไข — ออกจากแผนนี้เลยไหม?'); }
+  window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ---------------- แผน ----------------
+  function loadPlan() {
+    if (!S.code || !$('planDate').value) return;
+    msg('saveMsg', 'กำลังโหลด...');
+    call('DPLAN_get', S.kind, S.code, $('planDate').value).then(function (r) {
+      S.plan = r.plan; S.items = r.items; S.resources = r.resources; S.projectName = r.projectName;
+      $('otDate').value = r.plan.otDate || '';
+      $('pmName').value = r.plan.pmName || '';
+      dirty = false;
+      renderStatus(); renderItems(); loadMonth();
+      msg('saveMsg', S.resources.length ? '' : 'โครงการนี้ยังไม่มีรายชื่อ' + (S.kind === 'vehicle' ? 'รถ' : 'เครื่องจักร') + ' — ไปที่แท็บ "ตั้งค่ารายชื่อ" ก่อน (หรือพิมพ์ชื่อเองในแถวได้)', S.resources.length ? '' : 'err');
+    }).catch(function (e) { msg('saveMsg', e.message, 'err'); });
+  }
+
+  function renderStatus() {
+    var p = S.plan, h = [];
+    $('itemsTitle').textContent = form().formNo + ' ' + form().short + ' — ' + thDate(p.planDate) + ' (' + DOW_TH[dowOf(p.planDate)] + ')';
+    if (p.status === 'submitted') {
+      h.push('<span class="pill blue">ส่งแล้ว ' + esc(p.submittedText) + ' โดย ' + esc(p.submittedBy) + '</span>');
+      h.push(p.onTime ? '<span class="pill ok">ทันกำหนด (ก่อน 16:00 น. ' + thDateShort(p.deadlineDate) + ')</span>'
+        : '<span class="pill warn">ส่งหลังกำหนด 16:00 น. ' + thDateShort(p.deadlineDate) + '</span>');
+      h.push(p.complete ? '<span class="pill ok">✓ แผนสมบูรณ์</span>' : '<span class="pill bad">✗ แผนไม่สมบูรณ์</span>');
+      if (p.excluded) h.push('<span class="pill">ไม่นับ KPI — ' + esc(p.excludeReason) + '</span>');
+      if (p.editCount) h.push('<span class="pill">แก้ไขหลังส่ง ' + p.editCount + ' ครั้ง (ล่าสุด ' + esc(p.updatedText) + ' ' + esc(p.updatedBy) + ')</span>');
+    } else if (p.status === 'draft') {
+      h.push('<span class="pill warn">ร่าง — ยังไม่ได้ส่ง</span><span class="note">กำหนดส่ง 16:00 น. ' + thDateShort(p.deadlineDate) + '</span>');
+    } else {
+      h.push('<span class="pill">ยังไม่มีแผนวันนี้</span><span class="note">กำหนดส่ง 16:00 น. ' + thDateShort(p.deadlineDate) + '</span>');
+    }
+    $('statusBar').innerHTML = h.join('');
+    var miss = p.status === 'submitted' && !p.complete ? (p.missing || []) : [];
+    $('missBox').classList.toggle('hidden', !miss.length);
+    $('missBox').innerHTML = miss.length ? '<b>ข้อมูลที่ขาด ณ ตอนส่ง:</b><br>' + miss.map(function (m) {
+      return 'แถว ' + m.idx + (m.label ? ' (' + esc(m.label) + ')' : '') + ': ' + m.fields.map(function (f) { return META.fieldNames[f]; }).join(', ');
+    }).join('<br>') : '';
+    $('exRow').classList.toggle('hidden', p.status !== 'submitted');
+    $('exChk').checked = !!p.excluded;
+    if (p.excludeReason) {
+      if (META.excludeReasons.indexOf(p.excludeReason) < 0) $('exReason').insertAdjacentHTML('beforeend', '<option>' + esc(p.excludeReason) + '</option>');
+      $('exReason').value = p.excludeReason;
+    }
+    $('btnSubmit').classList.toggle('hidden', p.status === 'submitted');
+    $('btnSave').textContent = p.status === 'submitted' ? 'บันทึกการแก้ไข' : 'บันทึกร่าง';
+    $('btnDel').classList.toggle('hidden', !p.id || (p.status === 'submitted' && !META.isAdmin));
+  }
+
+  function slotOptions(sel, from, to) {
+    var sl = form().slots, ot = form().otSlots, h = '<option value="">—</option>';
+    for (var i = from; i < to; i++) {
+      if (ot && i === 0) h += '<optgroup label="ช่วง OT (วันที่ช่วง OT)">';
+      if (ot && i === ot) h += '</optgroup><optgroup label="วันทำงาน (วันที่ของแผน)">';
+      h += '<option value="' + i + '"' + (sel === i ? ' selected' : '') + '>' + esc(sl[i]) + '</option>';
+    }
+    return h + (ot ? '</optgroup>' : '');
+  }
+  function resOptions(it) {
+    var groups = {}, order = [];
+    S.resources.forEach(function (r) { if (!groups[r.grp]) { groups[r.grp] = []; order.push(r.grp); } groups[r.grp].push(r); });
+    var h = '<option value="">— เลือก —</option>';
+    order.forEach(function (g) {
+      h += '<optgroup label="' + esc(g || 'อื่น ๆ') + '">' + groups[g].map(function (r) {
+        return '<option value="' + r.id + '"' + (it.resourceId === r.id ? ' selected' : '') + '>' + esc(r.name + (r.plate ? ' ' + r.plate : '')) + '</option>';
+      }).join('') + '</optgroup>';
+    });
+    var custom = it.resourceLabel && !S.resources.some(function (r) { return r.id === it.resourceId; });
+    h += '<option value="__custom"' + (custom ? ' selected' : '') + '>อื่นๆ (พิมพ์เอง)</option>';
+    return h;
+  }
+  function isLift(it) { return /ลิฟท์|ลิฟต์/.test(it.grp || ''); }
+  function needs(it) {
+    var n = {};
+    var timeOk = it.slotFrom !== null && it.slotFrom !== '' && it.slotFrom !== undefined;
+    if (S.kind === 'vehicle') {
+      n.plate = !String(it.plate || '').trim();
+      n.type = !String(it.resourceLabel || '').trim() || /^อื่น/.test(it.resourceLabel);
+      n.location = !String(it.location || '').trim();
+      n.time = !timeOk;
+    } else {
+      n.type = !String(it.resourceLabel || '').trim();
+      n.time = !timeOk;
+      n.job = !String(it.job || '').trim();
+      n.requester = !isLift(it) && !String(it.requester || '').trim();
+    }
+    return n;
+  }
+
+  function renderItems() {
+    var v = S.kind === 'vehicle';
+    var head = '<tr><th></th><th style="width:22%">' + (v ? 'ประเภทรถ' : 'เครื่องจักร') + '</th>' +
+      (v ? '<th style="width:11%">ทะเบียนรถ</th>' : '') +
+      '<th style="width:20%">เวลา (ตั้งแต่ – ถึง)</th><th>' + (v ? 'งาน / วัสดุ' : 'งานที่ทำ') + '</th>' +
+      (v ? '<th style="width:14%">จุดกอง / จุดลงของ</th><th style="width:6%">จำนวนคัน</th>' : '<th style="width:14%">ผู้ขอใช้</th>') +
+      '<th style="width:11%">หมายเหตุ</th><th></th></tr>';
+    var nFrom = 0, nTo = form().slots.length;
+    var body = S.items.map(function (it, i) {
+      var n = needs(it), cls = function (k) { return n[k] ? ' class="need"' : ''; };
+      var custom = it.resourceLabel && !S.resources.some(function (r) { return r.id === it.resourceId; });
+      var sf = it.slotFrom === null || it.slotFrom === undefined ? null : +it.slotFrom;
+      var st = it.slotTo === null || it.slotTo === undefined ? null : +it.slotTo;
+      return '<tr data-i="' + i + '"' + (it.addedAfter ? ' class="after"' : '') + '><td class="n">' + (i + 1) + '</td>' +
+        '<td><select data-k="res"' + cls('type') + '>' + resOptions(it) + '</select>' +
+          '<input data-k="resourceLabel" placeholder="พิมพ์' + (v ? 'ประเภทรถ' : 'ชื่อเครื่องจักร') + '" value="' + esc(it.resourceLabel) + '"' + (custom ? '' : ' style="display:none"') + cls('type') + '>' +
+          (it.addedAfter ? '<div class="tag">เพิ่มหลังส่งแผน (ไม่นับ KPI)</div>' : '') + '</td>' +
+        (v ? '<td><input data-k="plate" value="' + esc(it.plate) + '" placeholder="เช่น 83-4797"' + cls('plate') + '></td>' : '') +
+        '<td><div class="time2"><select data-k="slotFrom"' + cls('time') + '>' + slotOptions(sf, nFrom, nTo) + '</select><span>–</span>' +
+          '<select data-k="slotTo"' + cls('time') + '>' + slotOptions(st, nFrom, nTo) + '</select></div></td>' +
+        '<td><input data-k="job" value="' + esc(it.job) + '" placeholder="' + (v ? 'เช่น เหล็กเส้น, ขยะออก' : 'เช่น ยกเหล็ก ชั้น 5') + '"' + cls('job') + '></td>' +
+        (v ? '<td><input data-k="location" value="' + esc(it.location) + '" placeholder="เช่น M09 LOAD อาคาร C"' + cls('location') + '></td>' +
+             '<td><input data-k="qty" type="number" min="0" value="' + (it.qty == null ? '' : it.qty) + '"></td>'
+           : '<td><input data-k="requester" value="' + esc(it.requester) + '" placeholder="' + (isLift(it) ? '(ลิฟท์ ไม่บังคับ)' : 'ชื่อผู้ขอใช้ / บริษัท') + '"' + cls('requester') + '></td>') +
+        '<td><input data-k="note" value="' + esc(it.note) + '"></td>' +
+        '<td class="x"><button class="xbtn" data-k="del" title="ลบแถว">×</button></td></tr>';
+    }).join('');
+    $('itemsTbl').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td colspan="9" class="empty">ยังไม่มีรายการ — กด "+ เพิ่มแถว" หรือ "คัดลอกจากแผนก่อน"</td></tr>') + '</tbody>';
+    updateNeedNote();
+  }
+
+  $('itemsTbl').addEventListener('input', onItemEdit);
+  $('itemsTbl').addEventListener('change', onItemEdit);
+  $('itemsTbl').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-k="del"]'); if (!b) return;
+    S.items.splice(+b.closest('tr').dataset.i, 1); dirty = true; renderItems();
+  });
+  function onItemEdit(e) {
+    var el = e.target, k = el.dataset.k, tr = el.closest('tr'); if (!k || !tr || k === 'del') return;
+    var it = S.items[+tr.dataset.i];
+    dirty = true;
+    if (k === 'res') {
+      if (e.type !== 'change') return;
+      if (el.value === '__custom') { it.resourceId = null; it.grp = ''; it.resourceLabel = it.resourceLabel || ''; renderItems(); var inp = $('itemsTbl').querySelector('tr[data-i="' + tr.dataset.i + '"] input[data-k="resourceLabel"]'); inp.style.display = ''; inp.focus(); return; }
+      var r = S.resources.find(function (x) { return String(x.id) === el.value; });
+      it.resourceId = r ? r.id : null; it.resourceLabel = r ? r.name : ''; it.grp = r ? r.grp : '';
+      if (S.kind === 'vehicle' && r && r.plate) it.plate = r.plate;
+      renderItems(); return;
+    }
+    if (k === 'slotFrom' || k === 'slotTo') {
+      it[k] = el.value === '' ? null : +el.value;
+      if (k === 'slotFrom' && (it.slotTo == null || it.slotTo < it.slotFrom)) it.slotTo = it.slotFrom;
+      if (k === 'slotTo' && it.slotFrom == null) it.slotFrom = it.slotTo;
+      if (e.type === 'change') renderItems();
+      return;
+    }
+    it[k] = k === 'qty' ? (el.value === '' ? null : +el.value) : el.value;
+    // ช่องพิมพ์: อัปเดตแค่สีช่องที่ขาด ไม่วาดตารางใหม่ (ไม่งั้นช่องถัดไปที่เพิ่งคลิกจะหลุดโฟกัส)
+    var n = needs(it), map = { plate: 'plate', location: 'location', job: 'job', requester: 'requester', resourceLabel: 'type' };
+    if (map[k]) el.classList.toggle('need', !!n[map[k]]);
+    if (k === 'resourceLabel') { var rs = tr.querySelector('select[data-k="res"]'); if (rs) rs.classList.toggle('need', !!n.type); }
+    updateNeedNote();
+  }
+  function updateNeedNote() {
+    var cnt = S.items.filter(function (it) { if (it.addedAfter) return false; var n = needs(it); return Object.keys(n).some(function (k) { return n[k]; }); }).length;
+    $('needNote').innerHTML = S.items.length ? (cnt ? '<span style="color:var(--red)">ข้อมูลยังไม่ครบ ' + cnt + ' แถว</span>' : '<span style="color:var(--green)">✓ ข้อมูลครบทุกแถว</span>') : '';
+  }
+  $('btnAdd').onclick = function () {
+    S.items.push({ resourceId: null, resourceLabel: '', grp: '', slotFrom: null, slotTo: null, plate: '', job: '', location: '', qty: null, requester: '', note: '', addedAfter: S.plan.status === 'submitted' });
+    dirty = true; renderItems();
+  };
+  $('btnCopy').onclick = function () {
+    if (S.items.length && !confirm('แทนที่รายการที่มีอยู่ด้วยรายการจากแผนก่อนหน้า?')) return;
+    call('DPLAN_previous', S.kind, S.code, $('planDate').value).then(function (r) {
+      var after = S.plan.status === 'submitted';
+      S.items = r.items.map(function (x) { x.addedAfter = after; return x; });
+      if (!$('pmName').value) $('pmName').value = r.pmName;
+      dirty = true; renderItems();
+      msg('saveMsg', 'คัดลอกจากแผนวันที่ ' + thDate(r.fromDate) + ' แล้ว ' + r.items.length + ' แถว — ตรวจ/แก้ แล้วกดบันทึก', 'ok');
+    }).catch(function (e) { msg('saveMsg', e.message, 'err'); });
+  };
+  function save(submit) {
+    if (submit) {
+      var cnt = S.items.filter(function (it) { if (it.addedAfter) return false; var n = needs(it); return Object.keys(n).some(function (k) { return n[k]; }); }).length;
+      var q = cnt ? 'ยังมีข้อมูลไม่ครบ ' + cnt + ' แถว — ถ้าส่งตอนนี้ แผนจะนับเป็น "ไม่สมบูรณ์" ใน KPI และแก้ผลภายหลังไม่ได้\n\nส่งแผนเลยไหม?'
+        : 'ส่งแผนวันที่ ' + thDate($('planDate').value) + ' เลยไหม? (ระบบบันทึกเวลาที่ส่ง)';
+      if (!confirm(q)) return;
+    }
+    $('btnSave').disabled = $('btnSubmit').disabled = true;
+    msg('saveMsg', submit ? 'กำลังส่ง...' : 'กำลังบันทึก...');
+    call('DPLAN_save', { kind: S.kind, projectCode: S.code, planDate: $('planDate').value, otDate: $('otDate').value, pmName: $('pmName').value, items: S.items, submit: submit })
+      .then(function (r) {
+        dirty = false;
+        loadPlan();
+        setTimeout(function () {
+          msg('saveMsg', r.submitted ? (r.complete ? '✓ ส่งแผนแล้ว — ข้อมูลครบถ้วน' : 'ส่งแผนแล้ว — ข้อมูลไม่ครบ ' + r.missing.length + ' แถว (นับเป็นแผนไม่สมบูรณ์)') : '✓ บันทึกแล้ว', r.submitted && !r.complete ? 'err' : 'ok');
+        }, 400);
+      })
+      .catch(function (e) { msg('saveMsg', e.message, 'err'); })
+      .then(function () { $('btnSave').disabled = $('btnSubmit').disabled = false; });
+  }
+  $('btnSave').onclick = function () { save(false); };
+  $('btnSubmit').onclick = function () { save(true); };
+  $('btnDel').onclick = function () {
+    if (!confirm('ลบแผนวันที่ ' + thDate(S.plan.planDate) + ' ทั้งใบ?')) return;
+    call('DPLAN_delete', S.plan.id).then(function () { dirty = false; loadPlan(); msg('saveMsg', 'ลบแล้ว', 'ok'); }).catch(function (e) { msg('saveMsg', e.message, 'err'); });
+  };
+  $('btnEx').onclick = function () {
+    call('DPLAN_setExcluded', S.plan.id, $('exChk').checked, $('exReason').value)
+      .then(function () { loadPlan(); }).catch(function (e) { alert(e.message); });
+  };
+
+  function loadMonth() {
+    var m = $('monthSel').value; if (!m || !S.code) return;
+    call('DPLAN_month', S.kind, S.code, m).then(function (list) {
+      var by = {}; list.forEach(function (p) { by[p.planDate] = p; });
+      var y = +m.slice(0, 4), mo = +m.slice(5, 7), days = new Date(Date.UTC(y, mo, 0)).getUTCDate(), h = '';
+      for (var d = 1; d <= days; d++) {
+        var ds = m + '-' + String(d).padStart(2, '0'), p = by[ds], cls = '', sub = '';
+        if (p) {
+          if (p.status !== 'submitted') { cls = 's-draft'; sub = 'ร่าง'; }
+          else if (p.excluded) { cls = 's-ex'; sub = 'ไม่นับ'; }
+          else { cls = p.complete ? 's-ok' : 's-bad'; sub = p.complete ? 'ครบ' : 'ไม่ครบ'; }
+        } else if (dowOf(ds) === 0) { sub = 'อา.'; } else { sub = '-'; }
+        h += '<div class="day ' + cls + (ds === $('planDate').value ? ' cur' : '') + '" data-d="' + ds + '"><b>' + d + '</b>' + sub + '</div>';
+      }
+      $('monthDays').innerHTML = h;
+    });
+  }
+  $('monthDays').onclick = function (e) {
+    var d = e.target.closest('.day'); if (!d || !confirmLeave()) return;
+    $('planDate').value = d.dataset.d; loadPlan();
+  };
+
+  // ---------------- พิมพ์ (หน้าตาแบบฟอร์มเดิม) ----------------
+  $('btnPrint').onclick = function () {
+    var w = window.open('', '_blank');
+    if (!w) { alert('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต pop-up ก่อน'); return; }
+    w.document.write(printHtml());
+    w.document.close();
+    setTimeout(function () { w.print(); }, 500);
+  };
+  function printHtml() {
+    var f = form(), v = S.kind === 'vehicle', sl = f.slots, p = S.plan;
+    // แถวของฟอร์ม = รายชื่อทั้งหมด + ชื่อที่พิมพ์เองในแผน
+    var rows = S.resources.map(function (r) { return { key: 'r' + r.id, grp: r.grp, label: r.name + (r.plate ? ' ' + r.plate : ''), lift: /ลิฟท์|ลิฟต์/.test(r.grp), items: [] }; });
+    var byKey = {}; rows.forEach(function (r) { byKey[r.key] = r; });
+    S.items.forEach(function (it) {
+      var key = it.resourceId && byKey['r' + it.resourceId] ? 'r' + it.resourceId : 'c' + (it.resourceLabel || 'อื่นๆ');
+      if (!byKey[key]) { byKey[key] = { key: key, grp: it.grp || (v ? 'อื่นๆ' : 'อื่นๆ'), label: it.resourceLabel || 'อื่นๆ', lift: /ลิฟท์|ลิฟต์/.test(it.grp || ''), items: [] }; rows.push(byKey[key]); }
+      byKey[key].items.push(it);
+    });
+    function cellText(it) {
+      // ทะเบียนที่ไม่ได้อยู่ในชื่อแถว (รถผู้รับเหมา / พิมพ์เอง) แสดงในช่องด้วย
+      var res = S.resources.find(function (r) { return r.id === it.resourceId; });
+      var plate = v && it.plate && !(res && res.plate === it.plate) ? '(' + it.plate + ')' : '';
+      var t = [it.job, it.qty ? it.qty + ' คัน' : '', plate].filter(Boolean).join(' ');
+      return t || '•';
+    }
+    // วางรายการลงช่องเวลา — ช่วงซ้อนกันขึ้นบรรทัดใหม่
+    function lanes(items, field) {
+      var out = [];
+      items.forEach(function (it) {
+        if (it.slotFrom == null) { out.push({ free: [it] }); return; }
+        var lane = out.find(function (l) { return l.cells && !l.cells.slice(it.slotFrom, it.slotTo + 1).some(Boolean); });
+        if (!lane) { lane = { cells: new Array(sl.length).fill(null) }; out.push(lane); }
+        for (var i = it.slotFrom; i <= it.slotTo; i++) lane.cells[i] = i === it.slotFrom ? { it: it, span: it.slotTo - it.slotFrom + 1 } : 'x';
+      });
+      return out;
+    }
+    function slotCells(lane, field) {
+      var h = '';
+      if (!lane || lane.free) {
+        for (var i = 0; i < sl.length; i++) h += '<td></td>';
+        return h;
+      }
+      for (var j = 0; j < sl.length; j++) {
+        var c = lane.cells[j];
+        if (c === 'x') continue;
+        if (!c) { h += '<td></td>'; continue; }
+        var txt = field === 'requester' ? c.it.requester : cellText(c.it);
+        h += '<td class="fill" colspan="' + c.span + '">' + esc(txt) + '</td>';
+      }
+      return h;
+    }
+    var thead, body = '';
+    if (v) {
+      thead = '<tr><th rowspan="2" style="width:62px">บริษัท</th><th rowspan="2" style="width:150px">ประเภทรถ</th><th colspan="' + sl.length + '">เวลา</th><th style="width:110px">ตำแหน่ง</th><th rowspan="2" style="width:90px">หมายเหตุ</th></tr><tr>' +
+        sl.map(function (s) { return '<th class="sl">' + esc(s) + '</th>'; }).join('') + '<th>เก็บวัสดุ</th></tr>';
+      var grpCount = {}; rows.forEach(function (r) { var ls = Math.max(1, lanes(r.items).length); grpCount[r.grp] = (grpCount[r.grp] || 0) + ls; });
+      var seen = {};
+      rows.forEach(function (r) {
+        var ls = lanes(r.items); if (!ls.length) ls = [null];
+        var locs = r.items.map(function (i) { return i.location; }).filter(Boolean).join(', ');
+        var notes = r.items.map(function (i) { return i.note; }).filter(Boolean).join(', ');
+        ls.forEach(function (lane, li) {
+          body += '<tr>';
+          if (!seen[r.grp]) { seen[r.grp] = 1; body += '<td class="grp" rowspan="' + grpCount[r.grp] + '">' + esc(r.grp) + '</td>'; }
+          if (li === 0) body += '<td rowspan="' + ls.length + '" class="lbl">' + esc(r.label) + '</td>';
+          body += slotCells(lane);
+          if (li === 0) body += '<td rowspan="' + ls.length + '">' + esc(locs) + '</td><td rowspan="' + ls.length + '">' + esc(notes) + '</td>';
+          body += '</tr>';
+        });
+      });
+    } else {
+      var ot = f.otSlots;
+      thead = '<tr><th rowspan="2" style="width:120px">ประเภทเครื่องจักร</th><th colspan="' + ot + '">วันที่ ' + esc(p.otDate ? thDateShort(p.otDate) : '') + ' (ช่วง OT)</th><th colspan="' + (sl.length - ot) + '">วันที่ ' + esc(thDateShort(p.planDate)) + '</th><th rowspan="2" style="width:90px">หมายเหตุ</th></tr><tr>' +
+        sl.map(function (s) { return '<th class="sl">' + esc(s) + '</th>'; }).join('') + '</tr>';
+      var lastG = null;
+      rows.forEach(function (r) {
+        if (r.grp !== lastG) { lastG = r.grp; body += '<tr><td class="grp" colspan="' + (sl.length + 2) + '">' + esc(r.grp) + '</td></tr>'; }
+        var ls = lanes(r.items); if (!ls.length) ls = [null];
+        var notes = r.items.map(function (i) { return i.note; }).filter(Boolean).join(', ');
+        body += '<tr><td class="lbl">' + esc(r.label) + '</td>' + sl.map(function () { return '<td class="blank"></td>'; }).join('') + '<td rowspan="' + (1 + ls.length * (r.lift ? 1 : 2)) + '">' + esc(notes) + '</td></tr>';
+        ls.forEach(function (lane) {
+          body += '<tr><td class="sub">งานที่ทำ</td>' + slotCells(lane) + '</tr>';
+          if (!r.lift) body += '<tr><td class="sub">ผู้ขอใช้</td>' + slotCells(lane, 'requester') + '</tr>';
+        });
+      });
+    }
+    var box = function (on) { return on ? '☑' : '☐'; };
+    var submitted = p.status === 'submitted', miss = submitted ? (p.missing || []) : [];
+    var mf = {}; miss.forEach(function (m) { m.fields.forEach(function (x) { mf[x] = 1; }); });
+    var checks = v
+      ? [['plate', 'ระบุทะเบียนรถครบทุกคัน'], ['type', 'ระบุประเภทรถครบทุกคัน'], ['location', 'ระบุจุดกอง / จุดลงของครบและชัดเจนทุกคัน'], ['time', 'ระบุเวลาลงของครบและชัดเจนทุกคัน']]
+      : [['machine', 'ระบุเครื่องจักรครบทุกรายการ'], ['mtime', 'ระบุช่วงเวลาครบและชัดเจนทุกรายการ'], ['job', 'ระบุงานที่ทำครบทุกรายการ'], ['requester', 'ระบุผู้ขอใช้ครบทุกรายการ']];
+    var check = '<div class="chk"><b>ส่วนตรวจสอบความสมบูรณ์ของแผน</b> (ระบบตรวจอัตโนมัติตอนส่งแผน)<div class="g">' +
+      checks.map(function (c) { return '<span>' + box(submitted && !mf[c[0]]) + ' ' + c[1] + '</span>'; }).join('') + '</div>' +
+      '<div>เวลาที่ส่งแผน ' + (submitted ? esc(p.submittedText) + ' น.' : '...............') + ' &nbsp; ' + box(submitted && p.onTime) + ' ทันกำหนด (ก่อน 16:00 น.) &nbsp; ' + box(submitted && !p.onTime) + ' ไม่ทันกำหนด' +
+      (p.excluded ? ' &nbsp; ☑ ไม่นับ : ' + esc(p.excludeReason) : '') + '</div>' +
+      '<div>ผลการตรวจ : ' + box(submitted && p.complete) + ' แผนสมบูรณ์ &nbsp; ' + box(submitted && !p.complete) + ' แผนไม่สมบูรณ์' +
+      (miss.length ? ' — ' + miss.map(function (m) { return 'แถว ' + m.idx + ' ' + esc(m.label) + ': ' + m.fields.map(function (x) { return META.fieldNames[x]; }).join(', '); }).join(' · ') : '') + '</div></div>';
+    return '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + esc(f.formNo + ' ' + S.projectName + ' ' + p.planDate) + '</title>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>' +
+      '@page{size:A4 landscape;margin:8mm}body{font-family:Sarabun,sans-serif;font-size:10.5px;color:#000;margin:0}' +
+      '.hd{display:flex;justify-content:space-between;align-items:flex-start}.hd h1{font-size:16px;margin:0 0 4px;text-align:center;flex:1}' +
+      '.no{border:1px solid #000;font-size:10px;padding:3px 6px;line-height:1.5}.meta{display:flex;justify-content:space-between;margin:4px 0 6px;font-size:11.5px}' +
+      'table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #000;padding:2px 3px;vertical-align:middle;word-wrap:break-word}' +
+      'th{background:#eee;font-size:9.5px}th.sl{font-size:8.5px;font-weight:400}td.fill{background:#fff6c8;text-align:center;font-size:9.5px}' +
+      'td.grp{font-weight:700;text-align:center;background:#f4f4f4}td.lbl{font-size:10px}td.sub{font-size:9.5px;padding-left:10px;color:#333}td.blank{background:#fafafa}' +
+      '.sig{display:flex;justify-content:flex-end;gap:60px;margin-top:14px;text-align:center}.sig div{min-width:200px}.sig .ln{border-bottom:1px dotted #000;height:18px;margin-bottom:2px}' +
+      '.chk{border:1px solid #000;padding:5px 8px;margin-top:8px;line-height:1.7}.chk .g{display:grid;grid-template-columns:1fr 1fr}.foot{margin-top:6px;font-size:9.5px}' +
+      '</style></head><body>' +
+      '<div class="hd"><div style="width:180px"></div><h1>' + esc(f.title) + '</h1><div class="no">เลขที่เอกสาร ' + esc(f.formNo) + '<br>แก้ไข/วันที่ ' + esc(f.rev) + '</div></div>' +
+      '<div class="meta"><div>ส่วนงาน ธุรการขนส่ง &nbsp; · &nbsp; หน่วยงาน <b>' + esc(S.projectName) + '</b> &nbsp; · &nbsp; ผู้รับผิดชอบ ' + esc(p.preparedBy || META.me) + ' ตำแหน่ง ธุรการขนส่ง</div>' +
+      '<div>ประจำวันที่ <b>' + esc(thDateShort(p.planDate)) + '</b></div></div>' +
+      '<table><thead>' + thead + '</thead><tbody>' + body + '</tbody></table>' +
+      '<div class="sig"><div><div class="ln">' + esc(p.preparedBy || '') + '</div>ผู้จัดทำ/ธุรการขนส่ง</div><div><div class="ln">' + esc($('pmName').value || '') + '</div>PE/PM</div></div>' +
+      check + '<div class="foot">หมายเหตุ: ธุรการขนส่ง จะรวบรวมส่งข้อมูลให้ผู้เกี่ยวข้อง ก่อนเวลา 16:00 น. · CC: PM/PE, GF, ธุรการทั่วไป, สโตร์, เสมียนป้อม, รปภ., ผู้เกี่ยวข้อง</div>' +
+      '</body></html>';
+  }
+
+  // ---------------- KPI ----------------
+  $('kFrom').onchange = $('kTo').onchange = $('kAll').onchange = loadKpi;
+  function loadKpi() {
+    $('kpiBody').innerHTML = '<div class="empty">กำลังคำนวณ...</div>';
+    var req = { from: $('kFrom').value, to: $('kTo').value };
+    if (!$('kAll').checked) req.code = S.code;
+    call('DPLAN_kpi', req).then(function (r) {
+      var h = '';
+      ['vehicle', 'machine'].forEach(function (k) {
+        var f = META.forms[k];
+        var all = r.rows.find(function (x) { return x.kind === k && !x.code; });
+        h += '<h3 style="margin:18px 0 4px;font-size:15px;">' + esc(f.formNo + ' ' + f.short) + '</h3>';
+        if (!all) { h += '<div class="note">ยังไม่มีแผนในช่วงนี้</div>'; return; }
+        h += '<div class="stats">' +
+          '<div class="stat ' + (all.pct == null ? '' : all.pct >= 90 ? 'hl' : 'low') + '"><b>' + (all.pct == null ? '-' : all.pct + '%') + '</b><span>KPI ความครบถ้วน</span></div>' +
+          '<div class="stat"><b>' + all.complete + ' / ' + all.made + '</b><span>แผนครบถ้วน / แผนที่จัดทำ</span></div>' +
+          '<div class="stat"><b>' + all.onTime + '</b><span>ส่งทัน 16:00 (ไม่ทัน ' + all.late + ')</span></div>' +
+          '<div class="stat"><b>' + all.excluded + '</b><span>ไม่นับ</span></div>' +
+          '<div class="stat"><b>' + all.drafts + '</b><span>ร่างที่ยังไม่ส่ง</span></div></div>';
+        var projs = r.rows.filter(function (x) { return x.kind === k && x.code && !x.month; });
+        h += '<div class="tbl"><table class="rep"><thead><tr><th>โครงการ / เดือน</th><th>จัดทำ</th><th>ครบถ้วน</th><th>KPI %</th><th>ส่งทัน 16:00</th><th>ไม่นับ</th><th>ร่าง</th></tr></thead><tbody>';
+        projs.forEach(function (p) {
+          var line = function (x, sub) {
+            return '<tr' + (sub ? ' class="sub"' : '') + '><td>' + (sub ? esc(MONTH_TH[+x.month.slice(5) - 1] + ' ' + (+x.month.slice(0, 4) + 543)) : '<b>' + esc(x.projectName) + '</b>') + '</td><td>' + x.made + '</td><td>' + x.complete + '</td><td><b>' + (x.pct == null ? '-' : x.pct + '%') + '</b></td><td>' + x.onTime + '</td><td>' + x.excluded + '</td><td>' + x.drafts + '</td></tr>';
+          };
+          h += line(p, false);
+          r.rows.filter(function (x) { return x.kind === k && x.code === p.code && x.month; }).sort(function (a, b) { return a.month < b.month ? -1 : 1; })
+            .forEach(function (x) { if (r.from !== r.to) h += line(x, true); });
+        });
+        h += '</tbody></table></div>';
+        var fc = Object.keys(r.fieldCount).filter(function (x) { return x.indexOf(k + '|') === 0; });
+        if (fc.length) h += '<div class="note" style="margin-top:8px;">ข้อมูลที่ขาดบ่อย: ' + fc.sort(function (a, b) { return r.fieldCount[b] - r.fieldCount[a]; }).map(function (x) { return META.fieldNames[x.split('|')[1]] + ' ' + r.fieldCount[x] + ' แผน'; }).join(' · ') + '</div>';
+        var inc = r.incomplete.filter(function (x) { return x.kind === k; });
+        if (inc.length) h += '<div class="note" style="margin-top:4px;">แผนที่ไม่ครบ: ' + inc.map(function (x) {
+          return '<a class="lnk" data-open="' + k + '|' + x.code + '|' + x.planDate + '">' + esc(x.code + ' ' + thDateShort(x.planDate)) + '</a>';
+        }).join(' · ') + '</div>';
+      });
+      $('kpiBody').innerHTML = h;
+    }).catch(function (e) { $('kpiBody').innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+  }
+  $('kpiBody').onclick = function (e) {
+    var a = e.target.closest('[data-open]'); if (!a) return;
+    var p = a.dataset.open.split('|');
+    setKind(p[0]); applyKind(); S.code = p[1]; $('projSel').value = p[1]; $('planDate').value = p[2]; $('monthSel').value = p[2].slice(0, 7); remember();
+    document.querySelector('.tab[data-tab="plan"]').click();
+  };
+
+  // ---------------- ตั้งค่ารายชื่อ ----------------
+  function loadSetup() {
+    var v = S.kind === 'vehicle';
+    $('setupTitle').textContent = (v ? 'รายชื่อรถ' : 'รายชื่อเครื่องจักร') + ' — ' + ($('projSel').selectedOptions[0] || {}).textContent;
+    $('setupHelp').textContent = v
+      ? 'แถวในแบบฟอร์ม 01-07 ของโครงการนี้ · กลุ่ม = SPY / ผู้รับเหมา · ใส่ทะเบียนของรถ SPY ไว้ได้เลย (ตอนกรอกแผนจะเติมให้เอง) · รถผู้รับเหมาเว้นทะเบียนไว้ ให้ธุรการพิมพ์ทุกครั้ง · ลบแถวแล้วแผนเก่ายังเก็บชื่อเดิมไว้'
+      : 'แถวในแบบฟอร์ม 01-03 ของโครงการนี้ · กลุ่ม = Towercrane / โมบายเครน / เดอริค / รถโฟล์คลิฟท์ / ลิฟท์โดยสาร / ลิฟท์ขนส่ง ... · กลุ่มที่มีคำว่า "ลิฟท์" ไม่บังคับช่องผู้ขอใช้ (ตามแบบฟอร์ม)';
+    msg('resMsg', '');
+    call('DPLAN_resources', S.kind, S.code).then(function (list) { S.setupRows = list; renderSetup(); });
+  }
+  function renderSetup() {
+    var v = S.kind === 'vehicle';
+    $('resTbl').innerHTML = '<thead><tr><th style="width:24%">กลุ่ม</th><th>' + (v ? 'ประเภทรถ' : 'ชื่อเครื่องจักร') + '</th>' + (v ? '<th style="width:18%">ทะเบียน</th>' : '') + '<th style="width:96px"></th></tr></thead><tbody>' +
+      (S.setupRows.map(function (r, i) {
+        return '<tr data-i="' + i + '"><td><input data-k="grp" value="' + esc(r.grp) + '" list="grpList"></td><td><input data-k="name" value="' + esc(r.name) + '"></td>' +
+          (v ? '<td><input data-k="plate" value="' + esc(r.plate) + '"></td>' : '') +
+          '<td><button class="xbtn" data-m="-1" title="เลื่อนขึ้น">↑</button><button class="xbtn" data-m="1" title="เลื่อนลง">↓</button><button class="xbtn" data-m="x" title="ลบ">×</button></td></tr>';
+      }).join('') || '<tr><td colspan="4" class="empty">ยังไม่มีรายชื่อ — กด "ใช้รายชื่อตั้งต้นจากแบบฟอร์ม" หรือ "+ เพิ่มแถว"</td></tr>') + '</tbody>' +
+      '<datalist id="grpList">' + Array.from(new Set(S.setupRows.map(function (r) { return r.grp; }).filter(Boolean))).map(function (g) { return '<option value="' + esc(g) + '">'; }).join('') + '</datalist>';
+  }
+  $('resTbl').addEventListener('input', function (e) {
+    var k = e.target.dataset.k, tr = e.target.closest('tr'); if (!k || !tr) return;
+    S.setupRows[+tr.dataset.i][k] = e.target.value;
+  });
+  $('resTbl').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    var i = +b.closest('tr').dataset.i, m = b.dataset.m, a = S.setupRows;
+    if (m === 'x') a.splice(i, 1);
+    else { var j = i + (+m); if (j < 0 || j >= a.length) return; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    renderSetup();
+  });
+  $('btnResAdd').onclick = function () {
+    var last = S.setupRows[S.setupRows.length - 1];
+    S.setupRows.push({ grp: last ? last.grp : '', name: '', plate: '' }); renderSetup();
+    var ins = $('resTbl').querySelectorAll('input[data-k="name"]'); ins[ins.length - 1].focus();
+  };
+  $('btnTpl').onclick = function () {
+    if (S.setupRows.length && !confirm('แทนที่รายชื่อปัจจุบันด้วยรายชื่อตั้งต้นจากแบบฟอร์ม? (ยังไม่บันทึกจนกว่าจะกด "บันทึกรายชื่อ")')) return;
+    call('DPLAN_template', S.kind).then(function (list) {
+      // คงรหัสแถวเดิมไว้ถ้าชื่อ+ทะเบียนตรงกัน (แผนเก่ายังอ้างถึงได้)
+      var old = S.setupRows.slice();
+      S.setupRows = list.map(function (t) {
+        var i = old.findIndex(function (o) { return o.name === t.name && (o.plate || '') === (t.plate || ''); });
+        if (i >= 0) { t.id = old[i].id; old.splice(i, 1); }
+        return t;
+      });
+      renderSetup(); msg('resMsg', 'ใส่รายชื่อตั้งต้นแล้ว ' + list.length + ' แถว — แก้ให้ตรงกับโครงการ แล้วกด "บันทึกรายชื่อ"', 'ok');
+    });
+  };
+  $('btnResSave').onclick = function () {
+    call('DPLAN_saveResources', S.kind, S.code, S.setupRows).then(function (r) {
+      msg('resMsg', '✓ บันทึกแล้ว ' + r.count + ' แถว', 'ok'); loadSetup();
+      setTimeout(function () { msg('resMsg', '✓ บันทึกแล้ว ' + r.count + ' แถว', 'ok'); }, 300);
+    }).catch(function (e) { msg('resMsg', e.message, 'err'); });
+  };
+</script>
+</body>
+</html>

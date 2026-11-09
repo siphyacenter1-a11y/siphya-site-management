@@ -324,6 +324,19 @@
         <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
       </a>
 
+      <!-- 5. แผนประจำวัน FM-GM-01-07 รถเข้า-ออก / FM-GM-01-03 เครื่องจักร (KPI ความครบถ้วนของแผน) -->
+      <a class="card" href="/daily-plan" style="--accent:#5B4A9E;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M7 14h3M7 17h6"/></svg>
+        </div>
+        <h2>
+          <span>แผนรถเข้า-ออก / เครื่องจักรประจำวัน</span>
+          <span class="card-badge" id="bDailyPlan">...</span>
+        </h2>
+        <p>กรอกแผน FM-GM-01-07 และ FM-GM-01-03 ระบบตรวจความครบถ้วนและคำนวณ KPI ให้อัตโนมัติ</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
     </div>
   </main>
 
@@ -405,6 +418,7 @@
           document.getElementById('bTransport').textContent = sys.transport.badge;
           document.getElementById('bWaste').textContent = sys.waste.badge;
           document.getElementById('bRoute').textContent = sys.route.badge;
+          if (sys.dailyPlan) document.getElementById('bDailyPlan').textContent = sys.dailyPlan.badge;
           document.getElementById('bChecklist').textContent = sys.checklist.badge;
         }
       } catch (err) {

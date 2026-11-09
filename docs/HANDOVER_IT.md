@@ -29,6 +29,7 @@ node scripts/migrate_waste.js
 node scripts/migrate_route.js
 node scripts/migrate_transport.js
 node scripts/migrate_route_plan.js                # บันทึกการเปลี่ยนแผนเดินรถ
+node scripts/migrate_daily_plan.js                # แผนรถเข้า-ออก / เครื่องจักรประจำวัน (FM-GM-01-07 / 01-03)
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx> --dry-run       # ตรวจก่อน
 node scripts/import_transport_xlsx.js <ไฟล์.xlsx>                 # นำเข้าจริง (ไฟล์ส่งให้แยก ไม่อยู่ใน repo)
 npm start
