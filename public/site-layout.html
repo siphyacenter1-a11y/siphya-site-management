@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เช็คลิสต์ตาม Site Layout | Site Management Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <script src="/js/gas-shim.js"></script>
+  <style>
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'Prompt', sans-serif; }
+    .top { background:var(--ink); color:#fff; padding:22px 16px 0; }
+    .wrap { max-width:1240px; margin:0 auto; padding:0 16px; box-sizing:border-box; }
+    .top .wrap { padding:0; }
+    .top a.back { color:#C9D6F2; text-decoration:none; font-size:13px; }
+    .top h1 { margin:8px 0 4px; font-size:22px; }
+    .top p { margin:0; color:#A3BBEB; font-size:13px; line-height:1.6; }
+    .tabs { display:flex; gap:4px; margin-top:16px; flex-wrap:wrap; }
+    .tab { font:inherit; font-size:13.5px; font-weight:600; border:none; background:transparent; color:#A3BBEB; padding:10px 16px; border-radius:10px 10px 0 0; cursor:pointer; }
+    .tab.on { background:var(--paper); color:var(--ink); }
+    .tab .cnt { background:var(--red); color:#fff; border-radius:999px; font-size:11px; padding:1px 7px; margin-left:4px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; }
+    .card h2 { margin:0 0 6px; font-size:16px; }
+    .note { font-size:12.5px; color:var(--muted); line-height:1.6; }
+    input, select, textarea { font:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); box-sizing:border-box; min-width:0; }
+    textarea { width:100%; min-height:60px; }
+    .btn1 { font:inherit; font-size:13px; font-weight:700; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; background:var(--ink); color:#fff; }
+    .btn1.go { background:var(--green); } .btn1.warn { background:var(--red); }
+    .btn1[disabled] { opacity:.5; cursor:default; }
+    .btn2 { font:inherit; font-size:12.5px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:6px 12px; cursor:pointer; background:#fff; color:var(--ink); }
+    .btn2.danger { color:var(--red); }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .grow { flex:1 1 auto; }
+    .hidden { display:none !important; }
+    .msg { font-size:13px; margin-top:8px; line-height:1.6; }
+    .msg.err { color:var(--red); } .msg.ok { color:var(--green); }
+    .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .seg button { font:inherit; font-size:13px; font-weight:600; border:none; background:#fff; color:var(--muted); padding:7px 14px; cursor:pointer; }
+    .seg button.on { background:var(--ink); color:#fff; }
+    label.f { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+    .pill { font-size:12px; font-weight:700; border-radius:999px; padding:3px 10px; background:var(--field); color:var(--muted); display:inline-block; }
+    .pill.ok { background:#E3F5EC; color:var(--green); } .pill.bad { background:#FDECEC; color:var(--red); }
+    .pill.warn { background:#FFF4D6; color:#8A6400; } .pill.blue { background:#E8F0FD; color:var(--blue); }
+    /* รอบตรวจ */
+    .rounds { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .rnd { border:1px solid var(--line); border-radius:10px; padding:7px 12px; font-size:12.5px; background:#fff; cursor:pointer; text-align:left; font-family:inherit; }
+    .rnd b { display:block; font-size:13.5px; }
+    .rnd.cur { outline:2px solid var(--ink); }
+    .rnd.new { border-style:dashed; color:var(--blue); font-weight:600; }
+    .split { display:grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap:14px; align-items:start; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .layout-box { border:1px dashed var(--line); border-radius:12px; min-height:200px; display:flex; align-items:center; justify-content:center; background:var(--field); overflow:hidden; position:sticky; top:8px; }
+    .layout-box img { width:100%; display:block; cursor:zoom-in; }
+    table.pts { width:100%; border-collapse:collapse; font-size:13px; }
+    table.pts th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); padding:6px; text-align:left; }
+    table.pts td { padding:5px 6px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+    table.pts tr.sec td { background:#F4F4F0; font-weight:600; font-size:12.5px; }
+    table.pts tr.ng td { background:#FFF5F5; }
+    .tick { display:inline-flex; gap:4px; }
+    .tick button { font:inherit; width:36px; height:30px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; font-size:15px; font-weight:700; color:var(--faint); }
+    .tick button.on-ok { background:var(--green); border-color:var(--green); color:#fff; }
+    .tick button.on-ng { background:var(--red); border-color:var(--red); color:#fff; }
+    .sumline { font-size:13px; margin-top:10px; }
+    a.lnk { color:var(--blue); cursor:pointer; text-decoration:none; font-weight:600; }
+    /* ใบแจ้ง */
+    table.list { width:100%; border-collapse:collapse; font-size:13px; }
+    table.list th, table.list td { padding:7px 8px; border-bottom:1px solid var(--line-soft); text-align:left; }
+    table.list th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); }
+    table.list tr.click { cursor:pointer; } table.list tr.click:hover td { background:#FAFAF6; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; }
+    @media (max-width: 760px) { .grid2 { grid-template-columns:1fr; } }
+    .reasons label { display:flex; gap:6px; font-size:13px; padding:3px 0; align-items:flex-start; }
+    .photos { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .ph { position:relative; width:120px; height:90px; border-radius:8px; overflow:hidden; border:1px solid var(--line); background:var(--field); }
+    .ph img { width:100%; height:100%; object-fit:cover; cursor:zoom-in; }
+    .ph button { position:absolute; top:2px; right:2px; border:none; background:rgba(0,0,0,.6); color:#fff; border-radius:50%; width:22px; height:22px; cursor:pointer; }
+    .ph .newtag { position:absolute; left:2px; bottom:2px; font-size:10px; background:var(--blue); color:#fff; border-radius:4px; padding:0 4px; }
+    .addph { width:120px; height:90px; border:1px dashed var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12.5px; color:var(--blue); cursor:pointer; text-align:center; }
+    /* KPI */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:12px 0 4px; }
+    .stat { background:var(--field); border-radius:12px; padding:12px 14px; }
+    .stat b { display:block; font-size:24px; line-height:1.2; } .stat span { font-size:12px; color:var(--muted); }
+    .stat.hl b { color:var(--green); } .stat.low b { color:var(--red); }
+    table.rep { width:100%; border-collapse:collapse; font-size:13px; }
+    table.rep th, table.rep td { padding:7px 8px; border-bottom:1px solid var(--line-soft); text-align:center; white-space:nowrap; }
+    table.rep th:first-child, table.rep td:first-child { text-align:left; white-space:normal; }
+    table.rep th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); }
+    .m-ok { color:var(--green); font-weight:700; } .m-low { color:var(--red); font-weight:700; } .m-cur { color:#8A6400; font-weight:700; }
+    table.res { width:100%; border-collapse:collapse; font-size:13px; }
+    table.res th { font-size:12px; color:var(--muted); font-weight:600; background:var(--field); padding:6px; text-align:left; }
+    table.res td { padding:3px 4px; border-bottom:1px solid var(--line-soft); }
+    table.res input { width:100%; }
+    .xbtn { border:none; background:none; color:var(--faint); font-size:16px; cursor:pointer; padding:4px; }
+    .empty { text-align:center; color:var(--muted); padding:24px 10px; font-size:13.5px; }
+    .zoom { position:fixed; inset:0; background:rgba(0,0,0,.85); display:flex; align-items:center; justify-content:center; z-index:50; cursor:zoom-out; }
+    .zoom img { max-width:96vw; max-height:94vh; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="wrap">
+      <a class="back" id="backLink" href="/">← กลับหน้าหลัก</a>
+      <h1>เช็คลิสต์ตาม Site Layout</h1>
+      <p>ตรวจการใช้พื้นที่ (ธุรการทั่วไป) · ตรวจการจัดกองวัสดุ (ธุรการขนส่ง) — เดือนละ 4 ครั้ง · จุดที่ ✗ ไม่ตรง ระบบออกใบแจ้งแก้ไขให้ 1 ใบต่อ 1 จุด แล้วติดตามด้วยรูป Before / After จนปิดงาน</p>
+      <div class="tabs">
+        <button class="tab on" data-tab="round">ตรวจ</button>
+        <button class="tab" data-tab="notice">ใบแจ้งแก้ไข <span class="cnt hidden" id="openCnt"></span></button>
+        <button class="tab" data-tab="kpi">KPI</button>
+        <button class="tab" data-tab="setup">ตั้งค่าจุดตรวจ / Layout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <div class="seg" id="kindSeg">
+          <button data-kind="area" class="on">🏢 การใช้พื้นที่</button>
+          <button data-kind="material">📦 การจัดกองวัสดุ</button>
+        </div>
+        <label class="f grow" style="max-width:420px;">โครงการ<select id="projSel"></select></label>
+      </div>
+    </div>
+
+    <!-- ===== ตรวจ ===== -->
+    <div id="tab-round">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">รอบตรวจของเดือน</h2>
+          <input type="month" id="monthSel">
+        </div>
+        <div class="note" id="roundsNote"></div>
+        <div class="rounds" id="roundList"></div>
+      </div>
+
+      <div class="card" id="roundCard">
+        <div class="row" style="align-items:flex-end;">
+          <h2 class="grow" style="margin:0;" id="roundTitle">รอบตรวจใหม่</h2>
+          <button class="btn2" id="btnPrintRound">🖨 พิมพ์เช็คลิสต์</button>
+        </div>
+        <div class="row" style="margin-top:10px; align-items:flex-end;">
+          <label class="f">วันที่ตรวจ<input type="date" id="rDate"></label>
+          <label class="f">เวลา<input type="time" id="rTime"></label>
+          <label class="f grow" style="max-width:240px;">ผู้ตรวจ<input type="text" id="rInspector"></label>
+          <label class="f grow" style="max-width:240px;">ผู้จัดการโครงการ (รับทราบ)<input type="text" id="rPm"></label>
+        </div>
+        <div class="split" style="margin-top:14px;">
+          <div>
+            <div class="layout-box" id="layoutBox"><span class="note">ยังไม่มีรูป Layout — อัปโหลดได้ที่แท็บ "ตั้งค่าจุดตรวจ / Layout"</span></div>
+          </div>
+          <div>
+            <div class="row" style="margin-bottom:6px;">
+              <span class="note grow">กด ✓ = ตรงตาม Layout · ✗ = ไม่ตรง (ระบบออกใบแจ้งแก้ไขให้ตอนบันทึก)</span>
+              <button class="btn2" id="btnAllOk">✓ ทั้งหมด</button>
+            </div>
+            <table class="pts" id="ptsTbl"></table>
+            <div class="row" style="margin-top:8px;">
+              <button class="btn2" id="btnAddOther">+ อื่น ๆ ระบุ</button>
+            </div>
+            <div class="sumline" id="sumLine"></div>
+            <label class="f" style="margin-top:10px;">หมายเหตุรอบตรวจ<textarea id="rNote"></textarea></label>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <span class="note grow" id="roundMeta"></span>
+          <button class="btn2 danger hidden" id="btnDelRound">ลบรอบตรวจ</button>
+          <button class="btn1 go" id="btnSaveRound">บันทึกรอบตรวจ</button>
+        </div>
+        <div class="msg" id="roundMsg"></div>
+      </div>
+    </div>
+
+    <!-- ===== ใบแจ้งแก้ไข ===== -->
+    <div id="tab-notice" class="hidden">
+      <div class="card" id="noticeListCard">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">ใบแจ้งแก้ไข</h2>
+          <div class="seg" id="stSeg">
+            <button data-st="open" class="on">ยังไม่ปิด</button>
+            <button data-st="closed">ปิดแล้ว</button>
+            <button data-st="">ทั้งหมด</button>
+          </div>
+        </div>
+        <div class="note" style="margin:6px 0 8px;">ใบแจ้งออกอัตโนมัติจากจุดที่ ✗ ในรอบตรวจ · กดที่แถวเพื่อกรอกรายละเอียด แนบรูป Before/After และปิดงาน</div>
+        <div style="overflow-x:auto;"><table class="list" id="noticeTbl"></table></div>
+      </div>
+
+      <div class="card hidden" id="noticeCard">
+        <div class="row">
+          <a class="lnk" id="btnBackList">← กลับรายการ</a>
+          <h2 class="grow" style="margin:0 0 0 10px;" id="nTitle"></h2>
+          <span id="nStatus"></span>
+          <button class="btn2" id="btnPrintNotice">🖨 พิมพ์ใบแจ้ง</button>
+        </div>
+        <div class="grid2" style="margin-top:12px;">
+          <label class="f">วันที่พบ<input type="date" id="nFoundDate"></label>
+          <label class="f">เวลาที่พบ<input type="time" id="nFoundTime"></label>
+          <label class="f">ตำแหน่งที่พบ<input type="text" id="nLocation"></label>
+          <div class="row">
+            <label class="f grow">รหัสโซน/พื้นที่ที่พบ<input type="text" id="nZoneFound"></label>
+            <label class="f grow">ที่ถูกต้องตาม Layout<input type="text" id="nZoneCorrect" placeholder="เช่น M05"></label>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="note"><b id="reasonHead">รายการ</b></div>
+          <div class="reasons grid2" id="nReasons"></div>
+          <label class="f" style="margin-top:4px;">อื่น ๆ ระบุ<input type="text" id="nReasonOther"></label>
+        </div>
+        <div class="grid2" style="margin-top:12px;">
+          <label class="f">บริษัท / ผรม. / เจ้าภาพ<input type="text" id="nOwner"></label>
+          <label class="f">ผู้รับปฏิบัติ (ผู้รับผิดชอบแก้ไข)<input type="text" id="nResp"></label>
+          <div class="f"><span>ความร่วมมือ</span>
+            <div class="row" style="font-size:13px;color:var(--ink);">
+              <label><input type="radio" name="coop" value="signed"> เซ็นรับทราบ</label>
+              <label><input type="radio" name="coop" value="refused"> ไม่ยอมเซ็นรับทราบ</label>
+              <label><input type="radio" name="coop" value=""> ยังไม่ระบุ</label>
+            </div>
+          </div>
+          <label class="f">กำหนดแก้ไขภายใน<input type="date" id="nDue"></label>
+        </div>
+        <label class="f" style="margin-top:12px;">รายละเอียดเพิ่มเติม<textarea id="nDetail"></textarea></label>
+
+        <div class="grid2" style="margin-top:14px;">
+          <div><b style="font-size:13.5px;">📷 BEFORE (ก่อนแก้ไข)</b><div class="photos" id="phBefore"></div></div>
+          <div><b style="font-size:13.5px;">📷 AFTER (หลังแก้ไข)</b><div class="photos" id="phAfter"></div>
+            <label class="f" style="margin-top:8px;max-width:200px;">แก้ไขแล้ว วันที่<input type="date" id="nFixed"></label></div>
+        </div>
+        <input type="file" id="fileIn" accept="image/*" multiple class="hidden">
+
+        <div style="margin-top:14px; border-top:1px solid var(--line-soft); padding-top:12px;">
+          <b style="font-size:13.5px;">ผลการตรวจปิดงาน</b>
+          <label class="f" style="margin-top:6px;">หมายเหตุการตรวจปิดงาน (ถ้าไม่ผ่าน ระบุสิ่งที่ต้องแก้เพิ่ม)<input type="text" id="nCloseNote"></label>
+          <div class="note" id="nClosedInfo" style="margin-top:4px;"></div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <div class="grow"></div>
+          <button class="btn1" id="btnSaveNotice">บันทึก</button>
+          <button class="btn1 warn" id="btnFail">ตรวจแล้ว ไม่ผ่าน</button>
+          <button class="btn1 go" id="btnPass">ตรวจแล้ว ผ่าน → ปิดงาน</button>
+          <button class="btn2 hidden" id="btnReopen">เปิดงานใหม่</button>
+        </div>
+        <div class="msg" id="noticeMsg"></div>
+      </div>
+    </div>
+
+    <!-- ===== KPI ===== -->
+    <div id="tab-kpi" class="hidden">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;">KPI การเข้าตรวจตาม Site Layout</h2>
+          <label class="note">ตั้งแต่ <input type="month" id="kFrom"></label>
+          <label class="note">ถึง <input type="month" id="kTo"></label>
+          <label class="note"><input type="checkbox" id="kAll" checked> ทุกโครงการ</label>
+        </div>
+        <div class="note" style="margin-top:6px;">KPI = (จำนวนครั้งที่เข้าตรวจ ÷ จำนวนครั้งทั้งหมด) × 100 · จำนวนครั้งทั้งหมด = 4 ครั้ง/เดือน/โครงการ (ตรวจเกิน 4 นับแค่ 4) · แยกการใช้พื้นที่กับการจัดกองวัสดุ · นับตั้งแต่เดือนแรกที่โครงการเริ่มตรวจในระบบ · เดือนปัจจุบัน (สีเหลือง) ยังไม่จบเดือน</div>
+        <div id="kpiBody"></div>
+      </div>
+    </div>
+
+    <!-- ===== ตั้งค่า ===== -->
+    <div id="tab-setup" class="hidden">
+      <div class="card">
+        <div class="row">
+          <h2 class="grow" style="margin:0;" id="setupTitle">จุดตรวจ</h2>
+          <button class="btn2" id="btnTpl">ใช้จุดตรวจตั้งต้นจากแบบฟอร์ม</button>
+        </div>
+        <div class="note" style="margin:4px 0 10px;">รหัส + ชื่อพื้นที่ตาม Layout ของโครงการนี้ · "หัวข้อ" ใช้แบ่งกลุ่ม เช่น ชั้นใต้ดิน (เว้นว่างได้) · ลบแถวแล้ว รอบตรวจเก่ายังเก็บชื่อเดิมไว้</div>
+        <table class="res" id="ptTbl"></table>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn2" id="btnPtAdd">+ เพิ่มจุด</button>
+          <div class="grow"></div>
+          <button class="btn1" id="btnPtSave">บันทึกจุดตรวจ</button>
+        </div>
+        <div class="msg" id="ptMsg"></div>
+      </div>
+      <div class="card">
+        <h2>รูป Layout</h2>
+        <div class="note">รูปผัง Site Layout ของโครงการ (ถ่ายหรือสแกนจากแบบ) — แสดงข้างเช็คลิสต์ตอนตรวจ และพิมพ์ลงใบเช็คลิสต์</div>
+        <div class="row" style="margin-top:10px; align-items:flex-start;">
+          <div class="layout-box" id="setupLayout" style="width:420px; position:static;"><span class="note">ยังไม่มีรูป</span></div>
+          <div>
+            <button class="btn2" id="btnLayoutUp">อัปโหลดรูป Layout</button>
+            <button class="btn2 danger" id="btnLayoutDel">ลบรูป</button>
+            <input type="file" id="layoutIn" accept="image/*" class="hidden">
+            <div class="msg" id="layMsg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var META = null;
+  var S = { kind: 'area', code: '', tab: 'round', points: [], layoutUrl: '', round: null, items: [], rounds: [], notice: null, nStatus: 'open', setupRows: [] };
+  var MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  var MONTH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  var dirty = false;
+
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (ok, fail) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail); r[fn].apply(r, args); });
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function thDate(d) { if (!d) return ''; var p = d.split('-'); return +p[2] + ' ' + MONTH_TH[+p[1] - 1] + ' ' + (+p[0] + 543); }
+  function thShort(d) { if (!d) return '____/____/______'; var p = d.split('-'); return p[2] + '/' + p[1] + '/' + (+p[0] + 543); }
+  function thMonth(m) { return MONTH_FULL[+m.slice(5) - 1] + ' ' + (+m.slice(0, 4) + 543); }
+  function msg(id, t, c) { var el = $(id); el.textContent = t || ''; el.className = 'msg' + (c ? ' ' + c : ''); }
+  function form() { return META.forms[S.kind]; }
+  function confirmLeave() { return !dirty || confirm('ยังไม่ได้บันทึกการแก้ไข — ออกจากหน้านี้เลยไหม?'); }
+  window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  function zoom(src) { var z = document.createElement('div'); z.className = 'zoom'; z.innerHTML = '<img src="' + esc(src) + '">'; z.onclick = function () { z.remove(); }; document.body.appendChild(z); }
+  function nowTime() { var d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
+  // ย่อรูปก่อนส่ง (ด้านยาวไม่เกิน 1600px)
+  function compress(file, maxSide) {
+    maxSide = maxSide || 1600;
+    return new Promise(function (resolve) {
+      var rd = new FileReader();
+      rd.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, maxSide / Math.max(img.width, img.height)), c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = function () { resolve(''); };
+        img.src = e.target.result;
+      };
+      rd.onerror = function () { resolve(''); };
+      rd.readAsDataURL(file);
+    });
+  }
+
+  // ---------------- เริ่มต้น ----------------
+  call('SL_meta').then(function (m) {
+    META = m;
+    $('backLink').href = m.isAdmin ? '/admin' : '/';
+    var saved = {}; try { saved = JSON.parse(localStorage.getItem('sl.sel') || '{}'); } catch (e) {}
+    $('projSel').innerHTML = m.projects.map(function (p) { return '<option value="' + esc(p.code) + '">' + esc(p.name) + ' (' + esc(p.code) + ')</option>'; }).join('');
+    if (saved.code && m.projects.some(function (p) { return p.code === saved.code; })) $('projSel').value = saved.code;
+    S.code = $('projSel').value;
+    if (saved.kind === 'material') setKind('material');
+    $('monthSel').value = m.today.slice(0, 7);
+    $('kFrom').value = m.today.slice(0, 7); $('kTo').value = m.today.slice(0, 7);
+    refreshTab(); refreshOpenCount();
+  }).catch(function (e) { document.querySelector('.wrap').insertAdjacentHTML('afterbegin', '<div class="card msg err">' + esc(e.message) + '</div>'); });
+
+  function remember() { try { localStorage.setItem('sl.sel', JSON.stringify({ code: S.code, kind: S.kind })); } catch (e) {} }
+  function setKind(k) { S.kind = k; document.querySelectorAll('#kindSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.kind === k); }); remember(); }
+  document.querySelectorAll('#kindSeg button').forEach(function (b) { b.onclick = function () { if (!confirmLeave()) return; dirty = false; setKind(b.dataset.kind); refreshTab(); refreshOpenCount(); }; });
+  $('projSel').onchange = function () { if (!confirmLeave()) { this.value = S.code; return; } dirty = false; S.code = this.value; remember(); refreshTab(); refreshOpenCount(); };
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () {
+      if (!confirmLeave()) return; dirty = false;
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); });
+      S.tab = b.dataset.tab;
+      ['round', 'notice', 'kpi', 'setup'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== S.tab); });
+      refreshTab();
+    };
+  });
+  function refreshTab() {
+    if (S.tab === 'round') loadRoundTab();
+    else if (S.tab === 'notice') { showNoticeList(); }
+    else if (S.tab === 'kpi') loadKpi();
+    else loadSetup();
+  }
+  function refreshOpenCount() {
+    call('SL_notices', { kind: S.kind, code: S.code, status: 'open' }).then(function (l) {
+      $('openCnt').textContent = l.length; $('openCnt').classList.toggle('hidden', !l.length);
+    });
+  }
+
+  // ---------------- ตรวจ ----------------
+  function loadRoundTab(openId) {
+    Promise.all([call('SL_setup', S.kind, S.code), call('SL_rounds', S.kind, S.code, $('monthSel').value)]).then(function (r) {
+      S.points = r[0].points; S.layoutUrl = r[0].layoutUrl; S.rounds = r[1];
+      renderLayout();
+      renderRoundList();
+      var target = openId ? S.rounds.find(function (x) { return x.id === openId; }) : null;
+      if (target) openRound(target.id); else newRound();
+    }).catch(function (e) { msg('roundMsg', e.message, 'err'); });
+  }
+  $('monthSel').onchange = function () { if (!confirmLeave()) return; dirty = false; loadRoundTab(); };
+  function renderLayout() {
+    $('layoutBox').innerHTML = S.layoutUrl ? '<img src="' + esc(S.layoutUrl) + '" title="กดเพื่อขยาย">' : '<span class="note" style="padding:20px;text-align:center;">ยังไม่มีรูป Layout — อัปโหลดได้ที่แท็บ "ตั้งค่าจุดตรวจ / Layout"</span>';
+    var im = $('layoutBox').querySelector('img'); if (im) im.onclick = function () { zoom(S.layoutUrl); };
+  }
+  function renderRoundList() {
+    var n = S.rounds.length, req = META.roundsPerMonth;
+    $('roundsNote').innerHTML = (thMonth($('monthSel').value)) + ' · ตรวจแล้ว <b>' + n + ' / ' + req + '</b> รอบ ' +
+      (n >= req ? '<span class="pill ok">ครบตามเป้า</span>' : '<span class="pill warn">ขาดอีก ' + (req - n) + ' รอบ</span>');
+    $('roundList').innerHTML = S.rounds.map(function (r) {
+      return '<button class="rnd' + (S.round && S.round.id === r.id ? ' cur' : '') + '" data-id="' + r.id + '"><b>รอบที่ ' + r.roundNo + ' · ' + esc(thDate(r.inspectDate)) + '</b>' +
+        'ตรง ' + r.ok + ' · <span style="color:' + (r.ng ? 'var(--red)' : 'inherit') + '">ไม่ตรง ' + r.ng + '</span>' + (r.openCount ? ' · ค้างแก้ ' + r.openCount : '') + '</button>';
+    }).join('') + '<button class="rnd new' + (S.round && !S.round.id ? ' cur' : '') + '" data-id="">+ รอบตรวจใหม่</button>';
+  }
+  $('roundList').onclick = function (e) {
+    var b = e.target.closest('.rnd'); if (!b || !confirmLeave()) return; dirty = false;
+    if (b.dataset.id) openRound(+b.dataset.id); else newRound();
+  };
+  function newRound() {
+    S.round = { id: null, roundNo: S.rounds.length + 1 };
+    S.items = S.points.map(function (p) { return { pointId: p.id, code: p.code, name: p.name, section: p.section, owner: p.owner, result: '', remark: '' }; });
+    var m = $('monthSel').value;
+    $('rDate').value = META.today.slice(0, 7) === m ? META.today : '';
+    $('rTime').value = nowTime(); $('rInspector').value = META.me; $('rPm').value = S.rounds.length ? (S.rounds[S.rounds.length - 1].pmName || '') : ''; $('rNote').value = '';
+    dirty = false; renderRound(); renderRoundList();
+    msg('roundMsg', S.points.length ? '' : 'โครงการนี้ยังไม่มีจุดตรวจ — ไปที่แท็บ "ตั้งค่าจุดตรวจ / Layout" ก่อน', S.points.length ? '' : 'err');
+  }
+  function openRound(id) {
+    call('SL_getRound', id).then(function (r) {
+      S.round = r; S.items = r.items;
+      $('rDate').value = r.inspectDate; $('rTime').value = r.inspectTime || ''; $('rInspector').value = r.inspector || ''; $('rPm').value = r.pmName || ''; $('rNote').value = r.note || '';
+      dirty = false; renderRound(); renderRoundList(); msg('roundMsg', '');
+    }).catch(function (e) { msg('roundMsg', e.message, 'err'); });
+  }
+  function renderRound() {
+    var r = S.round, f = form();
+    $('roundTitle').textContent = (r.id ? 'รอบที่ ' + r.roundNo : 'รอบตรวจใหม่ (รอบที่ ' + r.roundNo + ')') + ' — ' + f.short + ' ประจำเดือน ' + thMonth($('monthSel').value);
+    $('roundMeta').textContent = r.id ? 'บันทึกโดย ' + (r.createdBy || '') + ' · แก้ไขล่าสุด ' + (r.updatedText || '') + ' ' + (r.updatedBy || '') : '';
+    $('btnDelRound').classList.toggle('hidden', !(r.id && META.isAdmin));
+    var head = '<tr><th style="width:30px">ลำดับ</th><th style="width:56px">' + f.codeLabel + '</th><th>' + f.nameLabel + '</th>' + (f.hasOwner ? '<th style="width:16%">เจ้าภาพพื้นที่</th>' : '') +
+      '<th style="width:84px">✓ / ✗</th><th style="width:24%">หมายเหตุ / ใบแจ้ง</th></tr>';
+    var lastSec = '', body = '';
+    S.items.forEach(function (it, i) {
+      if ((it.section || '') !== lastSec) { lastSec = it.section || ''; if (lastSec) body += '<tr class="sec"><td colspan="6">' + esc(lastSec) + '</td></tr>'; }
+      var custom = !it.pointId && !it.noticeId && !(S.points.some(function (p) { return p.code === it.code && p.name === it.name; }));
+      body += '<tr data-i="' + i + '"' + (it.result === 'ng' ? ' class="ng"' : '') + '><td>' + (i + 1) + '</td><td>' + esc(it.code) + '</td><td>' +
+        (custom ? '<input data-k="name" value="' + esc(it.name) + '" placeholder="อื่น ๆ ระบุ" style="width:100%">' : esc(it.name)) + '</td>' +
+        (f.hasOwner ? '<td>' + esc(it.owner) + '</td>' : '') +
+        '<td><span class="tick"><button data-r="ok" class="' + (it.result === 'ok' ? 'on-ok' : '') + '">✓</button><button data-r="ng" class="' + (it.result === 'ng' ? 'on-ng' : '') + '">✗</button></span></td>' +
+        '<td><input data-k="remark" value="' + esc(it.remark) + '" placeholder="' + (it.result === 'ng' ? 'สิ่งที่พบ' : '') + '" style="width:100%">' +
+        (it.noticeNo ? '<div style="font-size:11.5px;margin-top:2px;"><a class="lnk" data-notice="' + it.noticeId + '">' + esc(it.noticeNo) + '</a> ' + (it.noticeStatus === 'closed' ? '<span class="pill ok">ปิดแล้ว</span>' : '<span class="pill bad">ค้างแก้</span>') + '</div>'
+          : (it.result === 'ng' ? '<div style="font-size:11.5px;color:var(--red);margin-top:2px;">ออกใบแจ้งแก้ไขตอนบันทึก</div>' : '')) + '</td></tr>';
+    });
+    $('ptsTbl').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td colspan="6" class="empty">ยังไม่มีจุดตรวจ</td></tr>') + '</tbody>';
+    renderSum();
+  }
+  function renderSum() {
+    var ok = 0, ng = 0, none = 0;
+    S.items.forEach(function (it) { if (it.result === 'ok') ok++; else if (it.result === 'ng') ng++; else none++; });
+    $('sumLine').innerHTML = 'สรุป ตรวจทั้งหมด <b>' + S.items.length + '</b> จุด · ตรง <b style="color:var(--green)">' + ok + '</b> · ไม่ตรง <b style="color:var(--red)">' + ng + '</b> จุด (ออกใบแจ้งแก้ไข ' + ng + ' ใบ)' + (none ? ' · <span style="color:#8A6400">ยังไม่ได้ติ๊ก ' + none + ' จุด</span>' : '');
+  }
+  $('ptsTbl').addEventListener('click', function (e) {
+    var a = e.target.closest('[data-notice]'); if (a) { if (!confirmLeave()) return; dirty = false; gotoNotice(+a.dataset.notice); return; }
+    var b = e.target.closest('[data-r]'); if (!b) return;
+    var it = S.items[+b.closest('tr').dataset.i];
+    if (it.result === 'ng' && b.dataset.r === 'ok' && it.noticeId && !confirm('จุดนี้มีใบแจ้งแก้ไขแล้ว (' + it.noticeNo + ') — เปลี่ยนเป็น ✓ ใบแจ้งจะถูกลบถ้ายังไม่ได้กรอกอะไร ใช่ไหม?')) return;
+    it.result = it.result === b.dataset.r ? '' : b.dataset.r;
+    dirty = true; renderRound();
+  });
+  $('ptsTbl').addEventListener('input', function (e) {
+    var k = e.target.dataset.k, tr = e.target.closest('tr'); if (!k || !tr) return;
+    S.items[+tr.dataset.i][k] = e.target.value; dirty = true;
+  });
+  ['rDate', 'rTime', 'rInspector', 'rPm', 'rNote'].forEach(function (id) { $(id).addEventListener('input', function () { dirty = true; }); });
+  $('btnAllOk').onclick = function () { S.items.forEach(function (it) { if (!it.result) it.result = 'ok'; }); dirty = true; renderRound(); };
+  $('btnAddOther').onclick = function () { S.items.push({ pointId: null, code: '', name: '', section: '', owner: '', result: '', remark: '' }); dirty = true; renderRound(); };
+  $('btnSaveRound').onclick = function () {
+    var items = S.items.filter(function (it) { return String(it.name || '').trim(); });
+    var ng = items.filter(function (it) { return it.result === 'ng' && !it.noticeId; }).length;
+    if (ng && !confirm('มีจุดที่ ✗ ไม่ตรงใหม่ ' + ng + ' จุด — ระบบจะออกใบแจ้งแก้ไข ' + ng + ' ใบ บันทึกเลยไหม?')) return;
+    $('btnSaveRound').disabled = true; msg('roundMsg', 'กำลังบันทึก...');
+    call('SL_saveRound', { id: S.round.id, kind: S.kind, projectCode: S.code, inspectDate: $('rDate').value, inspectTime: $('rTime').value,
+      inspector: $('rInspector').value, pmName: $('rPm').value, note: $('rNote').value, items: items })
+      .then(function (r) {
+        dirty = false;
+        if ($('rDate').value.slice(0, 7) !== $('monthSel').value) $('monthSel').value = $('rDate').value.slice(0, 7);
+        loadRoundTab(r.id); refreshOpenCount();
+        setTimeout(function () { msg('roundMsg', '✓ บันทึกแล้ว' + (r.created.length ? ' · ออกใบแจ้งแก้ไข ' + r.created.join(', ') + ' — ไปกรอกรายละเอียด + รูป Before ที่แท็บ "ใบแจ้งแก้ไข"' : '') + (r.removed ? ' · ลบใบแจ้งที่ไม่ใช้แล้ว ' + r.removed + ' ใบ' : ''), 'ok'); }, 500);
+      })
+      .catch(function (e) { msg('roundMsg', e.message, 'err'); })
+      .then(function () { $('btnSaveRound').disabled = false; });
+  };
+  $('btnDelRound').onclick = function () {
+    if (!confirm('ลบรอบตรวจนี้ และใบแจ้งแก้ไขทั้งหมดที่ออกจากรอบนี้?')) return;
+    call('SL_deleteRound', S.round.id).then(function () { dirty = false; loadRoundTab(); refreshOpenCount(); }).catch(function (e) { msg('roundMsg', e.message, 'err'); });
+  };
+
+  // ---------------- ใบแจ้งแก้ไข ----------------
+  document.querySelectorAll('#stSeg button').forEach(function (b) {
+    b.onclick = function () { S.nStatus = b.dataset.st; document.querySelectorAll('#stSeg button').forEach(function (x) { x.classList.toggle('on', x === b); }); loadNotices(); };
+  });
+  function showNoticeList() { $('noticeCard').classList.add('hidden'); $('noticeListCard').classList.remove('hidden'); loadNotices(); }
+  function loadNotices() {
+    call('SL_notices', { kind: S.kind, code: S.code, status: S.nStatus }).then(function (list) {
+      $('noticeTbl').innerHTML = '<thead><tr><th>เลขที่</th><th>วันที่ออก</th><th>โซนที่พบ</th><th>ตำแหน่ง</th><th>ผู้รับผิดชอบ</th><th>กำหนดแก้</th><th>รูป B/A</th><th>สถานะ</th></tr></thead><tbody>' +
+        (list.map(function (n) {
+          var st = n.status === 'closed' ? '<span class="pill ok">ปิดแล้ว ' + esc(n.closedDate ? thShort(n.closedDate) : '') + '</span>'
+            : n.overdue ? '<span class="pill bad">เกินกำหนด</span>' : n.closeResult === 'fail' ? '<span class="pill warn">ไม่ผ่าน แก้เพิ่ม</span>' : '<span class="pill blue">ค้างแก้</span>';
+          return '<tr class="click" data-id="' + n.id + '"><td><b>' + esc(n.noticeNo) + '</b></td><td>' + esc(thShort(n.issuedDate)) + '</td><td>' + esc(n.zoneFound) + '</td><td>' + esc(n.location) + '</td><td>' +
+            esc(n.responsible || n.ownerCompany || '-') + '</td><td>' + (n.dueDate ? esc(thShort(n.dueDate)) : '-') + '</td><td>' + (n.beforePhotos || []).length + ' / ' + (n.afterPhotos || []).length + '</td><td>' + st + '</td></tr>';
+        }).join('') || '<tr><td colspan="8" class="empty">ไม่มีใบแจ้งแก้ไข' + (S.nStatus === 'open' ? 'ที่ค้างอยู่' : '') + '</td></tr>') + '</tbody>';
+    });
+  }
+  $('noticeTbl').onclick = function (e) { var tr = e.target.closest('tr[data-id]'); if (tr) openNotice(+tr.dataset.id); };
+  $('btnBackList').onclick = function () { if (!confirmLeave()) return; dirty = false; showNoticeList(); };
+  function gotoNotice(id) {
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'notice'); });
+    S.tab = 'notice'; ['round', 'notice', 'kpi', 'setup'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== 'notice'); });
+    openNotice(id);
+  }
+  function openNotice(id) {
+    call('SL_getNotice', id).then(function (n) {
+      S.notice = n; S.newBefore = []; S.newAfter = [];
+      $('noticeListCard').classList.add('hidden'); $('noticeCard').classList.remove('hidden');
+      var f = META.forms[n.kind];
+      $('nTitle').textContent = 'ใบแจ้งแก้ไข ' + n.noticeNo + ' — ' + f.short;
+      $('nStatus').innerHTML = n.status === 'closed' ? '<span class="pill ok">ปิดงานแล้ว (ผ่าน)</span>' : n.closeResult === 'fail' ? '<span class="pill warn">ตรวจแล้วไม่ผ่าน — แก้เพิ่ม</span>' : '<span class="pill blue">ค้างแก้</span>';
+      $('nFoundDate').value = n.foundDate || ''; $('nFoundTime').value = n.foundTime || ''; $('nLocation').value = n.location || '';
+      $('nZoneFound').value = n.zoneFound || ''; $('nZoneCorrect').value = n.zoneCorrect || '';
+      $('reasonHead').textContent = 'รายการ - ' + f.short + ' (เลือกได้หลายข้อ)';
+      $('nReasons').innerHTML = META.reasons[n.kind].map(function (r) {
+        return '<label><input type="checkbox" value="' + esc(r) + '"' + ((n.reasons || []).indexOf(r) >= 0 ? ' checked' : '') + '> ' + esc(r) + '</label>';
+      }).join('');
+      $('nReasonOther').value = n.reasonOther || ''; $('nOwner').value = n.ownerCompany || ''; $('nResp').value = n.responsible || '';
+      document.querySelectorAll('input[name=coop]').forEach(function (x) { x.checked = x.value === (n.cooperation || ''); });
+      $('nDue').value = n.dueDate || ''; $('nDetail').value = n.detail || ''; $('nFixed').value = n.fixedDate || ''; $('nCloseNote').value = n.closeNote || '';
+      $('nClosedInfo').textContent = n.closedBy ? 'ตรวจล่าสุดโดย ' + n.closedBy + ' วันที่ ' + (n.closedDate ? thShort(n.closedDate) : '') + ' — ' + (n.closeResult === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน') : '';
+      var closed = n.status === 'closed';
+      $('btnPass').classList.toggle('hidden', closed); $('btnFail').classList.toggle('hidden', closed); $('btnReopen').classList.toggle('hidden', !closed);
+      renderPhotos(); dirty = false; msg('noticeMsg', '');
+    }).catch(function (e) { alert(e.message); });
+  }
+  function renderPhotos() {
+    var n = S.notice;
+    [['before', 'phBefore', n.beforePhotos, S.newBefore], ['after', 'phAfter', n.afterPhotos, S.newAfter]].forEach(function (x) {
+      var h = (x[2] || []).map(function (p, i) { return '<div class="ph"><img src="' + esc(p.url) + '"><button data-del="' + x[0] + '|old|' + i + '" title="ลบรูป">×</button></div>'; }).join('') +
+        x[3].map(function (d, i) { return '<div class="ph"><img src="' + d + '"><span class="newtag">ใหม่</span><button data-del="' + x[0] + '|new|' + i + '" title="ลบรูป">×</button></div>'; }).join('');
+      if ((x[2] || []).length + x[3].length < 6) h += '<div class="addph" data-add="' + x[0] + '">+ เพิ่มรูป<br>' + (x[0] === 'before' ? 'Before' : 'After') + '</div>';
+      $(x[1]).innerHTML = h;
+    });
+  }
+  var addTarget = 'before';
+  $('noticeCard').addEventListener('click', function (e) {
+    var a = e.target.closest('[data-add]'); if (a) { addTarget = a.dataset.add; $('fileIn').value = ''; $('fileIn').click(); return; }
+    var d = e.target.closest('[data-del]');
+    if (d) {
+      var p = d.dataset.del.split('|'), arr = p[1] === 'old' ? (p[0] === 'before' ? S.notice.beforePhotos : S.notice.afterPhotos) : (p[0] === 'before' ? S.newBefore : S.newAfter);
+      arr.splice(+p[2], 1); dirty = true; renderPhotos(); return;
+    }
+    var im = e.target.closest('.ph img'); if (im) zoom(im.src);
+  });
+  $('fileIn').onchange = function () {
+    var files = Array.prototype.slice.call(this.files || []);
+    msg('noticeMsg', 'กำลังย่อรูป...');
+    Promise.all(files.map(function (f) { return compress(f); })).then(function (list) {
+      var arr = addTarget === 'before' ? S.newBefore : S.newAfter, old = addTarget === 'before' ? S.notice.beforePhotos : S.notice.afterPhotos;
+      list.filter(Boolean).forEach(function (d) { if (arr.length + old.length < 6) arr.push(d); });
+      if (addTarget === 'after' && !$('nFixed').value) $('nFixed').value = META.today;
+      dirty = true; renderPhotos(); msg('noticeMsg', 'เพิ่มรูปแล้ว — กด "บันทึก" เพื่ออัปโหลด', 'ok');
+    });
+  };
+  document.querySelectorAll('#noticeCard input, #noticeCard textarea').forEach(function (el) { el.addEventListener('input', function () { dirty = true; }); el.addEventListener('change', function () { dirty = true; }); });
+  function saveNotice(extra) {
+    var n = S.notice, coop = document.querySelector('input[name=coop]:checked');
+    var req = Object.assign({
+      id: n.id, foundDate: $('nFoundDate').value, foundTime: $('nFoundTime').value, location: $('nLocation').value, zoneFound: $('nZoneFound').value,
+      zoneCorrect: $('nZoneCorrect').value, reasons: Array.prototype.map.call(document.querySelectorAll('#nReasons input:checked'), function (x) { return x.value; }),
+      reasonOther: $('nReasonOther').value, ownerCompany: $('nOwner').value, responsible: $('nResp').value, cooperation: coop ? coop.value : '',
+      dueDate: $('nDue').value, detail: $('nDetail').value, fixedDate: $('nFixed').value, closeNote: $('nCloseNote').value,
+      keepBefore: (n.beforePhotos || []).map(function (p) { return p.url; }), keepAfter: (n.afterPhotos || []).map(function (p) { return p.url; }),
+      newBefore: S.newBefore, newAfter: S.newAfter,
+    }, extra || {});
+    ['btnSaveNotice', 'btnPass', 'btnFail'].forEach(function (b) { $(b).disabled = true; });
+    msg('noticeMsg', 'กำลังบันทึก...');
+    call('SL_saveNotice', req).then(function (r) {
+      dirty = false; openNotice(n.id); refreshOpenCount();
+      setTimeout(function () { msg('noticeMsg', r.status === 'closed' ? '✓ ปิดงานแล้ว' : extra && extra.close === 'fail' ? 'บันทึกผล "ไม่ผ่าน" แล้ว — ใบแจ้งยังค้างอยู่' : '✓ บันทึกแล้ว', 'ok'); }, 400);
+    }).catch(function (e) { msg('noticeMsg', e.message, 'err'); })
+      .then(function () { ['btnSaveNotice', 'btnPass', 'btnFail'].forEach(function (b) { $(b).disabled = false; }); });
+  }
+  $('btnSaveNotice').onclick = function () { saveNotice(); };
+  $('btnPass').onclick = function () { if (confirm('ตรวจแล้วตรงตาม Layout — ปิดงานใบแจ้งนี้?')) saveNotice({ close: 'pass' }); };
+  $('btnFail').onclick = function () { if (!$('nCloseNote').value.trim()) { msg('noticeMsg', 'ระบุสิ่งที่ต้องแก้เพิ่มในช่อง "หมายเหตุการตรวจปิดงาน" ก่อน', 'err'); return; } saveNotice({ close: 'fail' }); };
+  $('btnReopen').onclick = function () { if (confirm('เปิดใบแจ้งนี้ใหม่ (กลับเป็นค้างแก้)?')) saveNotice({ reopen: true }); };
+
+  // ---------------- พิมพ์ ----------------
+  var PRINT_CSS = '@page{size:A4 landscape;margin:8mm}body{font-family:Sarabun,Tahoma,sans-serif;font-size:11px;color:#000;margin:0}' +
+    'h1{font-size:15px;margin:0;text-align:center}.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.no{border:1px solid #000;padding:2px 6px;font-size:10px;white-space:nowrap}' +
+    '.meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin:6px 0;font-size:11.5px}.u{border-bottom:1px dotted #000;padding:0 4px}' +
+    'table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:2px 4px;vertical-align:middle}th{background:#eee;font-size:10px}' +
+    'td.c{text-align:center}tr.sec td{background:#f2f2f2;font-weight:700}.wrap{display:flex;gap:8px;align-items:flex-start}.lay{flex:0 0 52%}.lay img{width:100%;border:1px solid #000}' +
+    '.sig{display:flex;justify-content:space-around;margin-top:16px;text-align:center}.sig div{min-width:200px}.ln{border-bottom:1px dotted #000;height:18px;margin-bottom:2px}' +
+    '.box{border:1px solid #000;padding:6px 8px;margin-top:6px;line-height:1.8}.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.pg{page-break-after:always}' +
+    '.phs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.phs .col{border:1px solid #000;padding:6px;min-height:330px}.phs img{width:100%;max-height:300px;object-fit:contain;display:block;margin-bottom:4px}';
+  function openPrint(title, body) {
+    var w = window.open('', '_blank'); if (!w) { alert('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต pop-up ก่อน'); return; }
+    w.document.write('<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + esc(title) + '</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>' + PRINT_CSS + '</style></head><body>' + body + '</body></html>');
+    w.document.close(); setTimeout(function () { w.print(); }, 800);
+  }
+  function projName() { var o = $('projSel').selectedOptions[0]; return o ? o.textContent : S.code; }
+  $('btnPrintRound').onclick = function () {
+    var f = form(), r = S.round, ok = 0, ng = 0, lastSec = '', rows = '';
+    S.items.forEach(function (it, i) {
+      if (it.result === 'ok') ok++; if (it.result === 'ng') ng++;
+      if ((it.section || '') !== lastSec) { lastSec = it.section || ''; if (lastSec) rows += '<tr class="sec"><td colspan="' + (f.hasOwner ? 6 : 5) + '">' + esc(lastSec) + '</td></tr>'; }
+      rows += '<tr><td class="c">' + (i + 1) + '</td><td class="c">' + esc(it.code) + '</td><td>' + esc(it.name) + (it.remark ? ' <i>(' + esc(it.remark) + ')</i>' : '') + '</td>' + (f.hasOwner ? '<td>' + esc(it.owner) + '</td>' : '') +
+        '<td class="c">' + (it.result === 'ok' ? '✓' : '') + '</td><td class="c">' + (it.result === 'ng' ? '✗' : '') + '</td><td class="c" style="font-size:9.5px">' + esc(it.noticeNo || '') + '</td></tr>';
+    });
+    var d = $('rDate').value;
+    var body = '<div class="hd"><div style="width:120px"></div><h1>' + esc(f.title) + '</h1><div class="no">FM-____________ / Rev.___</div></div>' +
+      '<div class="meta"><span>โครงการ <span class="u">' + esc(projName()) + '</span></span><span>วันที่ตรวจ <span class="u">' + esc(thShort(d)) + '</span></span><span>เวลา <span class="u">' + esc($('rTime').value) + '</span></span>' +
+      '<span>รอบที่ <span class="u">' + r.roundNo + '</span> ประจำเดือน <span class="u">' + esc(d ? thMonth(d.slice(0, 7)) : '') + '</span></span><span>ผู้ตรวจ <span class="u">' + esc($('rInspector').value) + '</span></span></div>' +
+      '<div class="wrap"><div class="lay">' + (S.layoutUrl ? '<img src="' + esc(location.origin + S.layoutUrl) + '">' : '<div style="border:1px solid #000;height:420px;display:flex;align-items:center;justify-content:center">แนบ Layout</div>') + '</div>' +
+      '<div style="flex:1"><table><thead><tr><th style="width:26px">ลำดับ</th><th style="width:40px">' + f.codeLabel + '</th><th>' + f.nameLabel + '</th>' + (f.hasOwner ? '<th style="width:70px">เจ้าภาพพื้นที่</th>' : '') +
+      '<th style="width:26px">✓<br>ตรง</th><th style="width:30px">✗<br>ไม่ตรง</th><th style="width:70px">เลขที่<br>ใบแจ้งแก้ไข</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div style="margin-top:6px">สรุป ตรวจทั้งหมด <b>' + S.items.length + '</b> จุด &nbsp; ตรง <b>' + ok + '</b> จุด &nbsp; ไม่ตรง <b>' + ng + '</b> จุด (ออกใบแจ้งแก้ไข ' + ng + ' ใบ)</div>' +
+      ($('rNote').value ? '<div>หมายเหตุ: ' + esc($('rNote').value) + '</div>' : '') +
+      '<div class="sig"><div><div>ผู้ตรวจ</div><div class="ln">' + esc($('rInspector').value) + '</div>ธุรการสนาม</div><div><div>รับทราบ</div><div class="ln">' + esc($('rPm').value) + '</div>ผู้จัดการโครงการ</div></div></div></div>';
+    openPrint(f.short + ' ' + S.code + ' รอบ ' + r.roundNo, body);
+  };
+  $('btnPrintNotice').onclick = function () {
+    var n = S.notice, cb = function (on) { return on ? '☑' : '☐'; };
+    var reasons = Array.prototype.map.call(document.querySelectorAll('#nReasons input:checked'), function (x) { return x.value; });
+    var col = function (k) {
+      return META.reasons[k].map(function (r) { return '<div>' + cb(n.kind === k && reasons.indexOf(r) >= 0) + ' ' + esc(r) + '</div>'; }).join('') +
+        '<div>' + cb(n.kind === k && $('nReasonOther').value) + ' อื่น ๆ ระบุ ' + (n.kind === k ? esc($('nReasonOther').value) : '') + '</div>';
+    };
+    var coop = (document.querySelector('input[name=coop]:checked') || {}).value || '';
+    var ph = function (list, label) {
+      return '<div class="col"><b>' + label + '</b>' + (list || []).map(function (p) { return '<img src="' + esc(location.origin + p.url) + '">'; }).join('') +
+        (list && list.length ? '<div style="font-size:10px">ถ่ายวันที่ ' + esc(thShort(list[0].at.slice(0, 10))) + ' · ผู้ถ่าย ' + esc(list[0].by || '') + '</div>' : '<div style="height:280px"></div>') + '</div>';
+    };
+    var body = '<div class="pg"><div class="hd"><h1 style="text-align:left">ใบแจ้งแก้ไขการจัดกองวัสดุ / การใช้พื้นที่ตาม SITE LAYOUT</h1><div class="no">เลขที่ ' + esc(n.noticeNo) + '</div></div>' +
+      '<div class="meta"><span>โครงการ <span class="u">' + esc(projName()) + '</span></span><span>วันที่ออกใบแจ้งแก้ไข <span class="u">' + esc(thShort(n.issuedDate)) + '</span></span></div>' +
+      '<div class="meta"><span>ประเภทการแจ้ง : ' + cb(n.kind === 'material') + ' การจัดกองวัสดุ (ธุรการขนส่ง) &nbsp; ' + cb(n.kind === 'area') + ' การใช้พื้นที่ (ธุรการทั่วไป)</span></div>' +
+      '<div class="meta"><span>วันที่พบ <span class="u">' + esc(thShort($('nFoundDate').value)) + '</span></span><span>เวลาที่พบ <span class="u">' + esc($('nFoundTime').value) + '</span></span><span>ตำแหน่งที่พบ <span class="u">' + esc($('nLocation').value) + '</span></span>' +
+      '<span>รหัสโซน/พื้นที่ที่พบ <span class="u">' + esc($('nZoneFound').value) + '</span> ที่ถูกต้องตาม Layout <span class="u">' + esc($('nZoneCorrect').value) + '</span></span></div>' +
+      '<table><thead><tr><th>รายการ - การจัดกองวัสดุ</th><th>รายการ - การใช้พื้นที่</th><th style="width:22%">บริษัท/ผรม./เจ้าภาพ · ผู้รับปฏิบัติ · ความร่วมมือ</th></tr></thead><tbody><tr>' +
+      '<td style="vertical-align:top;line-height:1.7">' + col('material') + '</td><td style="vertical-align:top;line-height:1.7">' + col('area') + '</td>' +
+      '<td style="vertical-align:top;line-height:1.9">บริษัท/ผรม./เจ้าภาพ: ' + esc($('nOwner').value) + '<br>ผู้รับปฏิบัติ: ' + esc($('nResp').value) + '<br>' + cb(coop === 'signed') + ' เซ็นรับทราบ<br>' + cb(coop === 'refused') + ' ไม่ยอมเซ็นรับทราบ<br>' +
+      '<b>กำหนดการแก้ไข</b><br>ภายใน ' + esc(thShort($('nDue').value)) + '<br><b>ติดตามผลการแก้ไข</b><br>' + cb(!!$('nFixed').value) + ' แก้ไขแล้ว ' + ($('nFixed').value ? esc(thShort($('nFixed').value)) : '') + '<br>ผู้ตรวจปิดงาน: ' + esc(n.status === 'closed' ? n.closedBy : '') + '</td></tr></tbody></table>' +
+      '<div class="box">รายละเอียดเพิ่มเติม: ' + esc($('nDetail').value) + '<br><span style="font-size:10px">* แนบรูป Before / After ไว้ด้านหลังใบนี้</span></div>' +
+      '<div class="sig"><div><div class="ln"></div>ผู้แจ้งแก้ไข (ธุรการสนาม)</div><div><div class="ln"></div>ผู้ถูกแจ้งเตือน / ผู้รับผิดชอบแก้ไข (เจ้าภาพพื้นที่)</div><div><div class="ln"></div>ผู้จัดการโครงการ</div></div></div>' +
+      '<div><div class="hd"><h1 style="text-align:left">รูปประกอบใบแจ้งแก้ไขการจัดกองวัสดุ / การใช้พื้นที่ตาม SITE LAYOUT (ด้านหลัง)</h1><div class="no">เลขที่ ' + esc(n.noticeNo) + '</div></div>' +
+      '<div class="meta"><span>โครงการ <span class="u">' + esc(projName()) + '</span></span><span>รหัสโซน/พื้นที่ที่พบ <span class="u">' + esc($('nZoneFound').value) + '</span> ที่ถูกต้องตาม Layout <span class="u">' + esc($('nZoneCorrect').value) + '</span></span></div>' +
+      '<div class="phs">' + ph(n.beforePhotos, 'BEFORE (ก่อนแก้ไข)') + ph(n.afterPhotos, 'AFTER (หลังแก้ไข)') + '</div>' +
+      '<div class="box">ผลการตรวจปิดงาน: ' + cb(n.status === 'closed') + ' ผ่าน (ตรงตาม Layout แล้ว) &nbsp; ' + cb(n.closeResult === 'fail' && n.status !== 'closed') + ' ไม่ผ่าน ต้องแก้ไขเพิ่ม ระบุ ' + esc(n.closeResult === 'fail' ? n.closeNote : '') +
+      '<div style="text-align:right">ผู้ตรวจปิดงาน ' + esc(n.closedBy || '______________') + ' วันที่ ' + esc(n.closedDate ? thShort(n.closedDate) : '____/____/______') + '</div></div></div>';
+    openPrint(n.noticeNo, body);
+  };
+
+  // ---------------- KPI ----------------
+  $('kFrom').onchange = $('kTo').onchange = $('kAll').onchange = loadKpi;
+  function loadKpi() {
+    $('kpiBody').innerHTML = '<div class="empty">กำลังคำนวณ...</div>';
+    var req = { from: $('kFrom').value, to: $('kTo').value }; if (!$('kAll').checked) req.code = S.code;
+    call('SL_kpi', req).then(function (r) {
+      var h = '';
+      r.kinds.forEach(function (k) {
+        var f = META.forms[k.kind];
+        h += '<h3 style="margin:18px 0 4px;font-size:15px;">ตรวจ' + esc(f.short) + ' (' + esc(f.role) + ')</h3>';
+        if (!k.projects.length) { h += '<div class="note">ยังไม่มีโครงการที่ตั้งจุดตรวจไว้</div>'; return; }
+        h += '<div class="stats"><div class="stat ' + (k.pct >= 100 ? 'hl' : 'low') + '"><b>' + (k.pct == null ? '-' : k.pct + '%') + '</b><span>KPI การเข้าตรวจ</span></div>' +
+          '<div class="stat"><b>' + k.counted + ' / ' + k.required + '</b><span>ครั้งที่ตรวจ / ครั้งทั้งหมด</span></div>' +
+          '<div class="stat"><b>' + k.notices + '</b><span>ใบแจ้งแก้ไขที่ออก</span></div>' +
+          '<div class="stat"><b>' + k.closed + '</b><span>ปิดงานแล้ว</span></div>' +
+          '<div class="stat ' + (k.overdue ? 'low' : '') + '"><b>' + k.overdue + '</b><span>ค้างเกินกำหนด</span></div></div>';
+        h += '<div style="overflow-x:auto"><table class="rep"><thead><tr><th>โครงการ</th>' + r.months.map(function (m) { return '<th>' + esc(MONTH_TH[+m.slice(5) - 1] + ' ' + String(+m.slice(0, 4) + 543).slice(2)) + '</th>'; }).join('') +
+          '<th>รวม</th><th>KPI %</th><th>ใบแจ้ง (ปิด/ทั้งหมด)</th></tr></thead><tbody>' +
+          k.projects.map(function (p) {
+            return '<tr><td><b>' + esc(p.name) + '</b></td>' + p.months.map(function (m) {
+              if (m.before) return '<td class="note">ยังไม่เริ่ม</td>';
+              return '<td class="' + (m.done >= m.required ? 'm-ok' : m.current ? 'm-cur' : 'm-low') + '">' + m.done + '/' + m.required + '</td>';
+            }).join('') + '<td>' + p.counted + '/' + p.required + '</td><td><b>' + (p.pct == null ? '-' : p.pct + '%') + '</b></td><td>' + p.closed + '/' + p.notices + (p.overdue ? ' <span class="pill bad">เกินกำหนด ' + p.overdue + '</span>' : '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      });
+      $('kpiBody').innerHTML = h;
+    }).catch(function (e) { $('kpiBody').innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+  }
+
+  // ---------------- ตั้งค่า ----------------
+  function loadSetup() {
+    $('setupTitle').textContent = 'จุดตรวจ' + form().short + ' — ' + projName();
+    msg('ptMsg', ''); msg('layMsg', '');
+    call('SL_setup', S.kind, S.code).then(function (r) { S.setupRows = r.points; S.layoutUrl = r.layoutUrl; renderSetup(); renderSetupLayout(); });
+  }
+  function renderSetupLayout() {
+    $('setupLayout').innerHTML = S.layoutUrl ? '<img src="' + esc(S.layoutUrl) + '">' : '<span class="note">ยังไม่มีรูป</span>';
+    var im = $('setupLayout').querySelector('img'); if (im) im.onclick = function () { zoom(S.layoutUrl); };
+  }
+  function renderSetup() {
+    var own = form().hasOwner;
+    $('ptTbl').innerHTML = '<thead><tr><th style="width:90px">' + form().codeLabel + '</th><th>' + form().nameLabel + '</th><th style="width:16%">หัวข้อ</th>' + (own ? '<th style="width:18%">เจ้าภาพพื้นที่</th>' : '') + '<th style="width:96px"></th></tr></thead><tbody>' +
+      (S.setupRows.map(function (r, i) {
+        return '<tr data-i="' + i + '"><td><input data-k="code" value="' + esc(r.code) + '"></td><td><input data-k="name" value="' + esc(r.name) + '"></td><td><input data-k="section" value="' + esc(r.section) + '"></td>' +
+          (own ? '<td><input data-k="owner" value="' + esc(r.owner) + '"></td>' : '') +
+          '<td><button class="xbtn" data-m="-1">↑</button><button class="xbtn" data-m="1">↓</button><button class="xbtn" data-m="x">×</button></td></tr>';
+      }).join('') || '<tr><td colspan="5" class="empty">ยังไม่มีจุดตรวจ — กด "ใช้จุดตรวจตั้งต้นจากแบบฟอร์ม" หรือ "+ เพิ่มจุด"</td></tr>') + '</tbody>';
+  }
+  $('ptTbl').addEventListener('input', function (e) { var k = e.target.dataset.k, tr = e.target.closest('tr'); if (k && tr) { S.setupRows[+tr.dataset.i][k] = e.target.value; dirty = true; } });
+  $('ptTbl').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    var i = +b.closest('tr').dataset.i, m = b.dataset.m, a = S.setupRows;
+    if (m === 'x') a.splice(i, 1); else { var j = i + (+m); if (j < 0 || j >= a.length) return; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    dirty = true; renderSetup();
+  });
+  $('btnPtAdd').onclick = function () {
+    var last = S.setupRows[S.setupRows.length - 1];
+    S.setupRows.push({ code: '', name: '', section: last ? last.section : '', owner: '' }); dirty = true; renderSetup();
+    var ins = $('ptTbl').querySelectorAll('input[data-k="code"]'); ins[ins.length - 1].focus();
+  };
+  $('btnTpl').onclick = function () {
+    if (S.setupRows.length && !confirm('แทนที่จุดตรวจปัจจุบันด้วยจุดตั้งต้นจากแบบฟอร์ม? (ยังไม่บันทึกจนกว่าจะกด "บันทึกจุดตรวจ")')) return;
+    call('SL_template', S.kind).then(function (list) {
+      var old = S.setupRows.slice();
+      S.setupRows = list.map(function (t) { var i = old.findIndex(function (o) { return o.code === t.code; }); if (i >= 0) { t.id = old[i].id; t.owner = old[i].owner; old.splice(i, 1); } return t; });
+      dirty = true; renderSetup(); msg('ptMsg', 'ใส่จุดตั้งต้นแล้ว ' + list.length + ' จุด — แก้ให้ตรงกับ Layout ของโครงการ แล้วกด "บันทึกจุดตรวจ"', 'ok');
+    });
+  };
+  $('btnPtSave').onclick = function () {
+    call('SL_savePoints', S.kind, S.code, S.setupRows).then(function (r) { dirty = false; loadSetup(); setTimeout(function () { msg('ptMsg', '✓ บันทึกแล้ว ' + r.count + ' จุด', 'ok'); }, 300); })
+      .catch(function (e) { msg('ptMsg', e.message, 'err'); });
+  };
+  $('btnLayoutUp').onclick = function () { $('layoutIn').value = ''; $('layoutIn').click(); };
+  $('layoutIn').onchange = function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    msg('layMsg', 'กำลังอัปโหลด...');
+    compress(f, 2400).then(function (d) { return call('SL_saveLayout', S.kind, S.code, d); })
+      .then(function (r) { S.layoutUrl = r.layoutUrl; renderSetupLayout(); msg('layMsg', '✓ อัปโหลดแล้ว', 'ok'); })
+      .catch(function (e) { msg('layMsg', e.message, 'err'); });
+  };
+  $('btnLayoutDel').onclick = function () {
+    if (!S.layoutUrl || !confirm('ลบรูป Layout ของโครงการนี้?')) return;
+    call('SL_saveLayout', S.kind, S.code, '').then(function () { S.layoutUrl = ''; renderSetupLayout(); msg('layMsg', 'ลบแล้ว', 'ok'); });
+  };
+</script>
+</body>
+</html>

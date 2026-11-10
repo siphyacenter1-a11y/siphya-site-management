@@ -38,6 +38,7 @@ app.get('/transport', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/waste', (req, res) => res.sendFile(path.join(__dirname, 'public', 'waste.html')));
 app.get('/route', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route.html'))); // ฟอร์มขอจองรถเดิม (เก็บไว้ก่อน)
 app.get('/route-plan', (req, res) => res.sendFile(path.join(__dirname, 'public', 'route-plan.html'))); // บันทึกการเปลี่ยนแผนเดินรถ (admin)
+app.get('/site-layout', (req, res) => res.sendFile(path.join(__dirname, 'public', 'site-layout.html'))); // เช็คลิสต์ตาม SITE LAYOUT (ธุรการ)
 app.get('/daily-plan', (req, res) => res.sendFile(path.join(__dirname, 'public', 'daily-plan.html'))); // แผนประจำวัน FM-GM-01-07 / 01-03 (ธุรการ)
 app.get('/checklist', (req, res) => res.sendFile(path.join(__dirname, 'public', 'checklist.html')));
 app.get('/npo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'npo.html')));

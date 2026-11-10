@@ -337,6 +337,19 @@
         <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
       </a>
 
+      <!-- 6. เช็คลิสต์ตาม SITE LAYOUT (การใช้พื้นที่ / การจัดกองวัสดุ) + ใบแจ้งแก้ไข -->
+      <a class="card" href="/site-layout" style="--accent:#2F7D6D;">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h7v12M10 14h11M15 3v6"/></svg>
+        </div>
+        <h2>
+          <span>เช็คลิสต์ตาม Site Layout</span>
+          <span class="card-badge" id="bSiteLayout">...</span>
+        </h2>
+        <p>ตรวจการใช้พื้นที่ / การจัดกองวัสดุ เดือนละ 4 ครั้ง จุดที่ไม่ตรงออกใบแจ้งแก้ไข + รูป Before/After</p>
+        <span class="enter">เข้าใช้งาน <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+
     </div>
   </main>
 
@@ -419,6 +432,7 @@
           document.getElementById('bWaste').textContent = sys.waste.badge;
           document.getElementById('bRoute').textContent = sys.route.badge;
           if (sys.dailyPlan) document.getElementById('bDailyPlan').textContent = sys.dailyPlan.badge;
+          if (sys.siteLayout) document.getElementById('bSiteLayout').textContent = sys.siteLayout.badge;
           document.getElementById('bChecklist').textContent = sys.checklist.badge;
         }
       } catch (err) {

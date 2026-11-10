@@ -442,7 +442,7 @@ async function summary() {
 }
 
 module.exports = {
-  checkItems, deadlineOf, prevWorkday, summary, FORMS,
+  checkItems, deadlineOf, prevWorkday, summary, FORMS, projectList,
   functions: {
     DPLAN_meta, DPLAN_resources, DPLAN_template, DPLAN_saveResources, DPLAN_month, DPLAN_get,
     DPLAN_previous, DPLAN_save, DPLAN_setExcluded, DPLAN_delete, DPLAN_kpi,

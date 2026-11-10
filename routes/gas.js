@@ -20,11 +20,12 @@ const documents = require('../services/documents');
 const usersAdmin = require('../services/users_admin');
 const routePlan = require('../services/route_plan');
 const dailyPlan = require('../services/daily_plan');
+const siteLayout = require('../services/site_layout');
 
 // บัญชี "ลงนามอย่างเดียว" (role signer): ดูแดชบอร์ดเช็คลิสต์ ลงนาม และเปิด PDF เท่านั้น
 const SIGNER_ALLOWED = new Set(['CHECKLIST_getSubmissions', 'CHECKLIST_signSubmission', 'CHECKLIST_signMany', 'CHECKLIST_myRights', 'CHECKLIST_getPrintPdf']);
 
-const ALLOWED = Object.assign({}, checklist.functions, waste.functions, route.functions, transport.functions, transportDocs.functions, transportKpi.functions, documents.functions, usersAdmin.functions, routePlan.functions, dailyPlan.functions);
+const ALLOWED = Object.assign({}, checklist.functions, waste.functions, route.functions, transport.functions, transportDocs.functions, transportKpi.functions, documents.functions, usersAdmin.functions, routePlan.functions, dailyPlan.functions, siteLayout.functions);
 
 // รับทั้ง application/json และ text/plain (gas-shim ส่งเป็น text/plain เหมือนตอนใช้ Apps Script)
 router.use(express.text({ type: 'text/plain', limit: '30mb' }));
