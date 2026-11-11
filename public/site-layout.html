@@ -578,7 +578,7 @@
   $('btnReopen').onclick = function () { if (confirm('เปิดใบแจ้งนี้ใหม่ (กลับเป็นค้างแก้)?')) saveNotice({ reopen: true }); };
 
   // ---------------- พิมพ์ ----------------
-  var PRINT_CSS = '@page{size:A4 landscape;margin:8mm}body{font-family:Sarabun,Tahoma,sans-serif;font-size:11px;color:#000;margin:0}' +
+  var PRINT_CSS = '@page{size:A4 landscape;margin:8mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Sarabun,Tahoma,sans-serif;font-size:11px;color:#000;margin:0}' +
     'h1{font-size:15px;margin:0;text-align:center}.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.no{border:1px solid #000;padding:2px 6px;font-size:10px;white-space:nowrap}' +
     '.meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin:6px 0;font-size:11.5px}.u{border-bottom:1px dotted #000;padding:0 4px}' +
     'table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:2px 4px;vertical-align:middle}th{background:#eee;font-size:10px}' +
