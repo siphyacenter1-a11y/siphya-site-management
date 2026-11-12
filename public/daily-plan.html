@@ -552,11 +552,11 @@
   function renderAdminDel() {
     var list = S.monthList || [];
     $('delAll').checked = false;
-    $('adminDelTbl').innerHTML = '<thead><tr><th style="width:30px"></th><th>วันที่ของแผน</th><th>สถานะ</th><th>ผลตรวจ</th><th>รายการ</th><th>ส่งโดย / เวลา</th></tr></thead><tbody>' +
+    $('adminDelTbl').innerHTML = '<thead><tr><th style="width:30px"></th><th style="text-align:left">วันที่ของแผน</th><th style="text-align:center">สถานะ</th><th style="text-align:center">ผลตรวจ</th><th style="text-align:center">รายการ</th><th style="text-align:left">ส่งโดย / เวลา</th></tr></thead><tbody>' +
       (list.map(function (p) {
         var st = p.status === 'submitted' ? (p.excluded ? 'ส่งแล้ว · ไม่นับ' : 'ส่งแล้ว') : 'ร่าง';
         var res = p.status !== 'submitted' ? '-' : p.complete ? '<span style="color:var(--green)">ครบ</span>' : '<span style="color:var(--red)">ไม่ครบ</span>';
-        return '<tr><td><input type="checkbox" class="delChk" value="' + p.id + '"></td><td style="text-align:left">' + esc(thDate(p.planDate)) + ' (' + DOW_TH[dowOf(p.planDate)] + ')</td><td>' + st + '</td><td>' + res + '</td><td>' + p.itemCount + '</td><td>' + esc(p.submittedBy ? p.submittedBy + ' ' + p.submittedText : '-') + '</td></tr>';
+        return '<tr><td><input type="checkbox" class="delChk" value="' + p.id + '"></td><td style="text-align:left">' + esc(thDate(p.planDate)) + ' (' + DOW_TH[dowOf(p.planDate)] + ')</td><td style="text-align:center">' + st + '</td><td style="text-align:center">' + res + '</td><td style="text-align:center">' + p.itemCount + '</td><td style="text-align:left">' + esc(p.submittedBy ? p.submittedBy + ' ' + p.submittedText : '-') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">ไม่มีแผนในเดือนนี้</td></tr>') + '</tbody>';
   }
   $('btnDelToggle').onclick = function () {
