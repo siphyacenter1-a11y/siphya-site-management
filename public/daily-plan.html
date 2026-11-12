@@ -154,6 +154,22 @@
         </div>
         <div class="note">เขียว = ส่งแล้ว ข้อมูลครบ · แดง = ส่งแล้ว ข้อมูลไม่ครบ · เหลือง = ร่าง (ยังไม่ส่ง) · เทา = ไม่นับ · กดที่วันเพื่อเปิด</div>
         <div class="days" id="monthDays"></div>
+        <div class="hidden" id="adminDelWrap" style="margin-top:12px; border-top:1px solid var(--line-soft); padding-top:10px;">
+          <div class="row">
+            <b class="grow" style="font-size:13.5px;">🗑 ลบแผน (admin)</b>
+            <button class="btn2" id="btnDelToggle">เลือกแผนที่จะลบ</button>
+          </div>
+          <div class="hidden" id="adminDelBox">
+            <div class="note" style="margin:6px 0;">ลบได้ทุกสถานะ (ร่าง / ส่งแล้ว) — ลบแล้วแผนและรายการในแผนหายถาวร และไม่ถูกนับใน KPI · ถ้าแค่ไม่อยากให้นับ KPI ใช้ "ไม่นับใน KPI" แทน</div>
+            <div style="overflow-x:auto;"><table class="rep" id="adminDelTbl"></table></div>
+            <div class="row" style="margin-top:8px;">
+              <label class="note"><input type="checkbox" id="delAll"> เลือกทั้งหมด</label>
+              <div class="grow"></div>
+              <button class="btn1" id="btnDelMany" style="background:var(--red);">ลบแผนที่เลือก</button>
+            </div>
+            <div class="msg" id="delMsg"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -527,8 +543,39 @@
         h += '<div class="day ' + cls + (ds === $('planDate').value ? ' cur' : '') + '" data-d="' + ds + '"><b>' + d + '</b>' + sub + '</div>';
       }
       $('monthDays').innerHTML = h;
+      S.monthList = list;
+      $('adminDelWrap').classList.toggle('hidden', !META.isAdmin);
+      if (META.isAdmin) renderAdminDel();
     });
   }
+  // ---------- ลบแผน (admin) ----------
+  function renderAdminDel() {
+    var list = S.monthList || [];
+    $('delAll').checked = false;
+    $('adminDelTbl').innerHTML = '<thead><tr><th style="width:30px"></th><th>วันที่ของแผน</th><th>สถานะ</th><th>ผลตรวจ</th><th>รายการ</th><th>ส่งโดย / เวลา</th></tr></thead><tbody>' +
+      (list.map(function (p) {
+        var st = p.status === 'submitted' ? (p.excluded ? 'ส่งแล้ว · ไม่นับ' : 'ส่งแล้ว') : 'ร่าง';
+        var res = p.status !== 'submitted' ? '-' : p.complete ? '<span style="color:var(--green)">ครบ</span>' : '<span style="color:var(--red)">ไม่ครบ</span>';
+        return '<tr><td><input type="checkbox" class="delChk" value="' + p.id + '"></td><td style="text-align:left">' + esc(thDate(p.planDate)) + ' (' + DOW_TH[dowOf(p.planDate)] + ')</td><td>' + st + '</td><td>' + res + '</td><td>' + p.itemCount + '</td><td>' + esc(p.submittedBy ? p.submittedBy + ' ' + p.submittedText : '-') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">ไม่มีแผนในเดือนนี้</td></tr>') + '</tbody>';
+  }
+  $('btnDelToggle').onclick = function () {
+    var box = $('adminDelBox'); box.classList.toggle('hidden');
+    this.textContent = box.classList.contains('hidden') ? 'เลือกแผนที่จะลบ' : 'ปิด';
+    msg('delMsg', '');
+  };
+  $('delAll').onchange = function () { var on = this.checked; document.querySelectorAll('.delChk').forEach(function (x) { x.checked = on; }); };
+  $('btnDelMany').onclick = function () {
+    var ids = Array.prototype.map.call(document.querySelectorAll('.delChk:checked'), function (x) { return +x.value; });
+    if (!ids.length) { msg('delMsg', 'ยังไม่ได้เลือกแผน', 'err'); return; }
+    var f = form();
+    if (!confirm('ลบ ' + f.formNo + ' ' + f.short + ' ของโครงการนี้ ' + ids.length + ' แผน?\nลบแล้วกู้คืนไม่ได้')) return;
+    $('btnDelMany').disabled = true;
+    call('DPLAN_deleteMany', ids).then(function (r) {
+      msg('delMsg', '✓ ลบแล้ว ' + r.deleted + ' แผน', 'ok');
+      if (S.plan && ids.indexOf(S.plan.id) >= 0) { dirty = false; loadPlan(); } else loadMonth();
+    }).catch(function (e) { msg('delMsg', e.message, 'err'); }).then(function () { $('btnDelMany').disabled = false; });
+  };
   $('monthDays').onclick = function (e) {
     var d = e.target.closest('.day'); if (!d || !confirmLeave()) return;
     $('planDate').value = d.dataset.d; loadPlan();

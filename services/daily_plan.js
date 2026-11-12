@@ -14,6 +14,7 @@
 //   DPLAN_setExcluded(id, excluded, reason)      ไม่นับใน KPI
 //   DPLAN_review(req)                            ผู้ตรวจปรับผลเป็น "ไม่สมบูรณ์" (KPI ใช้ผลหลังปรับ)
 //   DPLAN_delete(id)                             ลบ (ร่าง = ธุรการลบได้ · ส่งแล้ว = admin เท่านั้น)
+//   DPLAN_deleteMany(ids)                        ลบหลายแผน (admin เท่านั้น)
 //   DPLAN_kpi({ from, to, code })                KPI แยกฟอร์ม × โครงการ × เดือน
 //
 // KPI = (จำนวนแผนที่ข้อมูลครบถ้วน ÷ จำนวนแผนทั้งหมดที่จัดทำ) × 100
@@ -471,6 +472,16 @@ async function DPLAN_kpi(req) {
   return { from: from.slice(0, 7), to: toM, rows: list, incomplete, fieldCount, reviewed };
 }
 
+// ลบหลายแผนพร้อมกัน (admin เท่านั้น — ใช้ล้างแผนทดลอง/แผนที่ทำผิด)
+async function DPLAN_deleteMany(ids) {
+  requireStaff(this);
+  if (!isAdmin(this)) throw new UserError('ลบหลายแผนได้เฉพาะผู้ดูแลระบบ (admin)');
+  const list = (Array.isArray(ids) ? ids : []).map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 400);
+  if (!list.length) throw new UserError('ยังไม่ได้เลือกแผน');
+  const r = await sitePool.query('DELETE FROM dplan_plans WHERE id = ANY($1::int[])', [list]);
+  return { ok: true, deleted: r.rowCount };
+}
+
 // สำหรับการ์ดในหน้า /admin
 async function summary() {
   const r = await sitePool.query(`SELECT COUNT(*)::int AS n FROM dplan_plans WHERE status = 'submitted'`);
@@ -481,6 +492,6 @@ module.exports = {
   checkItems, deadlineOf, prevWorkday, summary, FORMS,
   functions: {
     DPLAN_meta, DPLAN_resources, DPLAN_template, DPLAN_saveResources, DPLAN_month, DPLAN_get,
-    DPLAN_previous, DPLAN_save, DPLAN_setExcluded, DPLAN_review, DPLAN_delete, DPLAN_kpi,
+    DPLAN_previous, DPLAN_save, DPLAN_setExcluded, DPLAN_review, DPLAN_delete, DPLAN_deleteMany, DPLAN_kpi,
   },
 };
