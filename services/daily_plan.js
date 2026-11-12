@@ -12,12 +12,14 @@
 //   DPLAN_previous(kind, code, date)             รายการของแผนล่าสุดก่อนวันนั้น (ปุ่ม "คัดลอกจากแผนก่อน")
 //   DPLAN_save(req)                              บันทึกร่าง / ส่งแผน / แก้ไขหลังส่ง
 //   DPLAN_setExcluded(id, excluded, reason)      ไม่นับใน KPI
+//   DPLAN_review(req)                            ผู้ตรวจปรับผลเป็น "ไม่สมบูรณ์" (KPI ใช้ผลหลังปรับ)
 //   DPLAN_delete(id)                             ลบ (ร่าง = ธุรการลบได้ · ส่งแล้ว = admin เท่านั้น)
 //   DPLAN_kpi({ from, to, code })                KPI แยกฟอร์ม × โครงการ × เดือน
 //
 // KPI = (จำนวนแผนที่ข้อมูลครบถ้วน ÷ จำนวนแผนทั้งหมดที่จัดทำ) × 100
 //   - "จัดทำ" = กดส่งแผนแล้ว · ร่างที่ยังไม่ส่งไม่นับ · แผนที่ติ๊ก "ไม่นับ" ไม่อยู่ในตัวหาร
 //   - ครบถ้วน = ตรวจอัตโนมัติตอนส่งครั้งแรก แล้วเก็บผลไว้ — แก้ไข/เพิ่มรายการทีหลังไม่เปลี่ยนผล KPI
+//     หัวหน้างาน / ผู้ตรวจ ตรวจทานใบพิมพ์แล้วปรับเป็น "ไม่สมบูรณ์" ได้ (เช่น ข้อมูลไม่ชัด) — KPI ใช้ผลหลังปรับ
 //   - รถ:        ทุกแถวต้องมี ทะเบียนรถ · ประเภทรถ · จุดกอง/จุดลงของ · เวลา
 //   - เครื่องจักร: ทุกแถวต้องมี เครื่องจักร · ช่วงเวลา · งานที่ทำ · ผู้ขอใช้ (ลิฟท์ไม่มีช่องผู้ขอใช้ในฟอร์ม → ไม่บังคับ)
 //   - เวลาที่ส่ง (ทัน 16:00 ของวันทำงานก่อนหน้าหรือไม่) แสดงประกอบ ไม่อยู่ในสูตร
@@ -190,9 +192,15 @@ const PLAN_COLS = `id, kind, project_code AS "projectCode", TO_CHAR(plan_date, '
   TO_CHAR(ot_date, 'YYYY-MM-DD') AS "otDate", status, prepared_by AS "preparedBy", pm_name AS "pmName",
   submitted_at AS "submittedAt", TO_CHAR(submitted_at AT TIME ZONE '${TZ}', 'DD/MM/') || (EXTRACT(YEAR FROM submitted_at AT TIME ZONE '${TZ}')::int + 543) || TO_CHAR(submitted_at AT TIME ZONE '${TZ}', ' HH24:MI') AS "submittedText",
   submitted_by AS "submittedBy", complete, missing, excluded, exclude_reason AS "excludeReason", note, edit_count AS "editCount",
+  review_incomplete AS "reviewIncomplete", review_fields AS "reviewFields", review_note AS "reviewNote", reviewer,
+  reviewer_position AS "reviewerPosition", TO_CHAR(reviewed_at AT TIME ZONE '${TZ}', 'YYYY-MM-DD') AS "reviewedDate",
+  review_entered_by AS "reviewEnteredBy",
   updated_by AS "updatedBy", TO_CHAR(updated_at AT TIME ZONE '${TZ}', 'DD/MM/') || (EXTRACT(YEAR FROM updated_at AT TIME ZONE '${TZ}')::int + 543) || TO_CHAR(updated_at AT TIME ZONE '${TZ}', ' HH24:MI') AS "updatedText"`;
 
 function withOnTime(plan, hol) {
+  // ผลตรวจที่ใช้จริง = ระบบตรวจตอนส่ง แล้วถ้าผู้ตรวจปรับเป็นไม่สมบูรณ์ ใช้ผลของผู้ตรวจ
+  plan.systemComplete = plan.complete;
+  if (plan.complete != null) plan.complete = !!plan.complete && !plan.reviewIncomplete;
   const dl = deadlineOf(plan.kind, plan.planDate, plan.otDate, hol);
   plan.deadlineDate = dl.date;
   plan.onTime = plan.submittedAt ? new Date(plan.submittedAt) <= dl.at : null;
@@ -381,6 +389,30 @@ async function DPLAN_setExcluded(id, excluded, reason) {
   return { ok: true };
 }
 
+// ผลตรวจทานของหัวหน้างาน / ผู้ตรวจ (กรอกตามที่ผู้ตรวจติ๊ก/เซ็นในใบพิมพ์)
+//   req = { id, incomplete: bool, fields: ['plate', ...], note, reviewer, position }
+//   ปรับได้แค่ทางเดียว: จาก "สมบูรณ์" → "ไม่สมบูรณ์" (ช่องที่ระบบเห็นว่าว่าง ผู้ตรวจปรับเป็นครบไม่ได้)
+async function DPLAN_review(req) {
+  requireStaff(this);
+  req = req || {};
+  const p = (await sitePool.query('SELECT kind, status FROM dplan_plans WHERE id = $1', [Number(req.id) || 0])).rows[0];
+  if (!p) throw new UserError('ไม่พบแผนนี้');
+  if (p.status !== 'submitted') throw new UserError('บันทึกผลตรวจได้เฉพาะแผนที่ส่งแล้ว');
+  const on = !!req.incomplete;
+  const allowed = p.kind === 'vehicle' ? ['plate', 'type', 'location', 'time'] : ['machine', 'mtime', 'job', 'requester'];
+  const fields = (Array.isArray(req.fields) ? req.fields : []).filter(f => allowed.includes(f));
+  const note = str(req.note, 500), reviewer = str(req.reviewer, 100);
+  if (on) {
+    if (!fields.length && !note) throw new UserError('ระบุช่องที่ขาด / ไม่ชัด หรือรายละเอียด อย่างน้อย 1 อย่าง');
+    if (!reviewer) throw new UserError('กรุณาใส่ชื่อผู้ตรวจ (ตามที่ลงชื่อในใบ)');
+  }
+  await sitePool.query(
+    `UPDATE dplan_plans SET review_incomplete = $2, review_fields = $3::jsonb, review_note = $4, reviewer = $5, reviewer_position = $6,
+            reviewed_at = CASE WHEN $2 THEN NOW() ELSE NULL END, review_entered_by = $7, updated_by = $7, updated_at = NOW() WHERE id = $1`,
+    [Number(req.id), on, JSON.stringify(on ? fields : []), on ? note : '', on ? reviewer : '', on ? str(req.position, 60) : '', byName(this)]);
+  return { ok: true };
+}
+
 async function DPLAN_delete(id) {
   requireStaff(this);
   const p = (await sitePool.query('SELECT status FROM dplan_plans WHERE id = $1', [Number(id) || 0])).rows[0];
@@ -427,12 +459,16 @@ async function DPLAN_kpi(req) {
   }));
   // แผนที่ข้อมูลไม่ครบ (ไว้ดูว่าขาดอะไรบ่อย)
   const incomplete = rows.filter(p => p.status === 'submitted' && !p.excluded && p.complete === false)
-    .map(p => ({ id: p.id, kind: p.kind, code: p.projectCode, planDate: p.planDate, missing: p.missing || [] }));
+    .map(p => ({ id: p.id, kind: p.kind, code: p.projectCode, planDate: p.planDate, missing: p.missing || [],
+      reviewIncomplete: !!p.reviewIncomplete, reviewFields: p.reviewFields || [] }));
   const fieldCount = {};
-  incomplete.forEach(p => p.missing.forEach(m => m.fields.forEach(f => {
-    const k = p.kind + '|' + f; fieldCount[k] = (fieldCount[k] || 0) + 1;
-  })));
-  return { from: from.slice(0, 7), to: toM, rows: list, incomplete, fieldCount };
+  incomplete.forEach(p => {
+    const fs = new Set(p.reviewFields);
+    p.missing.forEach(m => m.fields.forEach(f => fs.add(f)));
+    fs.forEach(f => { const k = p.kind + '|' + f; fieldCount[k] = (fieldCount[k] || 0) + 1; });
+  });
+  const reviewed = rows.filter(p => p.status === 'submitted' && !p.excluded && p.reviewIncomplete && p.systemComplete).length;
+  return { from: from.slice(0, 7), to: toM, rows: list, incomplete, fieldCount, reviewed };
 }
 
 // สำหรับการ์ดในหน้า /admin
@@ -445,6 +481,6 @@ module.exports = {
   checkItems, deadlineOf, prevWorkday, summary, FORMS,
   functions: {
     DPLAN_meta, DPLAN_resources, DPLAN_template, DPLAN_saveResources, DPLAN_month, DPLAN_get,
-    DPLAN_previous, DPLAN_save, DPLAN_setExcluded, DPLAN_delete, DPLAN_kpi,
+    DPLAN_previous, DPLAN_save, DPLAN_setExcluded, DPLAN_review, DPLAN_delete, DPLAN_kpi,
   },
 };

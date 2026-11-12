@@ -64,3 +64,13 @@ CREATE TABLE IF NOT EXISTS dplan_items (
   sort_order     INT NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS dplan_items_plan_idx ON dplan_items (plan_id, sort_order);
+
+-- v2 (12 พ.ย. 2569): หัวหน้างาน / ผู้ตรวจ ตรวจทาน — ปรับผลเป็น "ไม่สมบูรณ์" ได้ (ปรับให้ดีขึ้นไม่ได้)
+--   KPI ใช้ผลหลังปรับ: ครบถ้วน = complete AND NOT review_incomplete
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS review_incomplete BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS review_fields     JSONB DEFAULT '[]'::jsonb;  -- ช่องที่ขาด/ไม่ชัด ตามผู้ตรวจ
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS review_note       TEXT DEFAULT '';             -- รายละเอียดที่ผู้ตรวจระบุ
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewer          TEXT DEFAULT '';             -- ชื่อผู้ตรวจ (เช่น PE)
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewer_position TEXT DEFAULT '';
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewed_at       TIMESTAMPTZ;
+ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS review_entered_by TEXT;                        -- บัญชีที่กดบันทึกผลตรวจ
