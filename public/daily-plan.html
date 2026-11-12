@@ -577,12 +577,18 @@
     var checks = v
       ? [['plate', 'ระบุทะเบียนรถครบทุกคัน'], ['type', 'ระบุประเภทรถครบทุกคัน'], ['location', 'ระบุจุดกอง / จุดลงของครบและชัดเจนทุกคัน'], ['time', 'ระบุเวลาลงของครบและชัดเจนทุกคัน']]
       : [['machine', 'ระบุเครื่องจักรครบทุกรายการ'], ['mtime', 'ระบุช่วงเวลาครบและชัดเจนทุกรายการ'], ['job', 'ระบุงานที่ทำครบทุกรายการ'], ['requester', 'ระบุผู้ขอใช้ครบทุกรายการ']];
-    var check = '<div class="chk"><b>ส่วนตรวจสอบความสมบูรณ์ของแผน</b> (ระบบตรวจอัตโนมัติตอนส่งแผน)<div class="g">' +
+    // ช่อง "ข้อมูลที่ขาด / ไม่ชัด" ตามแบบฟอร์ม
+    var missBoxes = v
+      ? [['plate', 'ทะเบียนรถ'], ['type', 'ประเภทรถ'], ['location', 'จุดกอง / จุดลงของ'], ['time', 'เวลาลงของ']]
+      : [['machine', 'เครื่องจักร'], ['mtime', 'ช่วงเวลา'], ['job', 'งานที่ทำ'], ['requester', 'ผู้ขอใช้']];
+    var check = '<div class="chk"><b>ส่วนตรวจสอบความสมบูรณ์ของแผน</b> (ระบบตรวจตอนธุรการกดส่งแผน · หัวหน้างาน / ผู้ตรวจ ตรวจทานและลงนาม)<div class="g">' +
       checks.map(function (c) { return '<span>' + box(submitted && !mf[c[0]]) + ' ' + c[1] + '</span>'; }).join('') + '</div>' +
-      '<div>เวลาที่ส่งแผน ' + (submitted ? esc(p.submittedText) + ' น.' : '...............') + ' &nbsp; ' + box(submitted && p.onTime) + ' ทันกำหนด (ก่อน 16:00 น.) &nbsp; ' + box(submitted && !p.onTime) + ' ไม่ทันกำหนด' +
-      (p.excluded ? ' &nbsp; ☑ ไม่นับ : ' + esc(p.excludeReason) : '') + '</div>' +
-      '<div>ผลการตรวจ : ' + box(submitted && p.complete) + ' แผนสมบูรณ์ &nbsp; ' + box(submitted && !p.complete) + ' แผนไม่สมบูรณ์' +
-      (miss.length ? ' — ' + miss.map(function (m) { return 'แถว ' + m.idx + ' ' + esc(m.label) + ': ' + m.fields.map(function (x) { return META.fieldNames[x]; }).join(', '); }).join(' · ') : '') + '</div></div>';
+      '<div>เวลาที่ส่งแผน ' + (submitted ? esc(p.submittedText) + ' น.' : '...............') + ' &nbsp; ' + box(submitted && p.onTime) + ' ทันกำหนด (ก่อน 16:00 น. ' + esc(thDateShort(p.deadlineDate)) + ') &nbsp; ' + box(submitted && !p.onTime) + ' ไม่ทัน' +
+      ' &nbsp; ' + box(p.excluded) + ' ไม่นับ : ' + (p.excluded ? esc(p.excludeReason) : 'ผู้ขอแจ้งหลัง 16:00 น. / ผู้ขอไม่ให้ข้อมูล') + '</div>' +
+      '<div>ผลการตรวจ : ' + box(submitted && p.complete) + ' แผนสมบูรณ์ &nbsp; ' + box(submitted && !p.complete) + ' แผนไม่สมบูรณ์ &nbsp;&nbsp; ข้อมูลที่ขาด / ไม่ชัด : ' +
+      missBoxes.map(function (c) { return box(!!mf[c[0]]) + ' ' + c[1]; }).join(' &nbsp; ') + '</div>' +
+      '<div>รายละเอียด (' + (v ? 'คัน' : 'รายการ') + 'ที่ข้อมูลไม่ครบ) ' + (miss.length ? miss.map(function (m) { return 'แถว ' + m.idx + ' ' + esc(m.label) + ': ' + m.fields.map(function (x) { return META.fieldNames[x]; }).join(', '); }).join(' · ') : '..............................................................') + '</div>' +
+      '<div style="margin-top:6px">ผู้ตรวจ ........................................................ &nbsp; ตำแหน่ง .................................... &nbsp; วันที่ตรวจ ......... / ......... / .........</div></div>';
     return '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + esc(f.formNo + ' ' + S.projectName + ' ' + p.planDate) + '</title>' +
       '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>' +
       '@page{size:A4 landscape;margin:8mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Sarabun,sans-serif;font-size:10.5px;color:#000;margin:0}' +

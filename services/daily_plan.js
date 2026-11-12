@@ -188,9 +188,9 @@ const ITEM_COLS = `id, resource_id AS "resourceId", resource_label AS "resourceL
   plate, job, location, qty, requester, note, added_after AS "addedAfter"`;
 const PLAN_COLS = `id, kind, project_code AS "projectCode", TO_CHAR(plan_date, 'YYYY-MM-DD') AS "planDate",
   TO_CHAR(ot_date, 'YYYY-MM-DD') AS "otDate", status, prepared_by AS "preparedBy", pm_name AS "pmName",
-  submitted_at AS "submittedAt", TO_CHAR(submitted_at AT TIME ZONE '${TZ}', 'DD/MM/YYYY HH24:MI') AS "submittedText",
+  submitted_at AS "submittedAt", TO_CHAR(submitted_at AT TIME ZONE '${TZ}', 'DD/MM/') || (EXTRACT(YEAR FROM submitted_at AT TIME ZONE '${TZ}')::int + 543) || TO_CHAR(submitted_at AT TIME ZONE '${TZ}', ' HH24:MI') AS "submittedText",
   submitted_by AS "submittedBy", complete, missing, excluded, exclude_reason AS "excludeReason", note, edit_count AS "editCount",
-  updated_by AS "updatedBy", TO_CHAR(updated_at AT TIME ZONE '${TZ}', 'DD/MM/YYYY HH24:MI') AS "updatedText"`;
+  updated_by AS "updatedBy", TO_CHAR(updated_at AT TIME ZONE '${TZ}', 'DD/MM/') || (EXTRACT(YEAR FROM updated_at AT TIME ZONE '${TZ}')::int + 543) || TO_CHAR(updated_at AT TIME ZONE '${TZ}', ' HH24:MI') AS "updatedText"`;
 
 function withOnTime(plan, hol) {
   const dl = deadlineOf(plan.kind, plan.planDate, plan.otDate, hol);
