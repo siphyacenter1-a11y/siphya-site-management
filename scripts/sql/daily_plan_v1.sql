@@ -74,3 +74,6 @@ ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewer          TEXT DEFAULT 
 ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewer_position TEXT DEFAULT '';
 ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS reviewed_at       TIMESTAMPTZ;
 ALTER TABLE dplan_plans ADD COLUMN IF NOT EXISTS review_entered_by TEXT;                        -- บัญชีที่กดบันทึกผลตรวจ
+
+-- v3 (13 พ.ย. 2569): ประเภทงานของเครื่องจักร (ใช้แยกสีไฮไลต์ในใบพิมพ์ 01-03) — ดู WORK_TYPES ใน services/daily_plan.js
+ALTER TABLE dplan_items ADD COLUMN IF NOT EXISTS work_type TEXT DEFAULT '';
