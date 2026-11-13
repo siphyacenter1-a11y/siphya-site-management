@@ -54,6 +54,7 @@
     .need { border-color:#E8A0A0 !important; background:#FFF5F5 !important; }
     .xbtn { border:none; background:none; color:var(--faint); font-size:18px; cursor:pointer; padding:4px; }
     .tag { font-size:10.5px; font-weight:700; color:var(--purple); }
+    .wt { display:inline-block; font-size:12px; font-weight:700; border-radius:6px; padding:6px 10px; }
     .time2 { display:flex; gap:3px; align-items:center; } .time2 select { flex:1 1 0; }
     /* ปฏิทินเดือน */
     .days { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -398,7 +399,26 @@
     h += '<option value="__custom"' + (custom ? ' selected' : '') + '>อื่นๆ (พิมพ์เอง)</option>';
     return h;
   }
-  function isLift(it) { return /ลิฟท์|ลิฟต์/.test(it.grp || ''); }
+  // ลิฟท์ (โดยสาร / ขนส่ง) — "รถโฟล์คลิฟท์" ไม่นับเป็นลิฟท์ (ต้องมีผู้ขอใช้)
+  function isLiftGrp(g) { return /ลิฟท์|ลิฟต์/.test(g || '') && !/โฟล์ค|โฟล์ก|forklift/i.test(g || ''); }
+  function isLift(it) { return isLiftGrp(it.grp); }
+  // สีไฮไลต์เครื่องจักร: ลิฟท์ / โฟล์คลิฟท์ = สีกลุ่ม · อื่น ๆ = ตามประเภทงานที่เลือก
+  function groupColor(grp) {
+    if (/โฟล์ค|โฟล์ก|forklift/i.test(grp || '')) return (META.groupColors || []).find(function (g) { return g.label === 'รถโฟล์คลิฟท์'; }) || null;
+    if (isLiftGrp(grp)) return (META.groupColors || []).find(function (g) { return g.label === 'ลิฟท์'; }) || null;
+    return null;
+  }
+  function workTypeOf(key) { return (META.workTypes || []).find(function (w) { return w.key === key; }) || null; }
+  function colorOf(it) { return groupColor(it.grp) || workTypeOf(it.workType) || META.noTypeColor; }
+  function workTypeCell(it) {
+    var g = groupColor(it.grp);
+    if (g) return '<td><span class="wt" style="background:' + g.bg + ';color:' + g.fg + '">' + esc(g.label) + '</span></td>';
+    var c = colorOf(it);
+    return '<td><select data-k="workType" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:600">' +
+      '<option value="" style="background:#fff;color:#000">— เลือกประเภทงาน —</option>' +
+      META.workTypes.map(function (w) { return '<option value="' + w.key + '"' + (it.workType === w.key ? ' selected' : '') + ' style="background:' + w.bg + ';color:' + w.fg + '">' + esc(w.label) + '</option>'; }).join('') +
+      '</select></td>';
+  }
   function needs(it) {
     var n = {};
     var timeOk = it.slotFrom !== null && it.slotFrom !== '' && it.slotFrom !== undefined;
@@ -418,8 +438,8 @@
 
   function renderItems() {
     var v = S.kind === 'vehicle';
-    var head = '<tr><th></th><th style="width:22%">' + (v ? 'ประเภทรถ' : 'เครื่องจักร') + '</th>' +
-      (v ? '<th style="width:11%">ทะเบียนรถ</th>' : '') +
+    var head = '<tr><th></th><th style="width:' + (v ? 22 : 17) + '%">' + (v ? 'ประเภทรถ' : 'เครื่องจักร') + '</th>' +
+      (v ? '<th style="width:11%">ทะเบียนรถ</th>' : '<th style="width:15%">ประเภทงาน (สี)</th>') +
       '<th style="width:20%">เวลา (ตั้งแต่ – ถึง)</th><th>' + (v ? 'งาน / วัสดุ' : 'งานที่ทำ') + '</th>' +
       (v ? '<th style="width:14%">จุดกอง / จุดลงของ</th><th style="width:6%">จำนวนคัน</th>' : '<th style="width:14%">ผู้ขอใช้</th>') +
       '<th style="width:11%">หมายเหตุ</th><th></th></tr>';
@@ -433,7 +453,7 @@
         '<td><select data-k="res"' + cls('type') + '>' + resOptions(it) + '</select>' +
           '<input data-k="resourceLabel" placeholder="พิมพ์' + (v ? 'ประเภทรถ' : 'ชื่อเครื่องจักร') + '" value="' + esc(it.resourceLabel) + '"' + (custom ? '' : ' style="display:none"') + cls('type') + '>' +
           (it.addedAfter ? '<div class="tag">เพิ่มหลังส่งแผน (ไม่นับ KPI)</div>' : '') + '</td>' +
-        (v ? '<td><input data-k="plate" value="' + esc(it.plate) + '" placeholder="เช่น 83-4797"' + cls('plate') + '></td>' : '') +
+        (v ? '<td><input data-k="plate" value="' + esc(it.plate) + '" placeholder="เช่น 83-4797"' + cls('plate') + '></td>' : workTypeCell(it)) +
         '<td><div class="time2"><select data-k="slotFrom"' + cls('time') + '>' + slotOptions(sf, nFrom, nTo) + '</select><span>–</span>' +
           '<select data-k="slotTo"' + cls('time') + '>' + slotOptions(st, nFrom, nTo) + '</select></div></td>' +
         '<td><input data-k="job" value="' + esc(it.job) + '" placeholder="' + (v ? 'เช่น เหล็กเส้น, ขยะออก' : 'เช่น ยกเหล็ก ชั้น 5') + '"' + cls('job') + '></td>' +
@@ -443,7 +463,7 @@
         '<td><input data-k="note" value="' + esc(it.note) + '"></td>' +
         '<td class="x"><button class="xbtn" data-k="del" title="ลบแถว">×</button></td></tr>';
     }).join('');
-    $('itemsTbl').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td colspan="9" class="empty">ยังไม่มีรายการ — กด "+ เพิ่มแถว" หรือ "คัดลอกจากแผนก่อน"</td></tr>') + '</tbody>';
+    $('itemsTbl').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td colspan="10" class="empty">ยังไม่มีรายการ — กด "+ เพิ่มแถว" หรือ "คัดลอกจากแผนก่อน"</td></tr>') + '</tbody>';
     updateNeedNote();
   }
 
@@ -465,6 +485,7 @@
       if (S.kind === 'vehicle' && r && r.plate) it.plate = r.plate;
       renderItems(); return;
     }
+    if (k === 'workType') { if (e.type === 'change') { it.workType = el.value; renderItems(); } return; }
     if (k === 'slotFrom' || k === 'slotTo') {
       it[k] = el.value === '' ? null : +el.value;
       if (k === 'slotFrom' && (it.slotTo == null || it.slotTo < it.slotFrom)) it.slotTo = it.slotFrom;
@@ -484,7 +505,7 @@
     $('needNote').innerHTML = S.items.length ? (cnt ? '<span style="color:var(--red)">ข้อมูลยังไม่ครบ ' + cnt + ' แถว</span>' : '<span style="color:var(--green)">✓ ข้อมูลครบทุกแถว</span>') : '';
   }
   $('btnAdd').onclick = function () {
-    S.items.push({ resourceId: null, resourceLabel: '', grp: '', slotFrom: null, slotTo: null, plate: '', job: '', location: '', qty: null, requester: '', note: '', addedAfter: S.plan.status === 'submitted' });
+    S.items.push({ resourceId: null, resourceLabel: '', grp: '', slotFrom: null, slotTo: null, plate: '', job: '', location: '', qty: null, requester: '', note: '', workType: '', addedAfter: S.plan.status === 'submitted' });
     dirty = true; renderItems();
   };
   $('btnCopy').onclick = function () {
@@ -592,11 +613,11 @@
   function printHtml() {
     var f = form(), v = S.kind === 'vehicle', sl = f.slots, p = S.plan;
     // แถวของฟอร์ม = รายชื่อทั้งหมด + ชื่อที่พิมพ์เองในแผน
-    var rows = S.resources.map(function (r) { return { key: 'r' + r.id, grp: r.grp, label: r.name + (r.plate ? ' ' + r.plate : ''), lift: /ลิฟท์|ลิฟต์/.test(r.grp), items: [] }; });
+    var rows = S.resources.map(function (r) { return { key: 'r' + r.id, grp: r.grp, label: r.name + (r.plate ? ' ' + r.plate : ''), lift: isLiftGrp(r.grp), items: [] }; });
     var byKey = {}; rows.forEach(function (r) { byKey[r.key] = r; });
     S.items.forEach(function (it) {
       var key = it.resourceId && byKey['r' + it.resourceId] ? 'r' + it.resourceId : 'c' + (it.resourceLabel || 'อื่นๆ');
-      if (!byKey[key]) { byKey[key] = { key: key, grp: it.grp || (v ? 'อื่นๆ' : 'อื่นๆ'), label: it.resourceLabel || 'อื่นๆ', lift: /ลิฟท์|ลิฟต์/.test(it.grp || ''), items: [] }; rows.push(byKey[key]); }
+      if (!byKey[key]) { byKey[key] = { key: key, grp: it.grp || (v ? 'อื่นๆ' : 'อื่นๆ'), label: it.resourceLabel || 'อื่นๆ', lift: isLiftGrp(it.grp), items: [] }; rows.push(byKey[key]); }
       byKey[key].items.push(it);
     });
     function cellText(it) {
@@ -627,6 +648,12 @@
         var c = lane.cells[j];
         if (c === 'x') continue;
         if (!c) { h += '<td></td>'; continue; }
+        if (field === 'color') {   // แถวสี (เครื่องจักร): ช่องเวลาเป็นสีตามประเภทงาน ไม่มีตัวหนังสือ
+          var col = colorOf(c.it);
+          h += '<td colspan="' + c.span + '" style="background:' + col.bg + '"></td>';
+          continue;
+        }
+        if (!v) { h += '<td class="txt" colspan="' + c.span + '">' + esc(field === 'requester' ? c.it.requester : cellText(c.it)) + '</td>'; continue; }
         var txt = field === 'requester' ? c.it.requester : cellText(c.it);
         h += '<td class="fill" colspan="' + c.span + '">' + esc(txt) + '</td>';
       }
@@ -660,8 +687,10 @@
         if (r.grp !== lastG) { lastG = r.grp; body += '<tr><td class="grp" colspan="' + (sl.length + 2) + '">' + esc(r.grp) + '</td></tr>'; }
         var ls = lanes(r.items); if (!ls.length) ls = [null];
         var notes = r.items.map(function (i) { return i.note; }).filter(Boolean).join(', ');
-        body += '<tr><td class="lbl">' + esc(r.label) + '</td>' + sl.map(function () { return '<td class="blank"></td>'; }).join('') + '<td rowspan="' + (1 + ls.length * (r.lift ? 1 : 2)) + '">' + esc(notes) + '</td></tr>';
-        ls.forEach(function (lane) {
+        // ต่อ 1 ช่วงเวลาที่ซ้อนกัน: แถวสี (ชื่อเครื่อง) → งานที่ทำ → ผู้ขอใช้ (ลิฟท์ไม่มี) — เหมือนแบบฟอร์ม Excel
+        ls.forEach(function (lane, li) {
+          body += '<tr><td class="lbl">' + (li === 0 ? esc(r.label) : '') + '</td>' + slotCells(lane, 'color') +
+            (li === 0 ? '<td rowspan="' + (ls.length * (r.lift ? 2 : 3)) + '">' + esc(notes) + '</td>' : '') + '</tr>';
           body += '<tr><td class="sub">งานที่ทำ</td>' + slotCells(lane) + '</tr>';
           if (!r.lift) body += '<tr><td class="sub">ผู้ขอใช้</td>' + slotCells(lane, 'requester') + '</tr>';
         });
@@ -696,7 +725,9 @@
       '.no{border:1px solid #000;font-size:10px;padding:3px 6px;line-height:1.5}.meta{display:flex;justify-content:space-between;margin:4px 0 6px;font-size:11.5px}' +
       'table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #000;padding:2px 3px;vertical-align:middle;word-wrap:break-word}' +
       'th{background:#eee;font-size:9.5px}th.sl{font-size:8.5px;font-weight:400}td.fill{background:#FFE699;text-align:center;font-size:9.5px}' +
-      'td.grp{font-weight:700;text-align:center;background:#f4f4f4}td.lbl{font-size:10px}td.sub{font-size:9.5px;padding-left:10px;color:#333}td.blank{background:#fafafa}' +
+      'td.grp{font-weight:700;text-align:center;background:#f4f4f4}td.txt{text-align:center;font-size:9.5px}' +
+      '.legend{margin-top:5px;font-size:9.5px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}.legend i{display:inline-block;width:18px;height:10px;border:1px solid #555;margin-right:4px;vertical-align:middle}' +
+      'td.lbl{font-size:10px}td.sub{font-size:9.5px;padding-left:10px;color:#333}td.blank{background:#fafafa}' +
       '.sig{display:flex;justify-content:flex-end;gap:60px;margin-top:14px;text-align:center}.sig div{min-width:200px}.sig .ln{border-bottom:1px dotted #000;height:18px;margin-bottom:2px}' +
       '.chk{border:1px solid #000;padding:5px 8px;margin-top:8px;line-height:1.7}.chk .g{display:grid;grid-template-columns:1fr 1fr}.foot{margin-top:6px;font-size:9.5px}' +
       '</style></head><body>' +
@@ -704,6 +735,9 @@
       '<div class="meta"><div>ส่วนงาน ธุรการขนส่ง &nbsp; · &nbsp; หน่วยงาน <b>' + esc(S.projectName) + '</b> &nbsp; · &nbsp; ผู้รับผิดชอบ ' + esc(p.preparedBy || META.me) + ' ตำแหน่ง ธุรการขนส่ง</div>' +
       '<div>ประจำวันที่ <b>' + esc(thDateShort(p.planDate)) + '</b></div></div>' +
       '<table><thead>' + thead + '</thead><tbody>' + body + '</tbody></table>' +
+      (v ? '' : '<div class="legend"><b>สีตามประเภทงาน:</b> ' + META.workTypes.concat(META.groupColors).map(function (w) {
+        return '<span><i style="background:' + w.bg + '"></i>' + esc(w.label) + '</span>'; }).join('') +
+        '<span><i style="background:' + META.noTypeColor.bg + '"></i>ไม่ระบุ</span></div>') +
       '<div class="sig"><div><div class="ln">' + esc(p.preparedBy || '') + '</div>ผู้จัดทำ/ธุรการขนส่ง</div><div><div class="ln">' + esc($('pmName').value || '') + '</div>PE/PM</div></div>' +
       check + '<div class="foot">หมายเหตุ: ธุรการขนส่ง จะรวบรวมส่งข้อมูลให้ผู้เกี่ยวข้อง ก่อนเวลา 16:00 น. · CC: PM/PE, GF, ธุรการทั่วไป, สโตร์, เสมียนป้อม, รปภ., ผู้เกี่ยวข้อง</div>' +
       '</body></html>';

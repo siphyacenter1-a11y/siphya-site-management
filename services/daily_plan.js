@@ -40,6 +40,22 @@ const MACHINE_SLOTS = Array.from({ length: 5 }, (_, i) => `${17 + i}.00-${18 + i
   .concat(Array.from({ length: 10 }, (_, i) => `${pad(7 + i)}.00-${pad(8 + i)}.00`));
 const MACHINE_OT_SLOTS = 6;   // ช่อง 0–5 = ช่วง OT (วัน ot_date) · 6–15 = วันทำงานปกติ (plan_date)
 
+// ประเภทงานของเครื่องจักร → สีไฮไลต์ในใบพิมพ์ 01-03 (ชุดสีเดิมของแบบฟอร์ม Excel)
+//   ลิฟท์ / รถโฟล์คลิฟท์ ใช้สีเดียวทั้งกลุ่ม (GROUP_COLORS) ไม่ต้องเลือกประเภทงาน
+const WORK_TYPES = [
+  { key: 'concrete', label: 'เทคอนกรีต', bg: '#2E7D8C', fg: '#FFFFFF' },
+  { key: 'steel', label: 'งานเหล็ก / ยกเหล็กเส้น', bg: '#8C8C8C', fg: '#FFFFFF' },
+  { key: 'formwork', label: 'งานไม้แบบ', bg: '#E8731E', fg: '#000000' },
+  { key: 'wall', label: 'งานผนังบ่อ / งานเสา', bg: '#F8C9A0', fg: '#000000' },
+  { key: 'lifting', label: 'ยกของ / วัสดุทั่วไป', bg: '#CFC6E6', fg: '#000000' },
+  { key: 'other', label: 'อื่น ๆ', bg: '#CFE3F5', fg: '#000000' },
+];
+const GROUP_COLORS = [
+  { match: 'ลิฟท์|ลิฟต์', label: 'ลิฟท์', bg: '#FFF200', fg: '#000000' },
+  { match: 'โฟล์ค|โฟล์ก|forklift', label: 'รถโฟล์คลิฟท์', bg: '#92D050', fg: '#000000' },
+];
+const NO_TYPE_COLOR = { bg: '#FFE699', fg: '#000000' };   // ยังไม่เลือกประเภทงาน
+
 const FORMS = {
   vehicle: { title: 'ตารางสรุปแผนรถเข้า - ออกหน่วยงานประจำวัน', short: 'แผนรถเข้า-ออก', formNo: 'FM-GM-01-07', rev: 'Rev.00_25/02/2565', slots: VEHICLE_SLOTS },
   machine: { title: 'ตารางการใช้เครื่องจักร ประจำวัน', short: 'เครื่องจักร', formNo: 'FM-GM-01-03', rev: 'Rev.00_25/02/2565', slots: MACHINE_SLOTS, otSlots: MACHINE_OT_SLOTS },
@@ -151,7 +167,8 @@ function checkItems(kind, items) {
       if (!str(it.resource_label)) f.push('machine');
       if (!timeOk) f.push('mtime');
       if (!str(it.job)) f.push('job');
-      if (!/ลิฟท์|ลิฟต์/.test(it.grp || '') && !str(it.requester)) f.push('requester');
+      const lift = /ลิฟท์|ลิฟต์/.test(it.grp || '') && !/โฟล์ค|โฟล์ก|forklift/i.test(it.grp || '');   // รถโฟล์คลิฟท์ ไม่ใช่ลิฟท์
+      if (!lift && !str(it.requester)) f.push('requester');
     }
     if (f.length) out.push({ idx: idx + 1, label: [it.resource_label, it.plate].filter(Boolean).join(' '), fields: f });
   });
@@ -184,11 +201,12 @@ function cleanItem(kind, raw, resMap) {
     qty,
     requester: str(raw.requester, 120),
     note: str(raw.note, 300),
+    work_type: kind === 'machine' && WORK_TYPES.some(w => w.key === raw.workType) ? raw.workType : '',
   };
 }
 
 const ITEM_COLS = `id, resource_id AS "resourceId", resource_label AS "resourceLabel", grp, slot_from AS "slotFrom", slot_to AS "slotTo",
-  plate, job, location, qty, requester, note, added_after AS "addedAfter"`;
+  plate, job, location, qty, requester, note, added_after AS "addedAfter", work_type AS "workType"`;
 const PLAN_COLS = `id, kind, project_code AS "projectCode", TO_CHAR(plan_date, 'YYYY-MM-DD') AS "planDate",
   TO_CHAR(ot_date, 'YYYY-MM-DD') AS "otDate", status, prepared_by AS "preparedBy", pm_name AS "pmName",
   submitted_at AS "submittedAt", TO_CHAR(submitted_at AT TIME ZONE '${TZ}', 'DD/MM/') || (EXTRACT(YEAR FROM submitted_at AT TIME ZONE '${TZ}')::int + 543) || TO_CHAR(submitted_at AT TIME ZONE '${TZ}', ' HH24:MI') AS "submittedText",
@@ -215,6 +233,7 @@ async function DPLAN_meta() {
   const today = todayBkk();
   return {
     forms: FORMS, fieldNames: FIELD_TH, excludeReasons: EXCLUDE_REASONS,
+    workTypes: WORK_TYPES, groupColors: GROUP_COLORS, noTypeColor: NO_TYPE_COLOR,
     projects: await projectList(), today, nextWorkday: nextWorkday(today, hol),
     isAdmin: isAdmin(this), me: byName(this), deadlineHour: DEADLINE_HOUR,
   };
@@ -360,10 +379,10 @@ async function DPLAN_save(req) {
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       await client.query(
-        `INSERT INTO dplan_items (plan_id, resource_id, resource_label, grp, slot_from, slot_to, plate, job, location, qty, requester, note, added_after, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        `INSERT INTO dplan_items (plan_id, resource_id, resource_label, grp, slot_from, slot_to, plate, job, location, qty, requester, note, added_after, sort_order, work_type)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [plan.id, it.resource_id, it.resource_label, it.grp, it.slot_from, it.slot_to, it.plate, it.job, it.location, it.qty,
-          it.requester, it.note, it.added_after, i]);
+          it.requester, it.note, it.added_after, i, it.work_type]);
     }
 
     let missing = null;
